@@ -17,12 +17,12 @@ import {
 } from './defaultData';
 
 const STORAGE_KEYS = {
-  COMPANY: 'yeshua_company_info_v1',
+  COMPANY: 'yeshua_company_info_v4',
   SERVICES: 'yeshua_services_v1',
   PRODUCTS: 'yeshua_products_v1',
-  MEDIA: 'yeshua_media_v1',
+  MEDIA: 'yeshua_media_v4',
   APPOINTMENTS: 'yeshua_appointments_v1',
-  INSTAGRAM_EMBEDS: 'yeshua_instagram_embeds_v1',
+  INSTAGRAM_EMBEDS: 'yeshua_instagram_embeds_v4',
 };
 
 // Listeners for multi-component reactivity without heavy Redux
@@ -34,12 +34,23 @@ function notify() {
 }
 
 // In-memory cache loaded from LocalStorage
-let currentCompany: CompanyInfo = loadFromStorage(
-  STORAGE_KEYS.COMPANY,
-  INITIAL_COMPANY_INFO
-);
+let currentCompany: CompanyInfo = (() => {
+  const loaded = loadFromStorage<CompanyInfo>(
+    STORAGE_KEYS.COMPANY,
+    INITIAL_COMPANY_INFO
+  );
+  // Ensure the latest official logo and exact Instagram URL are present
+  return {
+    ...INITIAL_COMPANY_INFO,
+    ...loaded,
+    instagramUrl: INITIAL_COMPANY_INFO.instagramUrl,
+    instagramHandle: INITIAL_COMPANY_INFO.instagramHandle,
+    logoUrl: '/logo.jpg',
+  };
+})();
+
 let currentServices: ServiceItem[] = loadFromStorage(
-  STORAGE_KEYS.SERVICES,
+  STORAGE_SERVICES_KEY(STORAGE_KEYS.SERVICES),
   INITIAL_SERVICES
 );
 let currentProducts: ProductItem[] = loadFromStorage(
@@ -54,10 +65,31 @@ let currentAppointments: Appointment[] = loadFromStorage(
   STORAGE_KEYS.APPOINTMENTS,
   INITIAL_APPOINTMENTS
 );
-let currentInstagramEmbeds: InstagramEmbedItem[] = loadFromStorage(
-  STORAGE_KEYS.INSTAGRAM_EMBEDS,
-  INITIAL_INSTAGRAM_EMBEDS
-);
+
+function STORAGE_SERVICES_KEY(k: string) { return k; }
+
+let currentInstagramEmbeds: InstagramEmbedItem[] = (() => {
+  const loaded = loadFromStorage<InstagramEmbedItem[]>(
+    STORAGE_KEYS.INSTAGRAM_EMBEDS,
+    INITIAL_INSTAGRAM_EMBEDS
+  );
+  // Reset if empty, has old unsplash images, old fake shortcodes, or synthetic generic haircuts
+  const hasLegacyOrGeneric = loaded.some(
+    (item) =>
+      !item.shortcode ||
+      item.shortcode === 'CGnw1SIhPs1' ||
+      item.shortcode === 'C_1vY5ksw5F' ||
+      item.shortcode.endsWith('Yesh') ||
+      (item.previewImageUrl &&
+        (item.previewImageUrl.includes('images.unsplash.com') ||
+          item.previewImageUrl.includes('yeshua_post_')))
+  );
+  if (hasLegacyOrGeneric || loaded.length === 0) {
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, INITIAL_INSTAGRAM_EMBEDS);
+    return INITIAL_INSTAGRAM_EMBEDS;
+  }
+  return loaded;
+})();
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
@@ -263,37 +295,121 @@ export const store = {
     shortcode: string;
     type: 'post' | 'reel';
     embedUrl: string;
+    compactEmbedUrl: string;
+    cleanUrl: string;
+    isProfile: boolean;
+    isPostOrReel: boolean;
   } {
-    const clean = inputUrl.trim();
-    // Reel match
-    const reelMatch = clean.match(/(?:reel|reels)\/([A-Za-z0-9_-]+)/i);
+    let clean = (inputUrl || '').trim();
+
+    // 1. If user pasted a full HTML blockquote or iframe snippet from Instagram Embed
+    // e.g. <blockquote ... data-instgrm-permalink="https://www.instagram.com/p/CODE/..."
+    const permalinkMatch = clean.match(/data-instgrm-permalink=["']([^"']+)["']/i);
+    if (permalinkMatch && permalinkMatch[1]) {
+      clean = permalinkMatch[1];
+    } else {
+      // e.g. <iframe ... src="https://www.instagram.com/p/CODE/embed/..."
+      const iframeSrcMatch = clean.match(/<iframe[^>]+src=["']([^"']+)["']/i);
+      if (iframeSrcMatch && iframeSrcMatch[1]) {
+        clean = iframeSrcMatch[1];
+      }
+    }
+
+    // Strip URL query parameters and hashes for shortcode extraction
+    const urlWithoutQuery = clean.split('?')[0].split('#')[0];
+
+    // 2. Reel or Reels match (/reel/CODE or /reels/CODE)
+    const reelMatch = urlWithoutQuery.match(/(?:reel|reels)\/([A-Za-z0-9_-]+)/i);
     if (reelMatch && reelMatch[1]) {
       const code = reelMatch[1];
       return {
         shortcode: code,
         type: 'reel',
-        embedUrl: `https://www.instagram.com/reel/${code}/embed/`,
+        embedUrl: `https://www.instagram.com/reel/${code}/embed/captioned/`,
+        compactEmbedUrl: `https://www.instagram.com/reel/${code}/embed/`,
+        cleanUrl: `https://www.instagram.com/reel/${code}/`,
+        isProfile: false,
+        isPostOrReel: true,
       };
     }
 
-    // Post match
-    const postMatch = clean.match(/\/p\/([A-Za-z0-9_-]+)/i);
+    // 3. Post match (/p/CODE)
+    const postMatch = urlWithoutQuery.match(/\/p\/([A-Za-z0-9_-]+)/i);
     if (postMatch && postMatch[1]) {
       const code = postMatch[1];
       return {
         shortcode: code,
         type: 'post',
-        embedUrl: `https://www.instagram.com/p/${code}/embed/`,
+        embedUrl: `https://www.instagram.com/p/${code}/embed/captioned/`,
+        compactEmbedUrl: `https://www.instagram.com/p/${code}/embed/`,
+        cleanUrl: `https://www.instagram.com/p/${code}/`,
+        isProfile: false,
+        isPostOrReel: true,
       };
     }
 
-    // Fallback if plain code or short link
-    const code = clean.replace(/[^A-Za-z0-9_-]/g, '') || 'DFcut01Yesh';
-    const isReel = clean.toLowerCase().includes('reel');
+    // 4. IGTV match (/tv/CODE)
+    const tvMatch = urlWithoutQuery.match(/\/tv\/([A-Za-z0-9_-]+)/i);
+    if (tvMatch && tvMatch[1]) {
+      const code = tvMatch[1];
+      return {
+        shortcode: code,
+        type: 'reel',
+        embedUrl: `https://www.instagram.com/reel/${code}/embed/captioned/`,
+        compactEmbedUrl: `https://www.instagram.com/reel/${code}/embed/`,
+        cleanUrl: `https://www.instagram.com/reel/${code}/`,
+        isProfile: false,
+        isPostOrReel: true,
+      };
+    }
+
+    // 5. Profile check (e.g. instagram.com/barbearia_estetica_yeshua or starts with @)
+    const profileMatch = clean.match(/(?:instagram\.com\/|@)([A-Za-z0-9_.-]+)/i);
+    if (profileMatch && profileMatch[1]) {
+      const username = profileMatch[1];
+      const isYeshua = username.toLowerCase().includes('yeshua');
+      const profileUrl = isYeshua
+        ? 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D'
+        : `https://www.instagram.com/${username}/`;
+      return {
+        shortcode: username,
+        type: 'post',
+        embedUrl: profileUrl,
+        compactEmbedUrl: profileUrl,
+        cleanUrl: profileUrl,
+        isProfile: true,
+        isPostOrReel: false,
+      };
+    }
+
+    // 6. Direct shortcode if alphanumeric (e.g. "C_1vY5ksw5F") without url
+    const codeMatch = clean.replace(/[^A-Za-z0-9_-]/g, '');
+    if (codeMatch && codeMatch.length >= 6 && codeMatch.length <= 25) {
+      const isReel = clean.toLowerCase().includes('reel');
+      const type: 'post' | 'reel' = isReel ? 'reel' : 'post';
+      const path = isReel ? 'reel' : 'p';
+      return {
+        shortcode: codeMatch,
+        type,
+        embedUrl: `https://www.instagram.com/${path}/${codeMatch}/embed/captioned/`,
+        compactEmbedUrl: `https://www.instagram.com/${path}/${codeMatch}/embed/`,
+        cleanUrl: `https://www.instagram.com/${path}/${codeMatch}/`,
+        isProfile: false,
+        isPostOrReel: true,
+      };
+    }
+
+    // Fallback to official Yeshua profile
+    const defaultProfile =
+      'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D';
     return {
-      shortcode: code,
-      type: isReel ? 'reel' : 'post',
-      embedUrl: `https://www.instagram.com/${isReel ? 'reel' : 'p'}/${code}/embed/`,
+      shortcode: 'barbearia_estetica_yeshua',
+      type: 'post',
+      embedUrl: defaultProfile,
+      compactEmbedUrl: defaultProfile,
+      cleanUrl: defaultProfile,
+      isProfile: true,
+      isPostOrReel: false,
     };
   },
 

@@ -51,14 +51,19 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => handleNavClick('home')}
             className="flex items-center gap-3 text-left group focus:outline-none"
           >
-            <div className="w-11 h-11 rounded-lg bg-gradient-to-br from-amber-400/20 via-neutral-900 to-amber-900/30 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:border-amber-400 transition-colors shadow-sm">
-              <Sparkles className="w-5 h-5 text-amber-300" />
+            <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-neutral-900 border border-amber-500/40 group-hover:border-amber-400 transition-colors shadow-md shrink-0 flex items-center justify-center">
+              <img
+                src={company.logoUrl || '/logo.jpg'}
+                alt="Logo Barbearia & Estética Yeshua"
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                referrerPolicy="no-referrer"
+              />
             </div>
             <div>
               <span className="block font-display text-lg sm:text-xl font-bold tracking-wider text-neutral-100 uppercase group-hover:text-amber-200 transition-colors">
                 Yeshua
               </span>
-              <span className="block text-[11px] uppercase tracking-widest text-neutral-400 font-medium">
+              <span className="block text-[11px] uppercase tracking-widest text-amber-400/90 font-medium">
                 Barbearia & Estética • Manaus
               </span>
             </div>

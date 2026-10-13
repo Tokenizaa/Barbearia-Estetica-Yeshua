@@ -77,11 +77,12 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* 1. HERO SECTION */}
       <section className="relative min-h-[85vh] flex items-center justify-center overflow-hidden border-b border-neutral-800/60 bg-gradient-to-b from-neutral-950 via-neutral-900 to-neutral-950 px-4 sm:px-6 lg:px-8 py-16">
         {/* Subtle Luxury Atmospheric Background */}
-        <div className="absolute inset-0 z-0 opacity-25">
+        <div className="absolute inset-0 z-0 opacity-30">
           <img
-            src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1920&q=80"
+            src="/images/yeshua_og_banner_1791913374687.jpg"
             alt="Barbearia e Estética Yeshua"
-            className="w-full h-full object-cover filter grayscale contrast-125 scale-105 transform motion-safe:animate-pulse duration-[10000ms]"
+            className="w-full h-full object-cover filter contrast-115 scale-105"
+            referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-neutral-950/90" />
         </div>
@@ -90,11 +91,21 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-10 right-10 w-72 h-72 bg-rose-500/5 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8">
-          {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-900/90 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-medium backdrop-blur-md shadow-sm">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>Centro de Manaus • Atendimento Premium & Exclusivo</span>
+        <div className="relative z-10 max-w-5xl mx-auto text-center space-y-7">
+          {/* Official Logo Crest & Badge */}
+          <div className="flex flex-col items-center justify-center gap-3">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border border-amber-500/50 bg-neutral-900 shadow-2xl p-0.5 group">
+              <img
+                src={company.logoUrl || '/logo.jpg'}
+                alt="Logo Barbearia & Estética Yeshua"
+                className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-900/90 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-medium backdrop-blur-md shadow-sm">
+              <Sparkles className="w-4 h-4 text-amber-400" />
+              <span>Centro de Manaus • Atendimento Premium & Exclusivo</span>
+            </div>
           </div>
 
           {/* Title */}
@@ -714,12 +725,14 @@ export const HomePage: React.FC<HomePageProps> = ({
         </div>
       </section>
 
-      {/* 6. INSTAGRAM EMBED & FEED INTERATIVO */}
+      {/* 6. INSTAGRAM EMBED & FEED INTERATIVO (Ocultado provisoriamente) */}
+      {/* 
       <InstagramSection
         onSelectServiceForBooking={(serviceName) => {
           if (onBookService) onBookService();
         }}
       />
+      */}
 
       {/* 7. LOCALIZAÇÃO SECTION (MANAUS - CENTRO) */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">

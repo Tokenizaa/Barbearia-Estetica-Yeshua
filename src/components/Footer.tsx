@@ -32,15 +32,20 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
           {/* Col 1: Identity */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-                <Sparkles className="w-5 h-5 text-amber-400" />
+              <div className="w-12 h-12 rounded-xl overflow-hidden bg-neutral-900 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-md">
+                <img
+                  src={company.logoUrl || '/logo.jpg'}
+                  alt="Barbearia & Estética Yeshua"
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               </div>
               <div>
                 <span className="block font-display text-lg font-bold text-neutral-100 uppercase tracking-wider">
                   Yeshua
                 </span>
-                <span className="block text-xs uppercase tracking-widest text-neutral-400">
-                  Barbearia & Estética
+                <span className="block text-xs uppercase tracking-widest text-amber-400 font-medium">
+                  Barbearia & Estética • Manaus
                 </span>
               </div>
             </div>

@@ -22,6 +22,7 @@ export interface CompanyInfo {
   cityState: string;
   openingHoursNote?: string;
   adminPin: string;
+  logoUrl?: string;
 }
 
 export interface InstagramEmbedItem {

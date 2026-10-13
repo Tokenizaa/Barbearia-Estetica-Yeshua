@@ -79,6 +79,7 @@ export const AdminPage: React.FC = () => {
 
   const [editingInstagram, setEditingInstagram] = useState<InstagramEmbedItem | null>(null);
   const [isInstagramModalOpen, setIsInstagramModalOpen] = useState(false);
+  const [previewInstagramId, setPreviewInstagramId] = useState<string | null>(null);
 
   // Appointment Administration States
   const [isBlockSlotModalOpen, setIsBlockSlotModalOpen] = useState(false);
@@ -1323,9 +1324,10 @@ export const AdminPage: React.FC = () => {
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shrink-0">
                 <img
-                  src="https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=200&q=80"
+                  src="/logo.jpg"
                   alt="avatar"
                   className="w-full h-full object-cover rounded-full"
+                  referrerPolicy="no-referrer"
                 />
               </div>
               <div>
@@ -1449,6 +1451,22 @@ export const AdminPage: React.FC = () => {
 
                     <div className="flex items-center gap-1.5">
                       <button
+                        type="button"
+                        onClick={() =>
+                          setPreviewInstagramId(
+                            previewInstagramId === item.id ? null : item.id
+                          )
+                        }
+                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                          previewInstagramId === item.id
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                            : 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300'
+                        }`}
+                        title="Testar Iframe oficial do Instagram"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                      </button>
+                      <button
                         onClick={() => {
                           setEditingInstagram(item);
                           setIsInstagramModalOpen(true);
@@ -1472,6 +1490,36 @@ export const AdminPage: React.FC = () => {
                       </button>
                     </div>
                   </div>
+
+                  {/* Inline Iframe Preview se ativado pelo admin */}
+                  {previewInstagramId === item.id && (
+                    <div className="p-3 bg-neutral-950 border-t border-neutral-800 space-y-2">
+                      <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                        <span className="font-semibold text-amber-300">
+                          Preview do Iframe Oficial ({store.parseInstagramUrl(item.url).shortcode}):
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewInstagramId(null)}
+                          className="hover:text-white transition-colors cursor-pointer"
+                        >
+                          Fechar ✕
+                        </button>
+                      </div>
+                      <div className="w-full h-[520px] rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800">
+                        <iframe
+                          src={store.parseInstagramUrl(item.url).embedUrl}
+                          title={item.title}
+                          className="w-full h-full border-0"
+                          frameBorder="0"
+                          scrolling="no"
+                          allowTransparency={true}
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                          loading="lazy"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -1560,6 +1608,29 @@ export const AdminPage: React.FC = () => {
                       className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-sm text-neutral-100 focus:border-amber-400 focus:outline-none"
                     />
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
+                  Logo Oficial da Marca (Navbar, PWA e Redes)
+                </label>
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl overflow-hidden bg-neutral-950 border border-amber-500/40 shrink-0">
+                    <img
+                      src={company.logoUrl || '/logo.jpg'}
+                      alt="Logo Yeshua"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    value={company.logoUrl || '/logo.jpg'}
+                    onChange={(e) => store.updateCompany({ logoUrl: e.target.value })}
+                    placeholder="/logo.jpg"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-sm text-neutral-100 focus:border-amber-400 focus:outline-none"
+                  />
                 </div>
               </div>
 

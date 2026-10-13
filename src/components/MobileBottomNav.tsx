@@ -29,7 +29,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   setCurrentPage,
   onBookClick,
 }) => {
-  const { store } = useStore();
+  const { company, store } = useStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showPWAModal, setShowPWAModal] = useState(false);
 
@@ -178,10 +178,17 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             <div className="flex flex-col items-center">
               <div className="w-12 h-1.5 rounded-full bg-neutral-700 mb-3" />
               <div className="w-full flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-amber-400" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-md overflow-hidden border border-amber-500/40 shrink-0">
+                    <img
+                      src={company.logoUrl || '/logo.jpg'}
+                      alt="Logo Yeshua"
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
                   <span className="font-semibold text-sm text-neutral-200">
-                    Menu & Opções Rápidas
+                    Barbearia & Estética Yeshua
                   </span>
                 </div>
                 <button
