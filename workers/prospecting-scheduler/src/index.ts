@@ -519,10 +519,26 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     return "blocked";
   }
 
+  let resolvedTemplateVersionId = templateVersionId;
+  if (!resolvedTemplateVersionId) {
+    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
+    if (!templateLookup.ok) throw new Error(`demo_template_lookup_http_${templateLookup.status}`);
+    const templates = await templateLookup.json() as Array<{ id: string }>;
+    resolvedTemplateVersionId = templates[0]?.id ?? "";
+  }
+  if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "template_version_required",
+      last_error: "Não existe versão publicada de modelo disponível para gerar a demonstração.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required" },
+    });
+    return "blocked";
+  }
+
   let resolvedProjectId = siteProjectId;
   if (!resolvedProjectId) {
     const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
-      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id }),
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: resolvedTemplateVersionId }),
     });
     if (!projectResult.ok) throw new Error(`demo_project_create_http_${projectResult.status}`);
     const projectBody = await projectResult.json() as { siteProjectId?: string };
@@ -530,14 +546,6 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
       throw new Error("demo_project_create_missing_id");
     }
     resolvedProjectId = projectBody.siteProjectId;
-  }
-
-  let resolvedTemplateVersionId = templateVersionId;
-  if (!resolvedTemplateVersionId) {
-    const templateLookup = await db(env, "site_template_versions?select=id&order=created_at.desc&limit=1");
-    if (!templateLookup.ok) throw new Error(`demo_template_lookup_http_${templateLookup.status}`);
-    const templates = await templateLookup.json() as Array<{ id: string }>;
-    resolvedTemplateVersionId = templates[0]?.id ?? "";
   }
   if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
     await updateTask(env, task, workerId, {
@@ -768,8 +776,13 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
 
   let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold" };
   if (result.score >= 50) {
+    const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
+    if (!templateLookup.ok) throw new Error(`qualified_template_lookup_http_${templateLookup.status}`);
+    const templates = await templateLookup.json() as Array<{ id: string }>;
+    const templateVersionId = templates[0]?.id;
+    if (!templateVersionId) throw new Error("qualified_published_template_missing");
     const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
-      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id }),
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id, p_template_version_id: templateVersionId }),
     });
     if (!projectResult.ok) throw new Error(`qualified_project_create_http_${projectResult.status}`);
     const projectBody = await projectResult.json() as { siteProjectId?: string; created?: boolean };
@@ -784,7 +797,7 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
         prospect_id: task.prospect_id,
         task_type: "generate_demo",
         idempotency_key: `prospect:${task.prospect_id}:generate-demo:v1`,
-        payload: { siteProjectId: projectBody.siteProjectId, expiresInDays: 14 },
+        payload: { siteProjectId: projectBody.siteProjectId, templateVersionId, expiresInDays: 14 },
       }),
     });
     if (!demoTask.ok) throw new Error(`qualified_demo_enqueue_http_${demoTask.status}`);
