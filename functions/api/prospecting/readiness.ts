@@ -9,6 +9,8 @@ interface Env {
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
+  WHATSAPP_APP_SECRET?: string;
+  WHATSAPP_WEBHOOK_VERIFY_TOKEN?: string;
 }
 
 type Context = { request: Request; env: Env };
@@ -124,6 +126,13 @@ export async function onRequestGet({ request, env }: Context) {
     id: 'whatsapp_provider',
     ready: whatsappConfigured,
     detail: whatsappConfigured ? 'Credenciais e modelo de mensagem do WhatsApp configurados.' : 'Configure token, identificador do número e modelo aprovado do WhatsApp Business Platform.',
+  });
+
+  const webhookConfigured = Boolean(env.WHATSAPP_APP_SECRET?.trim() && env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim());
+  checks.push({
+    id: 'whatsapp_webhook_security',
+    ready: webhookConfigured,
+    detail: webhookConfigured ? 'Assinatura e token de verificação do webhook configurados.' : 'Configure WHATSAPP_APP_SECRET e WHATSAPP_WEBHOOK_VERIFY_TOKEN para validar recibos e opt-outs do WhatsApp.',
   });
 
   const ready = checks.every((check) => check.ready);
