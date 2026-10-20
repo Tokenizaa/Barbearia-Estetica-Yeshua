@@ -55,12 +55,12 @@ export default defineConfig(() => {
       devCapturePlugin(),
       VitePWA({
         registerType: 'autoUpdate',
-        includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icon.svg', 'logo.jpg', 'og-image.jpg'],
+        includeAssets: ['icon.svg'],
         manifest: {
           id: '/',
-          name: 'Barbearia & Estética Yeshua',
-          short_name: 'Yeshua',
-          description: 'Barbearia e estética em Manaus. Cortes masculinos, barboterapia, sobrancelhas, cílios e agendamento prático.',
+          name: 'Plataforma para Salões',
+          short_name: 'Salões',
+          description: 'Plataforma white-label para gestão e agendamento de barbearias, salões e espaços de estética.',
           theme_color: '#0a0a0c',
           background_color: '#0a0a0c',
           display: 'standalone',
@@ -69,9 +69,9 @@ export default defineConfig(() => {
           scope: '/',
           icons: [
             {
-              src: '/logo.jpg',
-              sizes: '512x512',
-              type: 'image/jpeg',
+              src: '/icon.svg',
+              sizes: 'any',
+              type: 'image/svg+xml',
               purpose: 'any',
             },
             {
