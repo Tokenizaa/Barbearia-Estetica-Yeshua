@@ -233,7 +233,9 @@ export default {
     env: Env,
     _ctx: { waitUntil(promise: Promise<unknown>): void },
   ) {
-    await processBatch(env);
+    const execution = processBatch(env);
+    _ctx.waitUntil(execution.then(() => undefined));
+    await execution;
   },
   async fetch(request: Request, env: Env) {
     if (request.method !== "POST") return json({ error: "not_found" }, 404);
