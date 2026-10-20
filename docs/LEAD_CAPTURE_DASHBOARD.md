@@ -1,82 +1,66 @@
-# Especificação funcional — captação de leads e dashboard
+# Prospecção automatizada — estado atual e contrato de implementação
+
+> **Documento atualizado em 2026-10-20.** Esta versão substitui as instruções anteriores que limitavam a prospecção a operações manuais, armazenamento local ou envio assistido. A fonte funcional principal é `docs/PRODUCT_FLOW_BASELINE_AND_PHASE1_READINESS.md`.
 
 ## Objetivo
 
-Preparar a operação de prospecção e a produção de uma primeira versão personalizada de site, sem integrar Supabase nesta fase. O dashboard é interno; o lead não navega por um marketplace.
+Executar automaticamente o ciclo de aquisição comercial: descobrir negócios por campanha, capturar e rastrear evidências, normalizar e deduplicar, qualificar, gerar uma demonstração versionada, disponibilizar uma landing page comercial pública e iniciar contato por integração autorizada quando houver elegibilidade comprovada. A tela do navegador não pode ser requisito para processar tarefas.
 
-## Entidades de domínio
+## Estado implementado nesta etapa
 
-### Lead
-- id: identificador estável.
-- businessName: nome observado do negócio.
-- category: categoria do negócio, se conhecida.
-- websiteUrl, phone, email, address, socialUrls: dados públicos, opcionais e com origem rastreável.
-- sourceType, sourceUrl, capturedAt: procedência e momento da captura.
-- verificationStatus: unreviewed | in_review | verified | needs_correction.
-- leadStatus: new | reviewing | qualified | site_preparing | site_ready | proposal_sent | interested | not_interested | converted | archived.
-- priority, owner, notes: gestão operacional.
-- createdAt, updatedAt: timestamps.
+- `functions/api/capture.ts`: captura metadados de uma URL pública já conhecida. Não descobre negócios sozinha.
+- `src/pages/LeadsDashboard.tsx`: painel legado com operações manuais e persistência em `localStorage`; ainda não é o repositório operacional compartilhado.
+- `src/pages/SharedSitePreview.tsx`: prévia por payload no URL; ainda não é um projeto público persistido no servidor.
+- `supabase/migrations/20261020180000_prospecting_automation_foundation.sql`: cria tabelas para campanhas, tarefas duráveis, eventos, mensagens e versões de projetos, além de campos de normalização e deduplicação.
+- `supabase/migrations/20261020180100_prospecting_worker_rpc.sql`: adiciona reivindicação atômica de tarefas com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
+- `src/lib/prospecting.ts`: funções determinísticas para normalização, chave de deduplicação, qualificação explicável e bloqueio de WhatsApp sem evidência de opt-in.
+- `tests/prospecting_automation.test.ts`: testes para as funções de domínio da prospecção, incluídos no comando `npm test`.
 
-### Site project / proposta
-- id, leadId: identidade e vínculo obrigatório com o lead.
-- status: not_started | preparing | ready_for_review | approved_to_share | shared | revision_requested | accepted | declined | failed.
-- initialTemplateId, initialTemplateVersion: modelo e versão usados para a primeira versão.
-- generatedContent: conteúdo derivado dos dados revisados, separado do design.
-- previewUrl ou referência local da prévia: opcional; só preencher quando a prévia realmente existir.
-- createdAt, updatedAt, sharedAt: datas relevantes.
+A existência desses arquivos não comprova que as migrations estejam aplicadas no Supabase, que secrets estejam configurados ou que haja um fornecedor de descoberta/WhatsApp conectado. Essas condições permanecem gates explícitos de prontidão.
 
-### Template version
-- id, templateId, version, name, description, preview, configuration, status.
-- Um projeto registra a versão exata usada; atualizar um modelo não modifica propostas já preparadas.
+## Modelo de domínio
 
-### Lead activity
-- id, leadId, type, summary, createdAt, createdBy.
-- Tipos previstos: captura, correção, qualificação, geração iniciada/concluída/falhou, proposta preparada/enviada manualmente, resposta recebida, pedido de alteração de modelo, aceite/recusa e conversão.
+### Campanha
 
-## Regras de produto
+Cada campanha guarda segmento, região, país, fonte/provedor configurado, regras de qualificação, agenda, limite de descoberta e estado operacional. Uma campanha sem fonte autorizada e credenciais válidas deve ficar bloqueada com motivo explícito; não deve recorrer silenciosamente a cadastro manual.
 
-1. O sistema prepara a primeira versão do site usando o modelo inicial neutro; não exige que o lead escolha um modelo antes de ver sua proposta.
-2. Depois de receber/visualizar a primeira versão, o lead poderá selecionar ou solicitar um modelo alternativo entre as opções habilitadas.
-3. A seleção é vinculada ao projeto daquele lead; não existe seleção pública/global de estabelecimentos.
-4. A seleção de modelo alternativo gera uma nova versão de proposta, mantendo a versão anterior e seu histórico.
-5. Dados capturados, dados verificados e hipóteses devem ser visualmente diferenciados.
-6. Captura manual ou importação só pode ser marcada como concluída quando os dados realmente foram registrados. Não simular raspagem automática.
-7. Preparar, aprovar, enviar e publicar são estados diferentes. Envio e publicação exigem ação explícita e não ocorrem automaticamente.
-8. O dashboard pode usar um repositório local/mock nesta fase, mas deve exibir um indicador de modo de demonstração/local e não prometer sincronização entre usuários.
-9. Nenhum dado de exemplo pode ser apresentado como lead real.
-10. O Supabase já existente será conectado em fase posterior; esta especificação não autoriza criar outro projeto, conectar credenciais ou aplicar migrations agora.
+### Prospect
 
-## Dashboard mínimo
+O registro preserva os dados originais, fontes públicas, data de captura, evidências, dados normalizados, chave persistente de deduplicação e pontuação acompanhada de razões. Ausência de informação não pode ser preenchida com fatos inventados. A pontuação de oportunidade não equivale a autorização para contato.
 
-- Resumo de pipeline com contagens por status.
-- Lista de leads com pesquisa e filtros por status, categoria, origem e prioridade.
-- Detalhe do lead com fontes, campos revisados, notas e histórico.
-- Ação de qualificar/desqualificar com motivo.
-- Ação para preparar a primeira versão de site a partir dos dados aprovados.
-- Prévia e status de geração do projeto.
-- Histórico manual de contato/resposta sem envio automático.
-- Catálogo interno de modelos e ação para vincular uma alternativa ao projeto depois da primeira versão.
-- Estado vazio útil e exemplos identificados como demonstração.
+### Fila e recuperação
 
-## Captura automatizada e prévia compartilhável
+As tarefas possuem chave de idempotência, estado, agenda de execução, tentativas, lock, erro e resultado. Workers devem reivindicar tarefas atomicamente, repetir apenas falhas transitórias e encaminhar falhas persistentes para estado terminal. Não registrar sucesso sem evidência da etapa executada.
 
-### Captura de site público
+### Eventos e mensagens
 
-- O dashboard envia a URL para `POST /api/capture`, implementado em `functions/api/capture.ts` como Cloudflare Pages Function.
-- A função faz a requisição no servidor, segue no máximo três redirecionamentos e revalida cada destino; bloqueia esquemas diferentes de HTTP(S), credenciais embutidas, hostnames locais e faixas comuns de IP privado/reservado.
-- O HTML tem limite de 1 MB e timeout de 8 segundos. A extração prioriza JSON-LD e metadados HTML (nome, categoria, descrição, telefone, e-mail, endereço e imagem).
-- O resultado mantém a URL de origem, URL final, horário e indicadores de quais tipos de campo foram encontrados. A captura coloca leads existentes em revisão e nunca os marca como verificados automaticamente.
-- Sites que dependem de JavaScript, bloqueiam robôs, exigem login ou não expõem metadados podem retornar dados incompletos; nesses casos a revisão/correção manual continua necessária.
-- O endpoint é para páginas públicas, não para contornar autenticação, paywalls, CAPTCHA ou controles de acesso. Antes de ampliar a operação, configurar rate limiting/observabilidade na borda e validar a política de uso das fontes.
+Eventos do funil são rastreáveis e idempotentes. Mensagens distinguem fila, tentativa, envio confirmado, entrega/leitura quando o provedor informar, falha, resposta e opt-out. Copiar um link ou enfileirar uma mensagem não equivale a envio.
 
-### Link compartilhável da prévia
+### Demonstração e versões
 
-- `src/pages/SharedSitePreview.tsx` renderiza uma página pública independente do painel administrativo.
-- O link usa o parâmetro `site-preview` com payload JSON em Base64 URL-safe. A pessoa que recebe o link não precisa de conta nem acesso ao dashboard, e a prévia abre em outro navegador/dispositivo.
-- O payload inclui somente os campos usados na proposta visual, o modelo, a versão e a data. Como o conteúdo está embutido no URL, o link é copiável e autossuficiente, mas não é um registro persistente no servidor e pode ser encaminhado por terceiros.
-- A prévia não é um site publicado, não cria domínio próprio, não atualiza automaticamente quando o lead muda e não garante cartões Open Graph/social, pois os metadados são renderizados no cliente.
-- A geração do link não envia a proposta automaticamente. O operador decide como e quando compartilhá-lo.
+Cada projeto deve ter um identificador persistente e estar vinculado ao prospect. Cada versão registra o modelo exato e o conteúdo correspondente. O link público precisa ser estável, funcionar sem sessão administrativa e expor somente os dados necessários à demonstração.
 
-## Fora do escopo atual
+## Elegibilidade para WhatsApp
 
-Integração Supabase, autenticação de produção, automação de e-mails/WhatsApp, pagamentos, publicação real, domínios customizados e sincronização multiusuário.
+- Telefone público não significa consentimento para receber marketing pelo WhatsApp.
+- O envio automático só pode ocorrer após validação da política do provedor, da base legal aplicável e da elegibilidade do destinatário.
+- O estado de opt-out bloqueia novas abordagens.
+- Cada tentativa e transição deve ser registrada com a evidência fornecida pelo provedor.
+- Sem credenciais ou configuração válida, a etapa fica bloqueada; não há fallback obrigatório para envio manual nem simulação de sucesso.
+
+## Critérios de aceite
+
+1. A campanha inicia descoberta sem cadastro individual de cada estabelecimento.
+2. A fonte, data e evidência são preservadas.
+3. Duplicatas entre campanhas e execuções concorrentes são impedidas pelo banco.
+4. Qualificação é automática, determinística e explicável, sem transformar score em consentimento.
+5. O projeto e suas versões são persistidos e acessíveis por URL pública estável.
+6. A landing page comercial permite comparar e selecionar modelos, com persistência da escolha.
+7. O pipeline opera sem navegador aberto e recupera falhas com idempotência.
+8. O envio de WhatsApp depende de integração real e elegibilidade comprovada.
+9. Build, lint, testes, RLS e fluxo E2E são executados e suas evidências registradas.
+10. Nenhuma migration é considerada aplicada até validar o banco alvo e as políticas efetivas.
+
+## Fora do escopo desta etapa
+
+Cadastro final de cliente, checkout, pagamento, ativação da assinatura, editor privado completo e publicação definitiva do site pertencem às fases posteriores. O código existente dessas partes deve ser preservado, sem desviar o foco da prospecção e da demonstração.
