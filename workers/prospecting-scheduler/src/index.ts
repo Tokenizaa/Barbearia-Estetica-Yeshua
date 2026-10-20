@@ -650,7 +650,7 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     });
     return "blocked";
   }
-  const project = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
+  const project = await db(env, `site_projects?id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
   if (!project.ok) throw new Error(`publish_project_read_http_${project.status}`);
   if (!(await project.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
@@ -660,7 +660,7 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     });
     return "blocked";
   }
-  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
+  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
   if (!versionsResponse.ok) throw new Error(`publish_versions_read_http_${versionsResponse.status}`);
   if (!(await versionsResponse.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
@@ -683,7 +683,7 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     method: "POST",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({
-      site_project_id: resolvedProjectId,
+      site_project_id: siteProjectId,
       token_hash: tokenHash,
       expires_at: expiresAt,
     }),
