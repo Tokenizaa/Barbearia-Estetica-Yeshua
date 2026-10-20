@@ -75,7 +75,7 @@ begin
   if v_columns is null then raise exception 'site_projects_schema_not_compatible'; end if;
 
   execute format(
-    'insert into public.site_projects (%1$s) select %1$s from jsonb_populate_record(null::public.site_projects, $1) on conflict (prospect_id) where prospect_id is not null do nothing returning id',
+    'insert into public.site_projects (%1$s) select %1$s from jsonb_populate_record(null::public.site_projects, $1) returning id',
     v_columns
   ) into v_project_id using v_data;
 
