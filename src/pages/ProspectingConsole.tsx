@@ -13,11 +13,13 @@ type Candidate = {
   status: string; source_url: string | null; created_at: string;
 };
 type Event = { id: number; event_type: string; source_provider: string | null; occurred_at: string; evidence: Record<string, unknown> };
+type Metrics = Record<string, number>;
 
 export function ProspectingConsole() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -37,6 +39,15 @@ export function ProspectingConsole() {
     else setCampaigns((campaignResult.data ?? []) as Campaign[]);
     if (!candidateResult.error) setCandidates((candidateResult.data ?? []) as Candidate[]);
     if (!eventResult.error) setEvents((eventResult.data ?? []) as Event[]);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData.session?.access_token;
+    if (accessToken) {
+      try {
+        const response = await fetch("/api/prospecting/overview", { headers: { authorization: `Bearer ${accessToken}` } });
+        const body = await response.json();
+        if (response.ok && body.status === "ok") setMetrics(body.counts as Metrics);
+      } catch { /* Keep the administrative overview available even if metrics endpoint is temporarily unavailable. */ }
+    }
     setBusy(false);
   }, []);
 
@@ -111,10 +122,13 @@ export function ProspectingConsole() {
       <div className="grid grid-cols-2 gap-3"><label className="text-xs text-neutral-400">País<select value={form.countryCode} onChange={(e) => setForm({ ...form, countryCode: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm"><option value="BR">Brasil</option><option value="PT">Portugal</option><option value="US">Estados Unidos</option></select></label><label className="text-xs text-neutral-400">Limite por execução<input type="number" min="1" max="10000" value={form.dailyLimit} onChange={(e) => setForm({ ...form, dailyLimit: e.target.value })} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm" /></label></div>
       <div className="flex items-center justify-end gap-2 sm:col-span-2"><button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm">Cancelar</button><button disabled={busy} className="rounded-lg bg-amber-400 px-4 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50">{busy ? "Salvando..." : "Criar pausada"}</button></div>
     </form>}
-    <div className="grid gap-4 sm:grid-cols-3">
-      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Campanhas</p><p className="mt-2 text-2xl font-semibold">{campaigns.length}</p></div>
-      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Candidatos</p><p className="mt-2 text-2xl font-semibold">{candidates.length}</p></div>
-      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Eventos recentes</p><p className="mt-2 text-2xl font-semibold">{events.length}</p></div>
+    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Campanhas ativas</p><p className="mt-2 text-2xl font-semibold">{metrics?.activeCampaigns ?? campaigns.filter((item) => item.status === "active").length}</p></div>
+      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Candidatos persistidos</p><p className="mt-2 text-2xl font-semibold">{metrics?.candidates ?? candidates.length}</p></div>
+      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Tarefas pendentes</p><p className="mt-2 text-2xl font-semibold">{metrics?.pendingTasks ?? "—"}</p></div>
+      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Tarefas bloqueadas</p><p className="mt-2 text-2xl font-semibold">{metrics?.blockedTasks ?? "—"}</p></div>
+      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Fila de falhas definitivas</p><p className="mt-2 text-2xl font-semibold">{metrics?.deadLetterTasks ?? "—"}</p></div>
+      <div className="rounded-xl border border-neutral-800 p-4"><p className="text-xs text-neutral-500">Mensagens confirmadas</p><p className="mt-2 text-2xl font-semibold">{(metrics?.sentMessages ?? 0) + (metrics?.deliveredMessages ?? 0)}</p></div>
     </div>
     <div className="overflow-hidden rounded-2xl border border-neutral-800">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3"><Activity size={17} /><h3 className="font-medium">Campanhas</h3></div>
