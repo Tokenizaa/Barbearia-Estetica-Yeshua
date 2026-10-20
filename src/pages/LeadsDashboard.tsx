@@ -241,7 +241,7 @@ export const LeadsDashboard: React.FC = () => {
                 const lines = raw.split(/\\r?\\n/).filter((line) => line.trim());
                 if (lines.length < 2) { setImportMessage('CSV sem linhas de dados.'); return; }
                 const delimiter = (lines[0].match(/;/g) ?? []).length > (lines[0].match(/,/g) ?? []).length ? ';' : ',';
-                const headers = parseCsvRow(lines[0], delimiter).map((header) => header.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[ _-]/g, ''));
+                const headers = parseCsvRow(lines[0], delimiter).map((header) => header.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[ _-]/g, ''));
                 const getValue = (row: string[], ...names: string[]) => {
                   const index = headers.findIndex((header) => names.includes(header));
                   return index >= 0 ? (row[index] ?? '').trim() : '';
