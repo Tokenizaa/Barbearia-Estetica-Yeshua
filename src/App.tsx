@@ -16,6 +16,7 @@ import { AdminPage } from './pages/AdminPage';
 import { SuperAdminPage } from './pages/SuperAdminPage';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
 import { PlatformAccessPage } from './pages/PlatformAccessPage';
+import { PlatformAdminDashboard } from './pages/PlatformAdminDashboard';
 import { AlertTriangle, Building2, Check } from 'lucide-react';
 
 export default function App() {
@@ -29,6 +30,10 @@ export default function App() {
     setCurrentPage('agendamento');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  if (window.location.pathname === '/plataforma/admin') {
+    return <PlatformAdminDashboard />;
+  }
 
   if (window.location.pathname === '/plataforma/cadastro' || window.location.pathname === '/plataforma/login') {
     return <PlatformAccessPage />;
