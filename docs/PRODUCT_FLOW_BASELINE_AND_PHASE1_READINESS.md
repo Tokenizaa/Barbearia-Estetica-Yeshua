@@ -83,6 +83,18 @@ Não liberar contratação real até configurar preços e planos aprovados, conf
 
 Inclui editor privado e persistente, isolamento multi-tenant, gestão de conteúdo/serviços/imagens, revisão e publicação de sites, gestão completa de estabelecimentos e modelos, monitoramento comercial/financeiro, auditoria e métricas do funil. A autorização precisa ser aplicada no servidor e no banco (RLS/políticas); ocultar botões no frontend não é controle de segurança.
 
+## Implementação iniciada — 2026-10-20
+
+As seguintes entregas foram registradas nesta branch durante o início da execução:
+
+- `supabase/migrations/20261020180000_prospecting_automation_foundation.sql`: modelo persistente de campanhas, fila, eventos, mensagens e versões de projeto; campos de normalização, qualificação e deduplicação.
+- `supabase/migrations/20261020180100_prospecting_worker_rpc.sql`: reivindicação atômica da fila com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
+- `src/lib/prospecting.ts`: normalização determinística, chave SHA-256 de deduplicação, score explicável e gate de WhatsApp que exige elegibilidade, opt-in comprovado e ausência de opt-out.
+- `tests/prospecting_automation.test.ts`: testes de domínio incluídos no comando `npm test`.
+- `docs/LEAD_CAPTURE_DASHBOARD.md` e `docs/DATA_MODEL.md`: atualizados para remover instruções obsoletas de prospecção manual.
+
+**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As migrations ainda não foram aplicadas ao projeto Supabase; o painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. Build, lint e testes ainda precisam ser executados em ambiente com dependências disponíveis. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
+
 ## 3. Análise de prontidão da Fase 1
 
 **Conclusão: prontidão parcial; não está pronta para operar a Fase 1 de ponta a ponta nem cumprir o requisito de prospecção autônoma.** Existem blocos reutilizáveis, mas ainda falta integrar o ciclo que começa na descoberta de negócios e termina na landing page/abordagem comercial.
@@ -90,19 +102,19 @@ Inclui editor privado e persistente, isolamento multi-tenant, gestão de conteú
 | Capacidade | Situação observada na branch | Avaliação |
 |---|---|---|
 | Painel de leads | `src/pages/LeadsDashboard.tsx` oferece cadastro manual, pesquisa/filtro, importação CSV, edição e histórico | Parcialmente pronto |
-| Persistência de leads | O dashboard usa `localStorage` (`prospecting_leads_v1`) | Não pronto para operação compartilhada/produção |
+| Persistência de leads | O dashboard ainda usa `localStorage`; migration com estruturas persistentes foi adicionada, mas não aplicada nem integrada à UI | Bloqueador |
 | Captura de dados | `POST /api/capture` em `functions/api/capture.ts` extrai metadados/JSON-LD de uma URL pública fornecida | Bloco inicial existente; não é descoberta automática de negócios |
-| Descoberta automatizada | Não foi identificada integração implementada para pesquisar listagens e capturar resultados em escala | Bloqueador crítico da automação |
-| Deduplicação | Importação CSV contém deduplicação limitada ao conjunto local; não há garantia de deduplicação global persistente | Parcial |
-| Qualificação | Há estados e revisão manual; não há motor operacional completo de pontuação/evidências conectado à captura | Parcial; deve avançar sem aprovação humana obrigatória |
+| Descoberta automatizada | Ainda não há provedor de descoberta nem worker/agenda operacional; o esquema de campanhas está preparado no Git | Bloqueador crítico da automação |
+| Deduplicação | Função determinística e índice único parcial foram adicionados ao código/migration, mas ainda não estão integrados ao pipeline nem aplicados ao banco | Parcial; não validada |
+| Qualificação | Score determinístico explicável foi adicionado, mas ainda não está conectado à captura e ao pipeline | Parcial; não validada |
 | Geração do site | `prepareSite` monta uma primeira versão textual; há modelos hardcoded (`modelo-inicial`, `minimal`, `editorial`, `bold`) na interface | Protótipo, não gerador completo a partir de catálogo persistente |
 | Prévia pública | `SharedSitePreview.tsx` mostra um snapshot por parâmetro `site-preview` codificado no URL | Parcial; não é registro server-side persistente e o link pode ser encaminhado |
 | Landing page comercial | A prévia compartilhável existe, mas não foi identificada uma landing page completa que explique a oferta, compare modelos e conduza à contratação | Bloqueador |
 | Escolha de modelos pelo lead | O dashboard registra troca de modelo internamente; não foi identificada seleção pública persistente na experiência do lead | Bloqueador |
-| Envio de WhatsApp | O painel copia o link da prévia; não foi identificada integração de envio de mensagem ao salão | Bloqueador para automação de contato |
+| Envio de WhatsApp | Existe gate de elegibilidade/opt-in no código de domínio; não há provedor de envio real conectado | Bloqueador para automação de contato |
 | Histórico do funil | Atividades e estados existem no navegador | Parcial; falta persistência compartilhada e eventos de entrega/visualização |
 | Segurança da captura | A função aplica validações de URL, limites e timeout; a própria documentação exige rate limiting/observabilidade e validação operacional | Precisa endurecimento e testes antes de escala |
-| Validação automatizada | Existe teste `tests/white_label_validation.test.ts`, mas não foi executado nesta análise | Não validado |
+| Validação automatizada | A suíte `tests/prospecting_automation.test.ts` foi adicionada ao comando `npm test`, mas nenhuma suíte foi executada neste ambiente | Não validado |
 | Build e fluxo real | Não foram executados build, lint, deploy de preview nem teste ponta a ponta nesta análise | Não validado |
 
 ### Bloqueadores prioritários
