@@ -90,6 +90,8 @@ export async function onRequestGet({ request, env }: Context) {
       ['prospecting_tasks', 'fila de tarefas'],
       ['prospect_events', 'eventos do funil'],
       ['prospect_outbound_messages', 'mensagens de saída'],
+      ['site_projects', 'projetos de site'],
+      ['site_template_versions', 'versões publicadas de modelos'],
       ['site_project_versions', 'versões das demonstrações'],
       ['prospecting_candidates', 'candidatos descobertos'],
       ['site_demo_public_links', 'links públicos das demonstrações'],
@@ -107,7 +109,7 @@ export async function onRequestGet({ request, env }: Context) {
       });
     }
   } else {
-    for (const table of ['prospecting_campaigns', 'prospecting_tasks', 'prospect_events', 'prospect_outbound_messages', 'site_project_versions']) {
+    for (const table of ['prospecting_campaigns', 'prospecting_tasks', 'prospect_events', 'prospect_outbound_messages', 'site_projects', 'site_template_versions', 'site_project_versions']) {
       checks.push({ id: `database_${table}`, ready: false, detail: 'Não foi possível validar o esquema sem credencial server-side.' });
     }
   }
