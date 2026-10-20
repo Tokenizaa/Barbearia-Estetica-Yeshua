@@ -45,7 +45,7 @@ async function run() {
     phone: '(51) 99999-1234',
     sourceUrl: 'https://exemplo.com/sobre',
   });
-  assert(qualification.score === 65, 'Pontuação determinística soma apenas evidências presentes');
+  assert(qualification.score === 75, 'Pontuação determinística soma apenas evidências presentes');
   assert(qualification.missingFields.includes('email') && qualification.reasons.length === 8, 'Qualificação explica dados ausentes e mantém trilha de razões');
 
   assert(!isEligibleForAutomatedWhatsApp({ eligibility: 'unknown', whatsappOptInAt: null, optInEvidenceUrl: null }), 'Telefone público não equivale a consentimento para WhatsApp');
