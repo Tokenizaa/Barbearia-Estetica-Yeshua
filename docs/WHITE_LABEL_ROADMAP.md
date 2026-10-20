@@ -76,7 +76,7 @@ O produto não é marketplace, diretório público nem ferramenta para o visitan
 ### Fase 3 — Integração e segurança
 - Conectar ao projeto Supabase existente somente quando autorizado e quando a fase de produto estiver pronta.
 - Aplicar e testar migrations, RLS, autenticação e isolamento; substituir o repositório local sem perder dados revisados.
-- Implementar captura automatizada server-side com fontes permitidas, observabilidade e limites.
+- Captura server-side inicial implementada em `functions/api/capture.ts` para metadados de sites públicos; adicionar rate limiting/observabilidade e ampliar validação antes de operação em escala.
 - Configurar envio de propostas e publicação apenas após decisões explícitas, com proteção de segredos e auditoria.
 
 ## Critérios de aceite da Fase 1
@@ -103,7 +103,16 @@ Implementação inicial da Fase 1 adicionada à branch:
 - Nome global padrão da plataforma neutralizado, preservando Yeshua como estabelecimento existente.
 
 Limitações ainda abertas:
-- A prévia é uma demonstração visual local, não um site hospedado nem uma URL compartilhável.
-- A captura automatizada/raspagem não está implementada; nesta etapa há cadastro manual e importação CSV.
+- A prévia agora pode ser aberta por um link autossuficiente e compartilhável, sem login; não é hospedagem/publicação real, não tem persistência server-side nem metadados sociais gerados no servidor.
+- A captura automatizada inicial usa uma Cloudflare Pages Function para HTML/JSON-LD público; páginas dinâmicas ou protegidas podem exigir revisão manual.
 - Não há envio de proposta, e-mail ou WhatsApp, publicação, autenticação de produção ou sincronização multiusuário.
 - Build e testes automatizados ainda precisam ser executados num ambiente com dependências instaladas. Não há execução de GitHub Actions registrada para os commits desta fase.
+
+
+## Atualização de implementação — captura e prévia (2026-10-19)
+
+- Adicionada a Cloudflare Pages Function `POST /api/capture`: extração server-side de metadados e JSON-LD, limite de resposta, timeout, validação de URL e controle básico de redirecionamentos.
+- O dashboard permite capturar dados ao cadastrar um lead ou atualizar dados de um lead existente. Campos capturados ficam em revisão; não são automaticamente considerados verdadeiros.
+- Adicionada a página pública `src/pages/SharedSitePreview.tsx` e o link `?site-preview=...`, que transporta um snapshot sanitizado da proposta e pode ser aberto em outro navegador/dispositivo.
+- A geração do link não envia mensagens nem publica o site. O payload está no URL, não em banco compartilhado; a versão é um snapshot e não sincroniza alterações futuras.
+- Ainda é necessário executar build/lint/testes e implantar a branch no Cloudflare Pages para validar a função HTTP em ambiente real. Nenhum deploy ou teste de ponta a ponta foi realizado por esta alteração.
