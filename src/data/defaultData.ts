@@ -13,46 +13,46 @@ export const INITIAL_PLATFORM_CONFIG: PlatformConfig = {
   platformName: 'Plataforma de Sites Personalizados',
   masterPin: '9988',
   supportEmail: 'contato@tokenizaa.com',
-  supportWhatsapp: '+55 92 98618-7766',
+  supportWhatsapp: '',
 };
 
-// Primeiro e principal estabelecimento da plataforma: Barbearia & Estética Yeshua
+// Estabelecimento inicial neutro para personalização pelo primeiro cliente
 export const INITIAL_ESTABLISHMENT_YESHUA: Establishment = {
   id: 'est-yeshua',
-  slug: 'yeshua',
-  name: 'Barbearia & Estética Yeshua',
-  tagline: 'Barbearia & Estética • Manaus',
+  slug: 'modelo-inicial',
+  name: 'Salão Modelo',
+  tagline: 'Modelo inicial • Personalize sua marca',
   status: 'active',
   isDefault: true,
 
   // Identidade Visual
-  logoUrl: '/logo.jpg',
-  coverUrl: '/images/yeshua_og_banner_1791913374687.jpg',
+  logoUrl: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=300&q=80',
+  coverUrl: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80',
   primaryColor: '#f59e0b', // Dourado Âmbar
   secondaryColor: '#d97706',
   theme: 'amber',
 
   // Contato e Localização
-  whatsapp: '+55 92 98618-7766',
-  whatsappClean: '5592986187766',
-  phone: '(92) 98618-7766',
-  address: 'Av. Constantino Nery, 50 — Centro',
-  cityState: 'Manaus — Amazonas',
-  googleMapsUrl: 'https://maps.google.com/?q=Av.+Constantino+Nery,+50+Centro+Manaus',
+  whatsapp: '',
+  whatsappClean: '',
+  phone: '',
+  address: '',
+  cityState: '',
+  googleMapsUrl: '',
 
   // Instagram e Redes
-  instagramHandle: '@barbearia_estetica_yeshua',
-  instagramUrl: 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D',
+  instagramHandle: '',
+  instagramUrl: '',
   instagramBio:
-    '💈 Barbearia & Estética em Manaus • Cortes Masculinos & Barba • Estética, Sobrancelhas, Cílios & Bem-Estar • Agendamentos pelo WhatsApp',
-  instagramFollowers: '4.8k',
-  instagramPostsCount: '348',
+    'Configure a descrição do seu estabelecimento, seus serviços e os canais de atendimento.',
+  instagramFollowers: '',
+  instagramPostsCount: '',
   showInstagramGallery: false, // Ocultado provisoriamente a pedido do usuário
 
   // Administração Local
   adminPin: '1234',
-  adminName: 'Gerência Yeshua',
-  adminEmail: 'admin@yeshua.com',
+  adminName: 'Administrador do estabelecimento',
+  adminEmail: '',
   openingHoursNote: 'Atendimento com horário marcado e por ordem de chegada no WhatsApp.',
   allowOnlineBooking: true,
   slotIntervalMinutes: 45,
@@ -61,12 +61,12 @@ export const INITIAL_ESTABLISHMENT_YESHUA: Establishment = {
   updatedAt: '2026-03-01T00:00:00.000Z',
 };
 
-// Segundo estabelecimento para validação imediata da plataforma White Label
+// Segundo estabelecimento fictício para demonstração da plataforma White Label
 export const INITIAL_ESTABLISHMENT_DEMO: Establishment = {
   id: 'est-imperio',
-  slug: 'imperio',
-  name: 'Império Club & Barbearia',
-  tagline: 'Estilo & Tradição Masculina • Ponta Negra',
+  slug: 'demonstracao',
+  name: 'Estabelecimento de Demonstração',
+  tagline: 'Exemplo de identidade • Personalizável',
   status: 'active',
   isDefault: false,
 
@@ -78,25 +78,25 @@ export const INITIAL_ESTABLISHMENT_DEMO: Establishment = {
   theme: 'emerald',
 
   // Contato e Localização
-  whatsapp: '+55 92 99988-1122',
-  whatsappClean: '5592999881122',
-  phone: '(92) 99988-1122',
-  address: 'Av. Coronel Teixeira, 1200 — Ponta Negra',
-  cityState: 'Manaus — Amazonas',
-  googleMapsUrl: 'https://maps.google.com/?q=Ponta+Negra+Manaus',
+  whatsapp: '',
+  whatsappClean: '',
+  phone: '',
+  address: '',
+  cityState: '',
+  googleMapsUrl: '',
 
   // Instagram e Redes
-  instagramHandle: '@imperiobarberclub',
-  instagramUrl: 'https://www.instagram.com/imperiobarberclub',
-  instagramBio: 'Cortes clássicos, toalha quente e bar executivo.',
-  instagramFollowers: '2.1k',
-  instagramPostsCount: '120',
+  instagramHandle: '',
+  instagramUrl: '',
+  instagramBio: '',
+  instagramFollowers: '',
+  instagramPostsCount: '',
   showInstagramGallery: false,
 
   // Administração Local
   adminPin: '4321',
-  adminName: 'Diretoria Império',
-  adminEmail: 'admin@imperio.com',
+  adminName: 'Administrador do estabelecimento',
+  adminEmail: '',
   openingHoursNote: 'Terça a Sábado das 09h às 21h.',
   allowOnlineBooking: true,
   slotIntervalMinutes: 45,
@@ -113,68 +113,8 @@ export const INITIAL_ESTABLISHMENTS: Establishment[] = [
 // Compatibilidade retroativa
 export const INITIAL_COMPANY_INFO: CompanyInfo = INITIAL_ESTABLISHMENT_YESHUA;
 
-// Canais e publicações oficiais da Barbearia & Estética Yeshua
-export const INITIAL_INSTAGRAM_EMBEDS: InstagramEmbedItem[] = [
-  {
-    id: 'ig-1',
-    establishmentId: 'est-yeshua',
-    url: 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D',
-    shortcode: 'perfil-oficial',
-    title: 'Canal Oficial @barbearia_estetica_yeshua',
-    caption:
-      'Acesse nosso perfil oficial no Instagram para conferir todas as publicações, fotos reais de cortes degradê, barba desenhada e procedimentos estéticos em Manaus! ✨💈\n\n#BarbeariaEsteticaYeshua #BarbeariaManaus #YeshuaOficial',
-    type: 'post',
-    previewImageUrl: '/logo.jpg',
-    likesCount: '1.2k',
-    commentsCount: '84',
-    date: '2026-03-01',
-    featured: true,
-  },
-  {
-    id: 'ig-2',
-    establishmentId: 'est-yeshua',
-    url: 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D',
-    shortcode: 'cortes-fade',
-    title: 'Cortes Degradê & Barbaterapia Navalhada',
-    caption:
-      'Degradê navalhado com alinhamento milimétrico, toalha quente e massagem facial relaxante. Conheça as transformações reais em nosso Instagram oficial! ✂️🔥\n\n#FadeNavalhado #Barbaterapia #CorteMasculino #ManausAM',
-    type: 'post',
-    previewImageUrl: '/og-image.jpg',
-    likesCount: '980',
-    commentsCount: '62',
-    date: '2026-03-02',
-    featured: true,
-  },
-  {
-    id: 'ig-3',
-    establishmentId: 'est-yeshua',
-    url: 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D',
-    shortcode: 'reels-transformacoes',
-    title: 'Reels: Transformações & Vídeos em Alta',
-    caption:
-      'Acompanhe nossos vídeos em formato Reel com bastidores, passo a passo de cortes e tratamentos de estética diretamente no feed do Instagram! 🚀📱\n\n#ReelsYeshua #TransformacaoVisual #BarbeiroManaus',
-    type: 'reel',
-    previewImageUrl: '/logo.jpg',
-    likesCount: '2.4k',
-    commentsCount: '143',
-    date: '2026-03-03',
-    featured: true,
-  },
-  {
-    id: 'ig-demo-1',
-    establishmentId: 'est-imperio',
-    url: 'https://www.instagram.com/imperiobarberclub',
-    shortcode: 'imperio-welcome',
-    title: 'Bem-vindo ao Império Barber Club',
-    caption: 'Espaço exclusivo com cerveja artesanal e corte executivo.',
-    type: 'post',
-    previewImageUrl: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=400&q=80',
-    likesCount: '340',
-    commentsCount: '22',
-    date: '2026-03-01',
-    featured: true,
-  },
-];
+// Exemplos de conteúdo de demonstração sem associação a negócios reais
+export const INITIAL_INSTAGRAM_EMBEDS: InstagramEmbedItem[] = [];
 
 // Agendamentos iniciais escopados por estabelecimento
 export const INITIAL_APPOINTMENTS: Appointment[] = [
@@ -222,7 +162,7 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
   },
 ];
 
-// Serviços base preparados com o catálogo Yeshua e catálogo Império
+// Serviços base preparados com o catálogo Salão Modelo e catálogo Império
 export const INITIAL_SERVICES: ServiceItem[] = [
   {
     id: 'srv-1',
@@ -320,7 +260,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
   {
     id: 'prod-1',
     establishmentId: 'est-yeshua',
-    name: 'Pomada Modeladora Yeshua Efeito Matte',
+    name: 'Pomada Modeladora — Demonstração',
     category: 'Barbearia',
     description: 'Fixação forte e acabamento natural sem brilho excessivo. Ideal para penteados diários.',
     price: 35.0,
@@ -375,8 +315,8 @@ export const INITIAL_MEDIA: MediaItem[] = [
     id: 'med-1',
     establishmentId: 'est-yeshua',
     type: 'image',
-    title: 'Corte Degradê Navalhado & Acabamento Yeshua',
-    url: '/images/yeshua_post_fade_1791913375461.jpg',
+    title: 'Exemplo de trabalho — corte e acabamento',
+    url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=900&q=80',
     category: 'Barbearia',
     dateAdded: '2026-03-01',
     featured: true,
@@ -386,7 +326,7 @@ export const INITIAL_MEDIA: MediaItem[] = [
     establishmentId: 'est-yeshua',
     type: 'image',
     title: 'Design de Barba & Barbaterapia com Toalha Quente',
-    url: '/images/yeshua_post_beard_1791913377137.jpg',
+    url: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=900&q=80',
     category: 'Barbearia',
     dateAdded: '2026-03-02',
     featured: true,
@@ -396,7 +336,7 @@ export const INITIAL_MEDIA: MediaItem[] = [
     establishmentId: 'est-yeshua',
     type: 'image',
     title: 'Estética Facial & Design de Sobrancelhas',
-    url: '/images/yeshua_post_facial_1791913377144.jpg',
+    url: 'https://images.unsplash.com/photo-1560750588-73207b1ef5b8?auto=format&fit=crop&w=900&q=80',
     category: 'Sobrancelhas',
     dateAdded: '2026-03-03',
     featured: true,
@@ -405,8 +345,8 @@ export const INITIAL_MEDIA: MediaItem[] = [
     id: 'med-4',
     establishmentId: 'est-yeshua',
     type: 'image',
-    title: 'Lounge & Espaço Barbearia & Estética Yeshua',
-    url: '/images/yeshua_og_banner_1791913374687.jpg',
+    title: 'Espaço do estabelecimento — imagem de demonstração',
+    url: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80',
     category: 'Ambiente',
     dateAdded: '2026-03-04',
     featured: true,
@@ -415,7 +355,7 @@ export const INITIAL_MEDIA: MediaItem[] = [
     id: 'med-5',
     establishmentId: 'est-yeshua',
     type: 'image',
-    title: 'Logo Oficial Barbearia & Estética Yeshua',
+    title: 'Logo do estabelecimento — substitua pela sua marca',
     url: '/logo.jpg',
     category: 'Ambiente',
     dateAdded: '2026-03-05',
@@ -437,7 +377,7 @@ export const INITIAL_MEDIA: MediaItem[] = [
     type: 'video',
     title: 'Transformação Visual e Finalização Barbearia',
     url: 'https://assets.mixkit.co/videos/preview/mixkit-barber-shaving-a-mans-beard-with-a-razor-41484-large.mp4',
-    thumbnailUrl: '/images/yeshua_post_beard_1791913377137.jpg',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=900&q=80',
     isReelVertical: true,
     category: 'Barbearia',
     dateAdded: '2026-03-07',
