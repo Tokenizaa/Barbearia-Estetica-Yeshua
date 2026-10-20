@@ -89,8 +89,8 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
     const newItem = store.addInstagramEmbed({
       url: parsed.cleanUrl,
       shortcode: parsed.shortcode,
-      title: newTitle.trim() || (parsed.type === 'reel' ? 'Reel Oficial @barbearia_estetica_yeshua' : 'Publicação Oficial @barbearia_estetica_yeshua'),
-      caption: newCaption.trim() || 'Publicação oficial da Barbearia & Estética Yeshua em Manaus.',
+      title: newTitle.trim() || (parsed.type === 'reel' ? 'Reel do estabelecimento' : 'Publicação do estabelecimento'),
+      caption: newCaption.trim() || 'Publicação do estabelecimento.',
       type: parsed.type,
       previewImageUrl: '/logo.jpg',
       likesCount: '500+',
@@ -165,13 +165,13 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                     seguidores
                   </span>
                   <span>•</span>
-                  <span className="text-neutral-400">Manaus, AM</span>
+                  <span className="text-neutral-400">Localidade não configurada</span>
                 </div>
 
                 {/* Bio do Instagram */}
                 <p className="text-xs text-neutral-400 max-w-xl leading-relaxed">
                   {company.instagramBio ||
-                    '💈 Barbearia & Estética em Manaus • Cortes Masculinos & Barba • Cílios, Sobrancelhas, Tranças & Unhas • Atendimento de Excelência'}
+                    'Configure a descrição, os serviços e os canais de atendimento do seu estabelecimento.'}
                 </p>
               </div>
             </div>
@@ -233,7 +233,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                       Incorporar Publicação Real do Instagram (Iframe Oficial)
                     </h4>
                     <p className="text-xs text-neutral-400">
-                      Cole a URL de qualquer post ou reel do <strong className="text-amber-300">@barbearia_estetica_yeshua</strong> para renderizar o iframe oficial com reprodução de vídeo, curtidas e comentários originais.
+                      Cole a URL de qualquer post ou reel do <strong className="text-amber-300">Instagram do estabelecimento</strong> para renderizar o iframe oficial com reprodução de vídeo, curtidas e comentários originais.
                     </p>
                   </div>
                 </div>
@@ -529,7 +529,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                     Embedar Publicação Real
                   </h4>
                   <p className="text-xs text-neutral-400 max-w-xs">
-                    Cole o link de um post ou reel de <strong className="text-amber-300">@barbearia_estetica_yeshua</strong> para exibir no site com iframe oficial.
+                    Cole o link de um post ou reel de <strong className="text-amber-300">Instagram do estabelecimento</strong> para exibir no site com iframe oficial.
                   </p>
                 </div>
                 <span className="text-xs font-semibold text-amber-400 underline">
@@ -557,7 +557,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                   Acompanhe todas as publicações em tempo real
                 </h4>
                 <p className="text-xs text-neutral-400">
-                  Siga <strong className="text-amber-300">@barbearia_estetica_yeshua</strong> para ver cortes diários, agenda, destaques e promoções exclusivas!
+                  Siga <strong className="text-amber-300">Instagram do estabelecimento</strong> para ver cortes diários, agenda, destaques e promoções exclusivas!
                 </p>
               </div>
             </div>
@@ -627,7 +627,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                       <h4 className="text-sm font-bold text-neutral-100">
                         {company.instagramHandle}
                       </h4>
-                      <p className="text-[11px] text-neutral-400">Manaus — Centro</p>
+                      <p className="text-[11px] text-neutral-400">Endereço não configurado</p>
                     </div>
                   </div>
 
@@ -646,7 +646,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                   </h3>
                   <p className="text-xs text-neutral-300 leading-relaxed whitespace-pre-line">
                     {selectedPost.caption ||
-                      'Confira esta publicação oficial da Barbearia & Estética Yeshua.'}
+                      'Confira esta publicação do estabelecimento.'}
                   </p>
                 </div>
 
@@ -679,7 +679,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
               <div className="space-y-2.5 pt-4 border-t border-neutral-800">
                 <a
                   href={store.buildWhatsAppUrl(
-                    `Olá! Vi a publicação "${selectedPost.title}" no Instagram da Barbearia & Estética Yeshua e quero agendar um horário!`
+                    `Olá! Vi a publicação "${selectedPost.title}" no Instagram do estabelecimento e quero agendar um horário!`
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
