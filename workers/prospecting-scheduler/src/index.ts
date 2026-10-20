@@ -23,6 +23,7 @@ interface ProspectingTask {
   payload: Record<string, unknown>;
   attempt_count: number;
   max_attempts: number;
+  result?: Record<string, unknown>;
 }
 
 type Prospect = Record<string, unknown>;
@@ -122,6 +123,16 @@ async function updateTask(env: Env, task: ProspectingTask, workerId: string, pat
   if (!response.ok) throw new Error(`task_update_http_${response.status}`);
   const rows = await response.json() as unknown[];
   if (!rows.length) throw new Error("task_lease_lost");
+}
+
+async function checkpointTaskResult(env: Env, task: ProspectingTask, workerId: string, result: Record<string, unknown>) {
+  const response = await db(env, `prospecting_tasks?id=eq.${task.id}&status=eq.processing&locked_by=eq.${encodeURIComponent(workerId)}&select=id`, {
+    method: "PATCH",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify({ result, updated_at: new Date().toISOString() }),
+  });
+  if (!response.ok) throw new Error(`task_checkpoint_http_${response.status}`);
+  if (!(await response.json() as unknown[]).length) throw new Error("task_lease_lost_before_checkpoint");
 }
 
 async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: string) {
@@ -710,26 +721,43 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     return "blocked";
   }
 
-  const random = new Uint8Array(32);
-  crypto.getRandomValues(random);
-  const token = Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("");
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-  const tokenHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const priorToken = typeof task.result?.publicToken === "string" && /^[a-f0-9]{64}$/.test(task.result.publicToken)
+    ? task.result.publicToken : "";
   const rawDays = Number(payload.expiresInDays ?? 14);
   const days = Number.isFinite(rawDays) ? Math.max(1, Math.min(30, Math.floor(rawDays))) : 14;
-  const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
-  const created = await db(env, "site_demo_public_links", {
+  const priorExpiry = typeof task.result?.expiresAt === "string" ? task.result.expiresAt : "";
+  const expiresAt = priorToken && priorExpiry && new Date(priorExpiry).getTime() > Date.now()
+    ? priorExpiry : new Date(Date.now() + days * 86400000).toISOString();
+  let token = priorToken;
+  if (!token) {
+    const random = new Uint8Array(32);
+    crypto.getRandomValues(random);
+    token = Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    await checkpointTaskResult(env, task, workerId, {
+      ...(task.result ?? {}), outcome: "publishing", siteProjectId, publicToken: token, expiresAt,
+    });
+  }
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const tokenHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const created = await db(env, "site_demo_public_links?on_conflict=publish_task_id", {
     method: "POST",
-    headers: { prefer: "return=representation" },
+    headers: { prefer: "resolution=ignore-duplicates,return=representation" },
     body: JSON.stringify({
       site_project_id: siteProjectId,
       token_hash: tokenHash,
       expires_at: expiresAt,
+      publish_task_id: task.id,
     }),
   });
   if (!created.ok) throw new Error(`publish_link_create_http_${created.status}`);
-  const rows = await created.json() as Array<{ id: string }>;
-  if (!rows.length) throw new Error("publish_link_create_no_rows");
+  let rows = await created.json() as Array<{ id: string }>;
+  if (!rows.length) {
+    const existing = await db(env, `site_demo_public_links?publish_task_id=eq.${task.id}&select=id,token_hash,expires_at&limit=1`);
+    if (!existing.ok) throw new Error(`publish_link_reconcile_http_${existing.status}`);
+    const existingRows = await existing.json() as Array<{ id: string; token_hash: string; expires_at: string }>;
+    if (!existingRows.length || existingRows[0].token_hash !== tokenHash) throw new Error("publish_link_idempotency_conflict");
+    rows = [{ id: existingRows[0].id }];
+  }
 
   if (task.prospect_id) {
     const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
@@ -947,7 +975,7 @@ async function processBatch(env: Env) {
           last_error_code: message.split("_")[0].slice(0, 100),
           last_error: message,
           completed_at: retry ? null : new Date().toISOString(),
-          result: { outcome: status, attempt: task.attempt_count },
+          result: { ...(task.result ?? {}), outcome: status, attempt: task.attempt_count },
         });
         if (retry) counts.retryable++; else counts.deadLetter++;
       } catch {
