@@ -57,3 +57,13 @@ As variáveis Vite e os secrets das Pages Functions têm escopos diferentes. Nã
 - O fluxo existente do Yeshua está temporariamente preservado durante a migração. Novos estabelecimentos precisam de assinatura ativa e não vencida.
 - **Limitação ainda aberta:** a listagem/gestão de agendamentos no painel administrativo ainda usa o store local. A escrita no banco já é server-side, mas a sincronização do painel, edição/cancelamento autenticados e a migração do catálogo de serviços para o banco ainda precisam ser concluídas antes de declarar a operação multi-tenant integralmente pronta.
 - Configure `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` nas variáveis do runtime Cloudflare Pages para a função de agendamento.
+
+
+## Primeiro administrador geral
+
+- A rota `/plataforma/cadastro` oferece a opção **Administrador geral**, separada do cadastro de um salão.
+- O primeiro administrador informa um código de ativação de uso único. O banco guarda somente o hash SHA-256 do código, com validade limitada; a ativação falha se já existir administrador, se o código estiver errado, expirado ou já utilizado.
+- O código não deve ser incluído no repositório, em logs, documentação pública ou metadados persistentes do usuário. O trigger remove o campo do cadastro depois de validá-lo.
+- A autorização administrativa é verificada pela existência do usuário em `public.platform_admins`, não por um campo editável de metadados enviado pelo navegador.
+- O código inicial foi provisionado diretamente no Supabase e compartilhado separadamente com o responsável. Ele expira em 14 dias após a migração e pode ser usado uma única vez.
+- A primeira conta deve ser criada pela opção **Administrador geral**. Cadastros comuns de salão continuam no fluxo **Cadastrar salão**.
