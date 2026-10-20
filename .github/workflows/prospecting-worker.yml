@@ -1,0 +1,44 @@
+name: Prospecting worker validation
+
+on:
+  push:
+    branches:
+      - feat/salon-onboarding-venopag
+    paths:
+      - "workers/prospecting-scheduler/**"
+      - "tests/prospecting_worker.test.ts"
+      - "src/lib/prospecting.ts"
+      - "tests/prospecting_automation.test.ts"
+      - "package.json"
+      - "bun.lock"
+      - "tsconfig.json"
+      - ".github/workflows/prospecting-worker.yml"
+  pull_request:
+    branches:
+      - feat/salon-onboarding-venopag
+    paths:
+      - "workers/prospecting-scheduler/**"
+      - "tests/prospecting_worker.test.ts"
+      - "src/lib/prospecting.ts"
+      - "tests/prospecting_automation.test.ts"
+      - "package.json"
+      - "bun.lock"
+      - "tsconfig.json"
+      - ".github/workflows/prospecting-worker.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  worker-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - run: bun install --frozen-lockfile
+      - run: bun run test
+      - run: bun run lint
+      - run: bun run build
