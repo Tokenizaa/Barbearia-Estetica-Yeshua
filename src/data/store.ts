@@ -85,16 +85,25 @@ function saveToStorage<T>(key: string, data: T) {
 // -------------------------------------------------------------
 
 function normalizeLegacyTemplate(establishment: Establishment): Establishment {
-  if (establishment.id !== 'est-yeshua' || establishment.name !== 'Barbearia & Estética Yeshua') {
-    return establishment;
+  if (establishment.id === 'est-yeshua' && establishment.name === 'Barbearia & Estética Yeshua') {
+    return {
+      ...INITIAL_ESTABLISHMENT_YESHUA,
+      id: establishment.id,
+      isDefault: true,
+      createdAt: establishment.createdAt,
+      updatedAt: establishment.updatedAt,
+    };
   }
-  return {
-    ...INITIAL_ESTABLISHMENT_YESHUA,
-    id: establishment.id,
-    isDefault: true,
-    createdAt: establishment.createdAt,
-    updatedAt: establishment.updatedAt,
-  };
+  if (establishment.id === 'est-imperio' && establishment.name === 'Império Club & Barbearia') {
+    return {
+      ...INITIAL_ESTABLISHMENT_DEMO,
+      id: establishment.id,
+      isDefault: false,
+      createdAt: establishment.createdAt,
+      updatedAt: establishment.updatedAt,
+    };
+  }
+  return establishment;
 }
 
 // 1. Establishments Repository
@@ -103,18 +112,7 @@ let allEstablishments: Establishment[] = (() => {
     STORAGE_KEYS.ESTABLISHMENTS,
     []
   );
-  const loaded = storedEstablishments.map((establishment) => {
-    if (establishment.id !== 'est-yeshua' || establishment.name !== 'Barbearia & Estética Yeshua') {
-      return establishment;
-    }
-    return {
-      ...INITIAL_ESTABLISHMENT_YESHUA,
-      id: establishment.id,
-      isDefault: true,
-      createdAt: establishment.createdAt,
-      updatedAt: establishment.updatedAt,
-    };
-  });
+  const loaded = storedEstablishments.map(normalizeLegacyTemplate);
   if (loaded.some((establishment, index) => establishment !== storedEstablishments[index])) {
     saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, loaded);
   }
@@ -140,7 +138,7 @@ let allEstablishments: Establishment[] = (() => {
     return initialList;
   }
 
-  // Ensure default Yeshua tenant is always present and active
+  // Ensure the neutral default tenant is always present and active
   const hasYeshua = loaded.some((e) => e.id === 'est-yeshua' || e.slug === 'yeshua');
   if (!hasYeshua) {
     const updated = [INITIAL_ESTABLISHMENT_YESHUA, ...loaded];
