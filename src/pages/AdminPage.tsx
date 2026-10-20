@@ -1055,7 +1055,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
                       // Link para responder e confirmar com o cliente no WhatsApp
                       const clientConfirmationWa = `https://wa.me/${clientPhoneFormatted}?text=${encodeURIComponent(
-                        `Olá ${appt.clientName}! Aqui é da Barbearia & Estética Yeshua.\n\nInformamos que o seu agendamento de *${appt.serviceName}* no dia *${formattedDate}* às *${appt.time}* está ✅ CONFIRMADO!\n\nEndereço: ${company.address} - Centro, Manaus.\nEstamos aguardando você!`
+                        `Olá ${appt.clientName}! Aqui é do estabelecimento.\n\nInformamos que o seu agendamento de *${appt.serviceName}* no dia *${formattedDate}* às *${appt.time}* está ✅ CONFIRMADO!\n\nEndereço: ${company.address}, ${company.cityState}.\nEstamos aguardando você!`
                       )}`;
 
                       const isPending = appt.status === 'pendente';
@@ -1397,7 +1397,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                 </h3>
               </div>
               <p className="text-xs text-neutral-400 mt-1">
-                Adicione posts, reels e vídeos oficiais do Instagram da Yeshua para exibir com player e preview no site.
+                Adicione publicações do Instagram do estabelecimento para exibir no site.
               </p>
             </div>
 
@@ -1432,7 +1432,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   </span>
                 </h4>
                 <p className="text-xs text-neutral-400 line-clamp-1">
-                  {company.instagramBio || 'Barbearia e estética em Manaus'}
+                  {company.instagramBio || 'Descreva o seu estabelecimento e os serviços oferecidos.'}
                 </p>
               </div>
             </div>
@@ -1626,7 +1626,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
         <div className="space-y-6 max-w-3xl">
           <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 sm:p-8 space-y-6">
             <h3 className="text-lg font-bold font-display text-neutral-100">
-              Dados da Barbearia & Estética Yeshua
+              Dados do Estabelecimento
             </h3>
 
             <div className="space-y-4">
@@ -1698,7 +1698,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       type="text"
                       value={company.instagramBio || ''}
                       onChange={(e) => store.updateCompany({ instagramBio: e.target.value })}
-                      placeholder="Ex: Barbearia & Estética em Manaus..."
+                      placeholder="Ex: Barbearia, salão de beleza ou espaço de estética..."
                       className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-sm text-neutral-100 focus:border-amber-400 focus:outline-none"
                     />
                   </div>
@@ -1713,7 +1713,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <div className="w-12 h-12 rounded-xl overflow-hidden bg-neutral-950 border border-amber-500/40 shrink-0">
                     <img
                       src={company.logoUrl || '/logo.jpg'}
-                      alt="Logo Yeshua"
+                      alt={company.name}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
@@ -1730,7 +1730,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
-                  Endereço Físico em Manaus
+                  Endereço do Estabelecimento
                 </label>
                 <input
                   type="text"
@@ -1783,7 +1783,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               </span>
               <button
                 onClick={() => {
-                  if (confirm('Deseja restaurar os dados originais padrão da Yeshua?')) {
+                  if (confirm('Deseja restaurar os dados de demonstração padrão?')) {
                     store.resetAllData();
                     showNotification('Dados restaurados com sucesso.');
                   }
@@ -2192,7 +2192,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ex: Pomada Modeladora Yeshua Matte"
+              placeholder="Ex: Pomada Modeladora — Demonstração"
               className="w-full px-3 py-2 rounded-lg bg-neutral-950 border border-neutral-700 text-neutral-100 text-sm focus:border-emerald-400 focus:outline-none"
             />
           </div>
