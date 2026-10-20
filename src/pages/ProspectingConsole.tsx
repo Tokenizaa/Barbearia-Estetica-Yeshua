@@ -22,6 +22,7 @@ export function ProspectingConsole() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [siteProjectId, setSiteProjectId] = useState("");
   const [form, setForm] = useState({ name: "", segment: "salão de beleza e barbearia", region: "", countryCode: "BR", dailyLimit: "100" });
 
   const refresh = useCallback(async () => {
@@ -125,6 +126,14 @@ export function ProspectingConsole() {
     <div className="overflow-hidden rounded-2xl border border-neutral-800">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3"><Users size={17} /><h3 className="font-medium">Candidatos recentes</h3></div>
       {candidates.length === 0 ? <p className="p-5 text-sm text-neutral-500">Ainda não há candidatos persistidos.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-neutral-900 text-xs text-neutral-500"><tr><th className="px-4 py-3">Negócio</th><th className="px-4 py-3">Local</th><th className="px-4 py-3">Pontuação</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Origem</th></tr></thead><tbody className="divide-y divide-neutral-800">{candidates.map((candidate) => <tr key={candidate.id}><td className="px-4 py-3"><p className="font-medium">{candidate.business_name}</p><p className="text-xs text-neutral-500">{candidate.category ?? "Sem categoria"}</p></td><td className="px-4 py-3 text-neutral-400">{[candidate.city, candidate.region].filter(Boolean).join(", ") || "—"}</td><td className="px-4 py-3 tabular-nums">{candidate.qualification_score ?? "—"}</td><td className="px-4 py-3">{candidate.status}</td><td className="px-4 py-3">{candidate.source_url ? <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-amber-300"><ExternalLink size={13} /> Fonte</a> : "—"}</td></tr>)}</tbody></table></div>}
+    </div>
+    <div className="rounded-2xl border border-neutral-800 p-4">
+      <div className="flex items-center gap-2"><ExternalLink size={17} /><h3 className="font-medium">Link público da demonstração</h3></div>
+      <p className="mt-1 text-sm text-neutral-400">Gere um link temporário para um projeto de site já criado. O projeto precisa ter versões persistidas para que o cliente possa escolher.</p>
+      <form className="mt-3 flex flex-col gap-2 sm:flex-row" onSubmit={(event) => { event.preventDefault(); if (siteProjectId.trim()) void createDemoLink(siteProjectId.trim()); }}>
+        <input value={siteProjectId} onChange={(event) => setSiteProjectId(event.target.value)} required placeholder="UUID do projeto de site" className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm" />
+        <button disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 disabled:opacity-50"><ExternalLink size={15} /> Criar link privado</button>
+      </form>
     </div>
     <div className="overflow-hidden rounded-2xl border border-neutral-800">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3"><Activity size={17} /><h3 className="font-medium">Eventos do funil</h3></div>
