@@ -73,7 +73,23 @@ begin
       selected_at = now(), updated_at = now()
   where id = v_link.id;
 
-  -- Selection is durably recorded on the link and version rows; event projection can be added after schema verification.
+  -- Make the selected version the canonical draft consumed by the site builder.
+  update public.site_projects
+  set template_version_id = v_version.template_version_id,
+      generated_content = v_version.generated_content,
+      design_overrides = v_version.design_overrides,
+      updated_at = now()
+  where id = v_link.site_project_id;
+
+  insert into public.prospect_events (
+    prospect_id, site_project_id, event_type, source_provider, idempotency_key, evidence
+  )
+  select p.prospect_id, p.id, 'template_selected', 'public-demo',
+    'demo-link:' || v_link.id::text || ':selected:' || p_version_id::text,
+    jsonb_build_object('linkId', v_link.id, 'versionId', p_version_id)
+  from public.site_projects p
+  where p.id = v_link.site_project_id and p.prospect_id is not null
+  on conflict (idempotency_key) do nothing;
 
   return jsonb_build_object(
     'status', 'selected',
