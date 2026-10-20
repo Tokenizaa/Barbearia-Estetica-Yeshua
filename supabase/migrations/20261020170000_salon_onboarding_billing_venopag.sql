@@ -48,8 +48,13 @@ alter table public.billing_plans enable row level security;
 alter table public.billing_payments enable row level security;
 
 drop policy if exists billing_plans_read_active on public.billing_plans;
-create policy billing_plans_read_active
-  on public.billing_plans for select to anon, authenticated
+drop policy if exists billing_plans_read_active_anon on public.billing_plans;
+drop policy if exists billing_plans_read_active_authenticated on public.billing_plans;
+create policy billing_plans_read_active_anon
+  on public.billing_plans for select to anon
+  using (is_active);
+create policy billing_plans_read_active_authenticated
+  on public.billing_plans for select to authenticated
   using (is_active or (select private.is_platform_admin()));
 
 drop policy if exists billing_plans_manage_platform_admin on public.billing_plans;
