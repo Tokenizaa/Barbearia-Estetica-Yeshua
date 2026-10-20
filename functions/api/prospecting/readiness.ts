@@ -9,6 +9,7 @@ interface Env {
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
+  WHATSAPP_API_VERSION?: string;
   WHATSAPP_APP_SECRET?: string;
   WHATSAPP_WEBHOOK_VERIFY_TOKEN?: string;
 }
@@ -120,12 +121,13 @@ export async function onRequestGet({ request, env }: Context) {
   const whatsappConfigured = Boolean(
     env.WHATSAPP_ACCESS_TOKEN?.trim() &&
     env.WHATSAPP_PHONE_NUMBER_ID?.trim() &&
-    env.WHATSAPP_TEMPLATE_NAME?.trim()
+    env.WHATSAPP_TEMPLATE_NAME?.trim() &&
+    /^v\\d+\\.\\d+$/.test(env.WHATSAPP_API_VERSION ?? '')
   );
   checks.push({
     id: 'whatsapp_provider',
     ready: whatsappConfigured,
-    detail: whatsappConfigured ? 'Credenciais e modelo de mensagem do WhatsApp configurados.' : 'Configure token, identificador do número e modelo aprovado do WhatsApp Business Platform.',
+    detail: whatsappConfigured ? 'Credenciais e modelo de mensagem do WhatsApp configurados.' : 'Configure token, identificador do número, modelo aprovado e versão suportada da Graph API.',
   });
 
   const webhookConfigured = Boolean(env.WHATSAPP_APP_SECRET?.trim() && env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim());
