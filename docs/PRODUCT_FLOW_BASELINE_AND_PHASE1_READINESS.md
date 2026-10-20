@@ -91,9 +91,10 @@ As seguintes entregas foram registradas nesta branch durante o início da execu�
 - `supabase/migrations/20261020180100_prospecting_worker_rpc.sql`: reivindicação atômica da fila com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
 - `src/lib/prospecting.ts`: normalização determinística, chave SHA-256 de deduplicação, score explicável e gate de WhatsApp que exige elegibilidade, opt-in comprovado e ausência de opt-out.
 - `tests/prospecting_automation.test.ts`: testes de domínio incluídos no comando `npm test`.
+- `functions/api/prospecting/readiness.ts`: diagnóstico autenticado do esquema e das credenciais necessárias, sem revelar segredos.
 - `docs/LEAD_CAPTURE_DASHBOARD.md` e `docs/DATA_MODEL.md`: atualizados para remover instruções obsoletas de prospecção manual.
 
-**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As migrations ainda não foram aplicadas ao projeto Supabase; o painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. Build, lint e testes ainda precisam ser executados em ambiente com dependências disponíveis. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
+**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As três migrations da infraestrutura foram aplicadas ao Supabase `ifkqrtjhdnolkuucgbpb` e a existência das tabelas/RLS e privilégios da fila foi verificada por consulta SQL. O painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. Build, lint e testes ainda precisam ser executados em ambiente com dependências disponíveis. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
 
 ## 3. Análise de prontidão da Fase 1
 
