@@ -32,13 +32,13 @@ export const ProductsPage: React.FC = () => {
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-widest">
           <ShoppingBag className="w-3.5 h-3.5" />
-          <span>Catálogo Exclusivo Yeshua</span>
+          <span>Catálogo do Estabelecimento</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-bold font-display uppercase tracking-wider text-neutral-100">
           Produtos & Cosméticos
         </h1>
         <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-          Pomadas modeladoras, óleos nutritivos para barba, tônicos e cosméticos para cuidado diário em casa. Venda e dúvidas atendidas direto pelo WhatsApp com retirada no Centro de Manaus.
+          Apresente os produtos do seu estabelecimento. Configure descrições, preços e canais de atendimento no painel administrativo.
         </p>
       </div>
 
