@@ -77,8 +77,22 @@ export async function onRequestPost({ request, env }: Context) {
     return json({ error: 'A VenoPag não conseguiu gerar o PIX. Tente novamente mais tarde.' }, 502);
   }
 
+  const returnedAmount = Number(providerPayload.amount);
+  if (Number.isFinite(returnedAmount) && Math.round(returnedAmount * 100) !== plan.price_brl_cents) {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/billing_payments?id=eq.${payment.id}`, {
+      method: 'PATCH', headers: { ...serviceHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'failed', provider_payload: { error: 'provider_amount_mismatch' } }),
+    });
+    return json({ error: 'O valor retornado pela VenoPag não corresponde ao plano.' }, 502);
+  }
   const requestNumber = typeof providerPayload.request_number === 'string' ? providerPayload.request_number : '';
-  if (!requestNumber) return json({ error: 'A VenoPag não retornou o identificador da cobrança.' }, 502);
+  if (!requestNumber) {
+    await fetch(`${env.SUPABASE_URL}/rest/v1/billing_payments?id=eq.${payment.id}`, {
+      method: 'PATCH', headers: { ...serviceHeaders, Prefer: 'return=minimal' },
+      body: JSON.stringify({ status: 'failed', provider_payload: { error: 'missing_request_number' } }),
+    });
+    return json({ error: 'A VenoPag não retornou o identificador da cobrança.' }, 502);
+  }
   const checkoutUrl = typeof providerPayload.checkout_url === 'string' ? providerPayload.checkout_url : null;
   const qrUrl = typeof providerPayload.qr_url === 'string' ? providerPayload.qr_url : null;
   const copyPaste = [providerPayload.copyPaste, providerPayload.copy_paste, providerPayload.pix_code, providerPayload.code, providerPayload.qr]
