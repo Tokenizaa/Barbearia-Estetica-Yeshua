@@ -49,4 +49,4 @@ A migration insere um único modelo neutro, modelo-inicial, versão 1, com seç�
 ## Limites do primeiro esquema
 
 - Ainda não há filas/tarefas de raspagem, integração com provedores de IA, armazenamento de arquivos nem domínios customizados. Essas integrações devem ser adicionadas quando o fluxo real estiver definido, sem criar tabelas especulativas.
-- A migration não foi aplicada a um projeto Supabase nesta etapa; os testes reais de RLS e advisors ainda precisam ser executados.
+- A migration `20261020154758_white_label_site_builder.sql` foi aplicada ao projeto Supabase `MeuSalao` (`ifkqrtjhdnolkuucgbpb`) em 2026-10-20. A verificação confirmou as oito tabelas esperadas, RLS habilitado nas oito tabelas, 22 políticas e os registros do modelo inicial. Os advisors foram executados; há alertas de segurança/performance que precisam de triagem antes de considerar o banco certificado.
