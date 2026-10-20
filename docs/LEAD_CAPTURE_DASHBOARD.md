@@ -58,6 +58,25 @@ Preparar a operação de prospecção e a produção de uma primeira versão per
 - Catálogo interno de modelos e ação para vincular uma alternativa ao projeto depois da primeira versão.
 - Estado vazio útil e exemplos identificados como demonstração.
 
+## Captura automatizada e prévia compartilhável
+
+### Captura de site público
+
+- O dashboard envia a URL para `POST /api/capture`, implementado em `functions/api/capture.ts` como Cloudflare Pages Function.
+- A função faz a requisição no servidor, segue no máximo três redirecionamentos e revalida cada destino; bloqueia esquemas diferentes de HTTP(S), credenciais embutidas, hostnames locais e faixas comuns de IP privado/reservado.
+- O HTML tem limite de 1 MB e timeout de 8 segundos. A extração prioriza JSON-LD e metadados HTML (nome, categoria, descrição, telefone, e-mail, endereço e imagem).
+- O resultado mantém a URL de origem, URL final, horário e indicadores de quais tipos de campo foram encontrados. A captura coloca leads existentes em revisão e nunca os marca como verificados automaticamente.
+- Sites que dependem de JavaScript, bloqueiam robôs, exigem login ou não expõem metadados podem retornar dados incompletos; nesses casos a revisão/correção manual continua necessária.
+- O endpoint é para páginas públicas, não para contornar autenticação, paywalls, CAPTCHA ou controles de acesso. Antes de ampliar a operação, configurar rate limiting/observabilidade na borda e validar a política de uso das fontes.
+
+### Link compartilhável da prévia
+
+- `src/pages/SharedSitePreview.tsx` renderiza uma página pública independente do painel administrativo.
+- O link usa o parâmetro `site-preview` com payload JSON em Base64 URL-safe. A pessoa que recebe o link não precisa de conta nem acesso ao dashboard, e a prévia abre em outro navegador/dispositivo.
+- O payload inclui somente os campos usados na proposta visual, o modelo, a versão e a data. Como o conteúdo está embutido no URL, o link é copiável e autossuficiente, mas não é um registro persistente no servidor e pode ser encaminhado por terceiros.
+- A prévia não é um site publicado, não cria domínio próprio, não atualiza automaticamente quando o lead muda e não garante cartões Open Graph/social, pois os metadados são renderizados no cliente.
+- A geração do link não envia a proposta automaticamente. O operador decide como e quando compartilhá-lo.
+
 ## Fora do escopo atual
 
-Integração Supabase, autenticação de produção, scraping automatizado, automação de e-mails/WhatsApp, pagamentos, publicação real, domínios customizados e sincronização multiusuário.
+Integração Supabase, autenticação de produção, automação de e-mails/WhatsApp, pagamentos, publicação real, domínios customizados e sincronização multiusuário.
