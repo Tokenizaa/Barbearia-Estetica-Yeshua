@@ -24,7 +24,7 @@ export default function App() {
   const [selectedServiceIdForBooking, setSelectedServiceIdForBooking] = useState<string | null>(null);
   const { establishment, store } = useStore();
   const sharedPreview = readShareablePreview(window.location.search);
-  const publicDemoMatch = window.location.pathname.match(/^\\/demo\\/([A-Za-z0-9_-]{40,100})\\/?$/);
+  const publicDemoMatch = window.location.pathname.match(/^\/demo\/([A-Za-z0-9_-]{40,100})\/?$/);
 
   const handleBookService = (serviceId?: string) => {
     setSelectedServiceIdForBooking(serviceId || null);
