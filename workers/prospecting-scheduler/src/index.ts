@@ -133,6 +133,7 @@ async function checkpointTaskResult(env: Env, task: ProspectingTask, workerId: s
   });
   if (!response.ok) throw new Error(`task_checkpoint_http_${response.status}`);
   if (!(await response.json() as unknown[]).length) throw new Error("task_lease_lost_before_checkpoint");
+  task.result = result;
 }
 
 async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: string) {
@@ -726,8 +727,15 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
   const rawDays = Number(payload.expiresInDays ?? 14);
   const days = Number.isFinite(rawDays) ? Math.max(1, Math.min(30, Math.floor(rawDays))) : 14;
   const priorExpiry = typeof task.result?.expiresAt === "string" ? task.result.expiresAt : "";
-  const expiresAt = priorToken && priorExpiry && new Date(priorExpiry).getTime() > Date.now()
-    ? priorExpiry : new Date(Date.now() + days * 86400000).toISOString();
+  if (priorToken && priorExpiry && new Date(priorExpiry).getTime() <= Date.now()) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "publish_link_expired_before_reconciliation",
+      last_error: "A tentativa anterior já tem link expirado; gere uma nova tarefa de publicação para criar um link novo.",
+      completed_at: new Date().toISOString(), result: { ...(task.result ?? {}), outcome: "blocked", reason: "previous_link_expired" },
+    });
+    return "blocked";
+  }
+  const expiresAt = priorToken && priorExpiry ? priorExpiry : new Date(Date.now() + days * 86400000).toISOString();
   let token = priorToken;
   if (!token) {
     const random = new Uint8Array(32);
