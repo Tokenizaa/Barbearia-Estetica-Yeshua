@@ -337,6 +337,51 @@ with check (
   )
 );
 
+-- Explicit least-privilege grants; RLS policies remain the row-level boundary.
+revoke all on table
+  public.platform_admins,
+  public.establishments,
+  public.establishment_memberships,
+  public.prospects,
+  public.site_templates,
+  public.site_template_versions,
+  public.site_projects,
+  public.audit_events
+from anon;
+
+grant select, insert, update, delete on table
+  public.platform_admins,
+  public.establishments,
+  public.establishment_memberships,
+  public.prospects,
+  public.site_templates,
+  public.site_template_versions,
+  public.site_projects,
+  public.audit_events
+to authenticated;
+
+grant usage, select on sequence public.audit_events_id_seq to authenticated;
+
+-- Preserve Yeshua as one establishment record, not as the product's brand/default identity.
+insert into public.establishments (slug, name, status, primary_color, secondary_color, contact, brand_settings)
+values (
+  'yeshua',
+  'Barbearia & Estética Yeshua',
+  'active',
+  '#f59e0b',
+  '#d97706',
+  jsonb_build_object(
+    'phone', '(92) 98618-7766',
+    'whatsapp', '5592986187766',
+    'address', 'Av. Constantino Nery, 50 — Centro',
+    'city', 'Manaus',
+    'region', 'Amazonas',
+    'instagram', 'https://www.instagram.com/barbearia_estetica_yeshua/'
+  ),
+  jsonb_build_object('theme', 'amber', 'source', 'legacy-project-bootstrap')
+)
+on conflict (slug) do nothing;
+
 -- One neutral starter template. Yeshua is a tenant record, never the platform brand or default template.
 insert into public.site_templates (slug, name, description, category)
 values (
@@ -365,4 +410,4 @@ where t.slug = 'modelo-inicial'
     where v.template_id = t.id and v.version = 1
   );
 
--- No admin users, secrets, PINs, production data, or fabricated prospects are seeded here.
+-- No admin users, secrets, PINs, production appointments, or fabricated prospects are seeded here.
