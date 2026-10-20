@@ -65,7 +65,7 @@ export default function App() {
               }}
               className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold transition-all shadow-md cursor-pointer"
             >
-              Ir para Barbearia & Estética Yeshua
+              Ir para o estabelecimento
             </button>
           </div>
         </div>
