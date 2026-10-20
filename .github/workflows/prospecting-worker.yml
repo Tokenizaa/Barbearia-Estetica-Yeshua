@@ -1,30 +1,7 @@
 name: Prospecting worker validation
 
 on:
-  push:
-    branches:
-      - feat/salon-onboarding-venopag
-    paths:
-      - "workers/prospecting-scheduler/**"
-      - "tests/prospecting_worker.test.ts"
-      - "src/lib/prospecting.ts"
-      - "tests/prospecting_automation.test.ts"
-      - "package.json"
-      - "bun.lock"
-      - "tsconfig.json"
-      - ".github/workflows/prospecting-worker.yml"
-  pull_request:
-    branches:
-      - feat/salon-onboarding-venopag
-    paths:
-      - "workers/prospecting-scheduler/**"
-      - "tests/prospecting_worker.test.ts"
-      - "src/lib/prospecting.ts"
-      - "tests/prospecting_automation.test.ts"
-      - "package.json"
-      - "bun.lock"
-      - "tsconfig.json"
-      - ".github/workflows/prospecting-worker.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
