@@ -1,116 +1,92 @@
-# Roadmap — Plataforma de sites personalizados white label
+# Roadmap — Plataforma de prospecção e sites personalizados
 
-## Direção do produto
+## Decisão de escopo da fase atual
 
-O produto não é um marketplace e não deve pedir ao visitante que escolha um estabelecimento em uma lista global. O fluxo é de prospecção assistida e criação de uma proposta personalizada para um negócio específico:
+**Não integrar o Supabase agora.** Já existe um projeto Supabase, mas a integração fica deliberadamente adiada. A prioridade é preparar o fluxo funcional de captação e qualificação de leads e o dashboard administrativo, usando uma camada de repositório local/mock substituível no futuro. Não criar outro projeto Supabase nem aplicar migrations nesta fase.
 
-1. Capturar dados públicos e permitidos de um negócio e registrar as fontes.
-2. Revisar e qualificar os dados; distinguir fatos verificados de campos ausentes ou inferidos.
-3. Gerar um rascunho de site usando dados aprovados, sem publicar nem contatar automaticamente o negócio.
-4. Permitir que o operador visualize e selecione entre modelos de site ativos.
-5. Renderizar a proposta no modelo e permitir revisão humana do conteúdo, imagens, links e identidade visual.
-6. Aprovar a proposta antes de compartilhar/publicar.
-7. Quando o negócio aceitar, convertê-lo em estabelecimento/cliente e vincular o projeto do site à sua conta.
-8. Publicar usando um slug/domínio próprio, com configuração por estabelecimento.
+O produto não é marketplace, diretório público nem ferramenta para o visitante escolher um estabelecimento. A plataforma identifica negócios, prepara uma proposta individualizada e apresenta ao lead uma primeira versão do próprio site.
 
-## Marca e navegação
+## Fluxo comercial desejado
 
-- “Yeshua” não é a marca da plataforma nem o modelo padrão.
-- O registro do Yeshua é preservado como primeiro estabelecimento legado, sem PINs ou credenciais hardcoded.
-- Remover seletor global de estabelecimento e seleção automática por query string/localStorage. O contexto do estabelecimento deve vir de uma rota/domínio resolvido e de autorização validada no servidor.
-- A escolha de modelo é uma etapa do editor/projeto: catálogo de modelos ativos, pré-visualização, escolha explícita e possibilidade de trocar o modelo antes da aprovação.
-- Começar com um modelo neutro, responsivo e reutilizável. Novos modelos são registros e versões de configuração, não duplicações da aplicação.
-- Não implementar marketplace, busca pública de estabelecimentos, checkout, assinatura ou envio automático de prospecção nesta fase.
+1. Capturar leads a partir de fontes públicas permitidas, registrando URL de origem, data, dados observados e estado da verificação.
+2. Exibir os leads em um dashboard interno com busca, filtros, status, prioridade, origem e histórico de ações.
+3. Permitir revisão humana dos dados; separar fatos verificados de campos ausentes e hipóteses.
+4. Gerar a primeira versão de um site personalizado usando os dados revisados e um modelo inicial neutro, sem esperar que o lead escolha um modelo.
+5. Associar a prévia ao lead e permitir revisão interna antes do envio.
+6. Registrar a proposta como preparada/enviada e acompanhar os estados de contato e resposta, sem disparar mensagens automaticamente.
+7. Depois que o lead visualizar a primeira versão, oferecer a opção de solicitar ou escolher outro modelo dentre os modelos habilitados para essa etapa.
+8. Versionar o modelo escolhido e preservar o conteúdo e a versão inicial da proposta; alterações não devem modificar silenciosamente uma proposta já enviada.
+9. Após aceite explícito, preparar a conversão do lead em cliente/estabelecimento e a publicação do site. Publicação e integrações externas ficam para fase posterior.
 
-## Estado atual encontrado
+## Dashboard da fase atual
 
-- Aplicação React + TypeScript + Vite.
-- Deploy configurado para Cloudflare Pages (barbearia-yeshua).
-- O estado atual multiestabelecimento está principalmente em localStorage/sessionStorage (src/data/store.ts).
-- Existem PINs de administrador no bundle cliente e autenticação local que gera tokens fictícios. Isso não é uma fronteira de segurança.
-- A base atual possui exemplos de Yeshua e Império; esses dados demo não devem ser tratados como clientes reais nem copiados automaticamente para produção.
-- Os projetos Supabase atualmente acessíveis foram consultados e nenhum corresponde a esta aplicação. A migration está preparada no repositório, mas ainda não foi aplicada a um banco.
+- Visão geral: total de leads, novos, em revisão, qualificados, com site preparado, proposta enviada, interessados e descartados.
+- Leads: tabela pesquisável, filtros, ficha detalhada, fonte e evidências, status, prioridade, responsável e notas.
+- Proposta/site: status da geração, prévia da primeira versão, modelo usado, data e versão.
+- Acompanhamento: registro manual de contatos e respostas, próximos passos e histórico.
+- Modelos: catálogo interno dos modelos disponíveis e suas versões; a seleção alternativa é vinculada ao site do lead, nunca global.
+- Configurações técnicas: indicar claramente quando os dados são locais/de demonstração e quando uma integração real ainda não está habilitada.
 
-## Arquitetura alvo
+## Limites explícitos
 
-- Frontend: preservar React + TypeScript + Vite e o deploy atual na Cloudflare enquanto o fluxo é migrado.
-- Auth e banco: Supabase Auth + Postgres + RLS.
-- Browser: usar apenas publishable key no frontend; nunca colocar service-role/secret key no bundle.
-- Operações privilegiadas (captura automatizada, tarefas de IA, provisionamento, publicação e integrações): camada server-side/Cloudflare Worker ou função server-side segura com segredos em ambiente.
-- Dados de prospecção: armazenar origem, URLs públicas e evidências, data da captura e estado de revisão. Não contornar CAPTCHA, login, paywall ou controles de acesso.
-- Geração de site: JSON de conteúdo separado da configuração/versão do modelo.
-- Auditoria: registrar alterações de privilégios, conversão de prospect, aprovação e publicação.
+- Não conectar o Supabase nesta fase, não executar migrations e não criar outro projeto.
+- Não introduzir marketplace, catálogo público de estabelecimentos ou seletor global de tenant.
+- Não enviar mensagens, e-mails ou campanhas automaticamente.
+- Não publicar sites automaticamente.
+- Não inventar dados capturados nem apresentar dados de demonstração como leads reais.
+- Não colocar segredos, PINs ou credenciais privilegiadas no bundle do navegador.
+- Não tratar localStorage como banco multiusuário seguro; ele é apenas persistência provisória para desenvolvimento/demonstração até a integração futura.
+- Não remover os dados e fluxos legados do Yeshua sem inventário e migração não destrutiva. Yeshua deixa de ser a marca da plataforma, mas os ativos específicos do estabelecimento devem ser preservados onde ainda forem necessários.
 
-## Modelo de autorização
+## Arquitetura de implementação agora
 
-- Administrador da plataforma: atribuído somente por processo privilegiado confiável; app_metadata não pode ser editado pelo usuário final. A tabela platform_admins serve como registro; a claim autorizadora deve ser provisionada pelo backend/admin API.
-- Owner/admin/editor/viewer local: associação explícita em establishment_memberships.
-- Um estabelecimento só vê e altera seus próprios projetos e configurações.
-- Prospects ainda não convertidos e tarefas de prospecção são acessíveis apenas à administração da plataforma.
-- Modelos publicados podem ser listados por usuários autenticados; criar, editar, ativar e versionar modelos é ação da plataforma.
-- RLS em todas as tabelas expostas; as rotas e o frontend não substituem as políticas.
-- Não permitir autoatribuição de papel, nem cadastro público que crie administrador geral.
+- Preservar React + TypeScript + Vite e o deploy existente na Cloudflare.
+- Separar o módulo de prospecção/dashboard do site público de cada negócio.
+- Definir tipos de domínio e uma interface de repositório para leads, projetos de site, versões de modelos e atividades.
+- Usar implementação local/mock explícita, com dados de exemplo claramente marcados; não simular sucesso de raspagem ou envio externo.
+- Preparar a camada de persistência para que o repositório Supabase possa ser conectado depois sem reescrever os componentes.
+- Registrar falhas e estados da geração do site; não exibir como pronta uma prévia que não foi gerada.
+- A captura automatizada futura deverá usar fontes permitidas, respeitar controles de acesso e operar no servidor, não no browser.
 
-## Modelo de dados preparado
+## Estado técnico conhecido
 
-A migration supabase/migrations/20261019000000_white_label_site_builder.sql define:
-- platform_admins
-- establishments
-- establishment_memberships
-- prospects
-- site_templates
-- site_template_versions
-- site_projects
-- audit_events
-- Funções de autorização no schema não exposto private, políticas RLS, grants e um modelo inicial neutro versionado.
+- Aplicação React + TypeScript + Vite; deploy configurado para Cloudflare Pages.
+- Há persistência e seleção de estabelecimento em localStorage/sessionStorage (src/data/store.ts), inclusive seleção por query string e seleção salva. Isso pertence ao fluxo legado e não deve virar o mecanismo do dashboard de leads.
+- Há PINs e autenticação local legada no código cliente. Não são uma fronteira de segurança e não devem ser reaproveitados como autenticação de produção.
+- O painel atual de superadmin é focado em estabelecimentos, não em pipeline de leads; deve ser adaptado ou substituído por um dashboard operacional de prospecção, preservando os fluxos de administração local que ainda forem necessários ao site legado.
+- A migration Supabase preparada no repositório é somente preparação documental/código. Não foi aplicada nem validada em banco real; fica fora do escopo desta fase.
 
-O registro inicial de Yeshua é preservado como estabelecimento. Não são inseridos usuários administrativos, PINs, agendamentos de exemplo nem prospects fictícios.
+## Fases
 
-## Fases de execução
+### Fase 1 — Prospecção e dashboard sem integração externa (prioridade)
+- Definir tipos, estados e interface de repositório para leads, atividades e projetos de site.
+- Implementar dashboard de leads e ficha detalhada com persistência provisória claramente identificada.
+- Implementar captura manual/importação assistida, com fonte e revisão; não afirmar que há scraping automatizado se ele não estiver conectado.
+- Implementar pipeline de status e histórico de acompanhamento.
+- Criar geração/preparação da primeira versão do site a partir de dados aprovados e modelo neutro.
+- Exibir prévia ligada ao lead e registrar erros/estado real de geração.
+- Deixar preparado o fluxo posterior para escolha alternativa de modelo pelo lead.
 
-### Fase A — Fundação de dados e segurança
-- Criar/confirmar um projeto Supabase dedicado.
-- Aplicar a migration e verificar tabelas, índices, grants, RLS e advisors.
-- Configurar Supabase Auth, criar o primeiro administrador geral por procedimento seguro e validar os claims.
-- Criar testes de isolamento entre dois estabelecimentos e de negação para usuário não autenticado.
+### Fase 2 — Modelos e experiência do lead
+- Criar catálogo interno versionado de modelos.
+- Entregar ao lead a primeira versão já preparada.
+- Permitir escolha/solicitação de outro modelo depois da primeira prévia, vinculada ao projeto.
+- Preservar versões e registrar decisões do lead; revisão interna antes de atualizar a proposta.
 
-### Fase B — Remover o modelo de marketplace
-- Retirar seleção global de tenant e dados de demonstração da navegação principal.
-- Remover PINs, sessões fictícias e autenticação baseada apenas no navegador.
-- Substituir a persistência local por repositórios Supabase com tipos.
-- Manter compatibilidade/migração não destrutiva dos dados locais do Yeshua quando necessário, sem importá-los automaticamente para um banco de produção sem revisão.
+### Fase 3 — Integração e segurança
+- Conectar ao projeto Supabase existente somente quando autorizado e quando a fase de produto estiver pronta.
+- Aplicar e testar migrations, RLS, autenticação e isolamento; substituir o repositório local sem perder dados revisados.
+- Implementar captura automatizada server-side com fontes permitidas, observabilidade e limites.
+- Configurar envio de propostas e publicação apenas após decisões explícitas, com proteção de segredos e auditoria.
 
-### Fase C — Prospecção e dados de origem
-- Criar captura manual/assistida inicial com fontes públicas permitidas.
-- Armazenar evidências e separar dados verificados, ausentes e inferidos.
-- Criar revisão e qualificação humana antes da geração do site.
-- Não disparar mensagens automaticamente.
+## Critérios de aceite da Fase 1
 
-### Fase D — Catálogo e personalização de modelos
-- Criar catálogo administrativo de modelos ativos e pré-visualizações.
-- Criar seletor de modelo dentro do projeto/editor, não no site público.
-- Fixar a versão exata do modelo no projeto para evitar que atualizações futuras alterem sites já aprovados.
-- Aplicar os dados aprovados, permitindo revisar texto, imagens, contato, cores e seções.
-
-### Fase E — Aprovação e publicação
-- Fluxo de rascunho → revisão → aprovação humana → publicação.
-- Domínio/slug por site, status e auditoria.
-- Não publicar nem compartilhar proposta sem ação explícita de aprovação.
-
-## Bloqueios antes de execução no banco
-
-1. Nenhum projeto Supabase acessível foi identificado como pertencente a este repositório. Os projetos existentes são de outros produtos; não reutilizar esses bancos.
-2. É necessário confirmar a organização e criar/selecionar um projeto Supabase dedicado. A criação pode gerar custos.
-3. A migration precisa ser aplicada e testada no banco real antes de dizer que o banco está pronto.
-4. A migration preparada não substitui testes reais de RLS, autenticação, build e fluxos do navegador.
-
-## Critérios de aceite
-
-- Nenhum nome ou ativo do Yeshua funciona como marca global/default de plataforma.
-- Não existe seletor global de marketplace.
-- Um prospect pode gerar um projeto de site em rascunho.
-- O operador pode escolher entre os modelos ativos e trocar o modelo antes da aprovação.
-- Cada projeto guarda uma versão imutável do modelo escolhido.
-- Dados de um estabelecimento não são acessíveis a outro.
-- O usuário não pode elevar privilégios editando o cliente ou a própria metadata.
-- Nenhum site é publicado nem contato enviado sem aprovação explícita.
+- Dashboard mostra leads e seus estados com busca/filtros e histórico.
+- A origem e a revisão dos dados ficam visíveis.
+- É possível registrar um lead sem inventar resultados de scraping.
+- Um lead qualificado pode ter uma primeira versão de site associada a ele.
+- A prévia e o estado da geração são verificáveis.
+- O dashboard funciona sem conexão com Supabase e deixa claro que a persistência é provisória.
+- Não há marketplace nem seletor global de estabelecimento no fluxo de prospecção.
+- A primeira versão é preparada antes de oferecer modelos alternativos ao lead.
+- Nenhum contato externo ou publicação acontece automaticamente.
