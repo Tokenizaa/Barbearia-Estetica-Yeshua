@@ -265,13 +265,11 @@ export const LeadsDashboard: React.FC = () => {
                   } satisfies Lead;
                 }).filter((lead): lead is Lead => lead !== null);
                 if (imported.length) {
-                  setLeads((current) => {
-                    const existing = new Set(current.map((lead) => lead.businessName.trim().toLowerCase()));
-                    const unique = imported.filter((lead) => !existing.has(lead.businessName.trim().toLowerCase()));
-                    setImportMessage(`${unique.length} lead(s) importado(s). ${imported.length - unique.length} duplicado(s) ignorado(s) por nome.`);
-                    if (unique[0]) setSelectedId(unique[0].id);
-                    return [...unique, ...current];
-                  });
+                  const existing = new Set(leads.map((lead) => lead.businessName.trim().toLowerCase()));
+                  const unique = imported.filter((lead) => !existing.has(lead.businessName.trim().toLowerCase()));
+                  setLeads((current) => [...unique, ...current]);
+                  setImportMessage(`${unique.length} lead(s) importado(s). ${imported.length - unique.length} duplicado(s) ignorado(s) por nome.`);
+                  if (unique[0]) setSelectedId(unique[0].id);
                 } else setImportMessage('Nenhum lead importado. Confira a coluna obrigatória businessName ou nome.');
               };
               reader.readAsText(file);
