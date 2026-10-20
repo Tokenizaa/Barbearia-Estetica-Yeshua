@@ -84,12 +84,40 @@ function saveToStorage<T>(key: string, data: T) {
 // IN-MEMORY MULTITENANT STATE WITH AUTOMATIC MIGRATION
 // -------------------------------------------------------------
 
+function normalizeLegacyTemplate(establishment: Establishment): Establishment {
+  if (establishment.id !== 'est-yeshua' || establishment.name !== 'Barbearia & Estética Yeshua') {
+    return establishment;
+  }
+  return {
+    ...INITIAL_ESTABLISHMENT_YESHUA,
+    id: establishment.id,
+    isDefault: true,
+    createdAt: establishment.createdAt,
+    updatedAt: establishment.updatedAt,
+  };
+}
+
 // 1. Establishments Repository
 let allEstablishments: Establishment[] = (() => {
-  const loaded = loadFromStorage<Establishment[]>(
+  const storedEstablishments = loadFromStorage<Establishment[]>(
     STORAGE_KEYS.ESTABLISHMENTS,
     []
   );
+  const loaded = storedEstablishments.map((establishment) => {
+    if (establishment.id !== 'est-yeshua' || establishment.name !== 'Barbearia & Estética Yeshua') {
+      return establishment;
+    }
+    return {
+      ...INITIAL_ESTABLISHMENT_YESHUA,
+      id: establishment.id,
+      isDefault: true,
+      createdAt: establishment.createdAt,
+      updatedAt: establishment.updatedAt,
+    };
+  });
+  if (loaded.some((establishment, index) => establishment !== storedEstablishments[index])) {
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, loaded);
+  }
 
   if (loaded.length === 0) {
     // Check for legacy single-establishment data to migrate
@@ -98,14 +126,14 @@ let allEstablishments: Establishment[] = (() => {
       null
     );
 
-    const yeshuaTenant: Establishment = {
+    const yeshuaTenant: Establishment = normalizeLegacyTemplate({
       ...INITIAL_ESTABLISHMENT_YESHUA,
       ...(legacyCompany ? legacyCompany : {}),
       id: 'est-yeshua',
-      slug: 'yeshua',
+      slug: 'modelo-inicial',
       isDefault: true,
-      logoUrl: legacyCompany?.logoUrl || '/logo.jpg',
-    };
+      logoUrl: legacyCompany?.logoUrl || INITIAL_ESTABLISHMENT_YESHUA.logoUrl,
+    });
 
     const initialList: Establishment[] = [yeshuaTenant, INITIAL_ESTABLISHMENT_DEMO];
     saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, initialList);
