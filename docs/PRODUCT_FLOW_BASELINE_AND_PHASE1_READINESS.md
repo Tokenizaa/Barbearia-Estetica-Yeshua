@@ -94,7 +94,7 @@ As seguintes entregas foram registradas nesta branch durante o início da execu�
 - `functions/api/prospecting/readiness.ts`: diagnóstico autenticado do esquema e das credenciais necessárias, sem revelar segredos.
 - `docs/LEAD_CAPTURE_DASHBOARD.md` e `docs/DATA_MODEL.md`: atualizados para remover instruções obsoletas de prospecção manual.
 
-**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As três migrations da infraestrutura foram aplicadas ao Supabase `ifkqrtjhdnolkuucgbpb` e a existência das tabelas/RLS e privilégios da fila foi verificada por consulta SQL. O painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. Build, lint e testes ainda precisam ser executados em ambiente com dependências disponíveis. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
+**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As três migrations da infraestrutura foram aplicadas ao Supabase `ifkqrtjhdnolkuucgbpb` e a existência das tabelas/RLS e privilégios da fila foi verificada por consulta SQL. O painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. O build de preview do Vercel concluiu com estado `READY` nos commits de código consultados. Lint e testes ainda não têm execução confirmada. Foi adicionada uma workflow de validação para testar, tipar e compilar; ainda não há execução de GitHub Actions registrada. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
 
 ## 3. Análise de prontidão da Fase 1
 
