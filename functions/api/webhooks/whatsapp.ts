@@ -87,7 +87,7 @@ export async function onRequest({ request, env }: Context) {
             method: "POST", headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
             body: JSON.stringify({
               prospect_id: message.prospect_id, campaign_id: message.campaign_id, event_type: eventType,
-              source_provider: "whatsapp_business_platform", provider_event_id: status.id,
+              source_provider: "whatsapp_business_platform", provider_event_id: `${status.id}:${mapped}`,
               idempotency_key: `whatsapp:${status.id}:${mapped}`,
               evidence: { status: state, timestamp, errors: status.errors ?? [] },
             }),
