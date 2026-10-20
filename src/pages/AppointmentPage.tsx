@@ -217,7 +217,7 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
           Reserve seu Horário
         </h1>
         <p className="text-sm text-neutral-400 leading-relaxed">
-          Escolha seu serviço, selecione o dia e horário de preferência e confirme diretamente no WhatsApp oficial da <strong className="text-neutral-200">Yeshua</strong>.
+          Escolha seu serviço, selecione o dia e horário de preferência e confirme diretamente no WhatsApp do <strong className="text-neutral-200">{company.name}</strong>.
         </p>
       </div>
 
@@ -496,7 +496,7 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
             <div className="p-3 rounded-xl bg-neutral-950 border border-neutral-800/80 flex items-start gap-2.5 text-xs text-neutral-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
               <p>
-                <strong className="text-neutral-200">Garantia Anti-Conflito Yeshua:</strong> Horários confirmados pela nossa equipe ficam automaticamente bloqueados com a etiqueta <span className="text-rose-400 font-semibold">Reservado</span> para impedir qualquer duplicidade.
+                <strong className="text-neutral-200">Proteção contra conflitos de horário:</strong> Horários confirmados pela nossa equipe ficam automaticamente bloqueados com a etiqueta <span className="text-rose-400 font-semibold">Reservado</span> para impedir qualquer duplicidade.
               </p>
             </div>
 
@@ -774,7 +774,7 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
               <strong className="text-neutral-100">
                 {selectedDate.split('-').reverse().join('/')} às {selectedTime}
               </strong>{' '}
-              foi gerada e encaminhada para o WhatsApp oficial da Yeshua.
+              foi gerada e encaminhada para o WhatsApp do estabelecimento.
             </p>
           </div>
 
