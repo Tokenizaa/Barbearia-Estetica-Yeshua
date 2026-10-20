@@ -152,17 +152,17 @@ export const INITIAL_APPOINTMENTS: Appointment[] = [
     clientName: 'Rodrigo Mendonça',
     clientPhone: '(92) 99881-2233',
     serviceId: 'srv-imp-1',
-    serviceName: 'Corte Executivo & Barboterapia Império',
+    serviceName: 'Corte Masculino — Demonstração',
     serviceDuration: 50,
     date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
     time: '16:00',
-    notes: 'Cliente VIP Império.',
+    notes: 'Agendamento fictício para demonstração.',
     status: 'confirmado',
     createdAt: new Date().toISOString(),
   },
 ];
 
-// Serviços base preparados com o catálogo Salão Modelo e catálogo Império
+// Serviços base preparados com o catálogo Salão Modelo e catálogo de demonstração
 export const INITIAL_SERVICES: ServiceItem[] = [
   {
     id: 'srv-1',
@@ -230,11 +230,11 @@ export const INITIAL_SERVICES: ServiceItem[] = [
     imageUrl: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?auto=format&fit=crop&w=800&q=80',
     featured: false,
   },
-  // Serviços do estabelecimento Império (demonstra isolamento)
+  // Serviços do estabelecimento de demonstração (demonstra isolamento)
   {
     id: 'srv-imp-1',
     establishmentId: 'est-imperio',
-    name: 'Corte Executivo & Barboterapia Império',
+    name: 'Corte Masculino — Demonstração',
     category: 'Barbearia',
     description: 'Corte personalizado com visagismo completo, lavagem especial e massagem facial.',
     price: 85,
@@ -298,7 +298,7 @@ export const INITIAL_PRODUCTS: ProductItem[] = [
   {
     id: 'prod-imp-1',
     establishmentId: 'est-imperio',
-    name: 'Balm Hidratante Amadeirado Império',
+    name: 'Balm Hidratante — Demonstração',
     category: 'Barbearia',
     description: 'Essência de cedro e sândalo com manteiga de karité para alinhamento da barba.',
     price: 55.0,
@@ -387,7 +387,7 @@ export const INITIAL_MEDIA: MediaItem[] = [
     id: 'med-imp-1',
     establishmentId: 'est-imperio',
     type: 'image',
-    title: 'Corte Clássico Pompadour Império',
+    title: 'Corte Clássico — Demonstração',
     url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=800&q=80',
     category: 'Barbearia',
     dateAdded: '2026-03-01',
