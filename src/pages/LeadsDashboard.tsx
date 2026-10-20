@@ -89,6 +89,21 @@ const STATUS_STYLES: Record<LeadStatus, string> = {
 const now = () => new Date().toISOString();
 const makeId = () => globalThis.crypto?.randomUUID?.() ?? `lead-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
+function parseCsvRow(line: string): string[] {
+  const values: string[] = [];
+  let value = '';
+  let quoted = false;
+  for (let index = 0; index < line.length; index++) {
+    const character = line[index];
+    if (character === '"' && quoted && line[index + 1] === '"') { value += '"'; index++; }
+    else if (character === '"') quoted = !quoted;
+    else if (character === ',' && !quoted) { values.push(value.trim()); value = ''; }
+    else value += character;
+  }
+  values.push(value.trim());
+  return values;
+}
+
 function readLeads(): Lead[] {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -111,6 +126,7 @@ export const LeadsDashboard: React.FC = () => {
   const [filter, setFilter] = useState<'all' | LeadStatus>('all');
   const [showCreate, setShowCreate] = useState(false);
   const [activityText, setActivityText] = useState('');
+  const [importMessage, setImportMessage] = useState<string | null>(null);
   const [form, setForm] = useState({
     businessName: '', category: '', websiteUrl: '', phone: '', email: '',
     address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' as Lead['priority'],
@@ -213,10 +229,62 @@ export const LeadsDashboard: React.FC = () => {
           <h2 className="mt-2 text-2xl font-semibold text-neutral-100">Leads e sites personalizados</h2>
           <p className="mt-1 max-w-2xl text-sm text-neutral-400">Gerencie a captação, revise os dados e prepare a primeira versão do site antes de oferecer outros modelos.</p>
         </div>
-        <button onClick={() => setShowCreate((value) => !value)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-400">
-          <Plus className="h-4 w-4" /> Novo lead
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-700 px-4 py-2.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800">
+            <ExternalLink className="h-4 w-4" /> Importar CSV
+            <input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = () => {
+                const raw = String(reader.result ?? '').replace(/^\\uFEFF/, '');
+                const lines = raw.split(/\\r?\\n/).filter((line) => line.trim());
+                if (lines.length < 2) { setImportMessage('CSV sem linhas de dados.'); return; }
+                const headers = parseCsvRow(lines[0]).map((header) => header.toLowerCase().replace(/[ _-]/g, ''));
+                const getValue = (row: string[], ...names: string[]) => {
+                  const index = headers.findIndex((header) => names.includes(header));
+                  return index >= 0 ? (row[index] ?? '').trim() : '';
+                };
+                const imported: Lead[] = lines.slice(1).map((line) => {
+                  const row = parseCsvRow(line);
+                  const timestamp = now();
+                  const businessName = getValue(row, 'businessname', 'nome', 'nomedonegocio', 'empresa', 'name');
+                  if (!businessName) return null;
+                  const sourceType = getValue(row, 'sourcetype', 'fonte') || 'Importação CSV';
+                  return {
+                    id: makeId(), businessName, category: getValue(row, 'category', 'categoria'),
+                    websiteUrl: getValue(row, 'websiteurl', 'site', 'website'),
+                    phone: getValue(row, 'phone', 'telefone', 'whatsapp'),
+                    email: getValue(row, 'email', 'emailpublico'),
+                    address: getValue(row, 'address', 'endereco', 'cidade'),
+                    sourceUrl: getValue(row, 'sourceurl', 'urlfonte', 'fonteurl'),
+                    sourceType, notes: getValue(row, 'notes', 'notas', 'observacoes'),
+                    priority: 'normal', verificationStatus: 'unreviewed', status: 'new',
+                    createdAt: timestamp, updatedAt: timestamp,
+                    activities: [{ id: makeId(), summary: 'Lead importado por CSV; dados pendentes de revisão.', createdAt: timestamp }],
+                  } satisfies Lead;
+                }).filter((lead): lead is Lead => lead !== null);
+                if (imported.length) {
+                  setLeads((current) => {
+                    const existing = new Set(current.map((lead) => lead.businessName.trim().toLowerCase()));
+                    const unique = imported.filter((lead) => !existing.has(lead.businessName.trim().toLowerCase()));
+                    setImportMessage(`${unique.length} lead(s) importado(s). ${imported.length - unique.length} duplicado(s) ignorado(s) por nome.`);
+                    if (unique[0]) setSelectedId(unique[0].id);
+                    return [...unique, ...current];
+                  });
+                } else setImportMessage('Nenhum lead importado. Confira a coluna obrigatória businessName ou nome.');
+              };
+              reader.readAsText(file);
+              event.target.value = '';
+            }} />
+          </label>
+          <button onClick={() => setShowCreate((value) => !value)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-400">
+            <Plus className="h-4 w-4" /> Novo lead
+          </button>
+        </div>
       </div>
+
+      {importMessage && <div role="status" className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-xs text-neutral-200">{importMessage}<button onClick={() => setImportMessage(null)} className="ml-3 underline">Fechar</button></div>}
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
         <Clock className="h-4 w-4 shrink-0" />
@@ -298,8 +366,17 @@ export const LeadsDashboard: React.FC = () => {
               {selected.project && <div className="mt-4 space-y-3 rounded-lg border border-neutral-700 bg-neutral-950 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex items-center gap-2 text-xs text-emerald-300"><Check className="h-4 w-4" /> Primeira versão preparada para revisão</span><span className="text-xs text-neutral-500">Versão {selected.project.templateVersion}</span></div>
                 <p className="text-sm font-medium text-neutral-100">Modelo: {selected.project.templateName}</p>
-                <pre className="whitespace-pre-wrap rounded-lg border border-neutral-800 bg-neutral-900 p-4 font-sans text-sm leading-6 text-neutral-300">{selected.project.previewText}</pre>
-                <p className="text-xs text-neutral-500">Prévia textual de demonstração, não é um site publicado ou URL pública.</p>
+                <div className={`overflow-hidden rounded-xl border ${selected.project.templateId === 'bold' ? 'border-emerald-500/50 bg-neutral-900' : selected.project.templateId === 'editorial' ? 'border-neutral-600 bg-stone-100' : selected.project.templateId === 'minimal' ? 'border-neutral-700 bg-white' : 'border-sky-500/30 bg-slate-950'}`}>
+                  <div className={`px-5 py-3 text-xs ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'text-neutral-600' : 'text-neutral-400'}`}>{selected.businessName}</div>
+                  <div className={`px-6 py-10 sm:px-10 sm:py-14 ${selected.project.templateId === 'editorial' ? 'bg-stone-100 text-stone-900 font-serif' : selected.project.templateId === 'minimal' ? 'bg-white text-neutral-900' : selected.project.templateId === 'bold' ? 'bg-neutral-900 text-white' : 'bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white'}`}>
+                    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'text-emerald-700' : 'text-emerald-300'}`}>{selected.category || 'Atendimento especializado'}</p>
+                    <h5 className="mt-4 max-w-xl text-3xl font-semibold leading-tight sm:text-4xl">{selected.businessName}</h5>
+                    <p className={`mt-4 max-w-lg text-sm leading-6 ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'text-neutral-600' : 'text-neutral-300'}`}>Uma presença digital feita para apresentar os serviços de {selected.businessName} com clareza e facilitar o contato com novos clientes.</p>
+                    <div className="mt-7 inline-flex rounded-md bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-neutral-950">Entre em contato</div>
+                    <div className={`mt-8 border-t pt-4 text-xs ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'border-neutral-300 text-neutral-600' : 'border-white/15 text-neutral-400'}`}>{selected.address || 'Endereço a confirmar'}{selected.phone ? ` · ${selected.phone}` : ''}</div>
+                  </div>
+                </div>
+                <p className="text-xs text-neutral-500">Prévia visual local para avaliação interna. Ainda não é uma URL pública, não foi enviada ao lead e não está publicada.</p>
                 <label className="block"><span className={labelClass}>Após a primeira versão, escolher outro modelo</span><select className={inputClass} value={selected.project.templateId} onChange={(e) => changeTemplate(selected, e.target.value)}><option value={INITIAL_TEMPLATE.id}>{INITIAL_TEMPLATE.name} (original)</option>{ALTERNATIVE_TEMPLATES.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
                 <div className="space-y-2 border-t border-neutral-800 pt-3"><p className="text-xs font-semibold text-neutral-400">Histórico de versões</p>{[...selected.project.versions].reverse().map((version) => <div key={`${version.templateId}-${version.version}`} className="flex items-center justify-between gap-3 text-xs"><span className="text-neutral-300">v{version.version} · {version.templateName}</span><span className="text-neutral-500">{new Date(version.createdAt).toLocaleString('pt-BR')}</span></div>)}</div>
               </div>}
