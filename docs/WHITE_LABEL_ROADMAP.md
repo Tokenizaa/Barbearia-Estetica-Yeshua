@@ -1,5 +1,15 @@
 # Roadmap — Plataforma de prospecção e sites personalizados
 
+## Escopo vigente — atualizado em 2026-10-20
+
+**Fonte de verdade funcional:** [Base funcional oficial e prontidão da Fase 1](./PRODUCT_FLOW_BASELINE_AND_PHASE1_READINESS.md).
+
+O fluxo vigente é: descoberta/captura de leads → mapeamento e revisão → geração de demonstração personalizada → abordagem por WhatsApp → landing page comercial com escolha de modelos → cadastro e pagamento → ativação → plataforma privada do salão e publicação, com acompanhamento pelo Admin Geral.
+
+O produto não é um marketplace nem um diretório público. A demonstração, a landing page comercial, a contratação e a plataforma privada do salão são experiências distintas.
+
+**Nota sobre o histórico abaixo:** as seções e fases existentes neste documento foram escritas antes da definição funcional de 2026-10-20. São preservadas como histórico da implementação anterior, mas instruções antigas como “não integrar Supabase nesta fase”, “não enviar WhatsApp” e a antiga divisão das fases não prevalecem sobre o escopo vigente no documento de referência. Nenhuma integração, migração de banco ou publicação em produção deve ser presumida concluída sem validação técnica específica.
+
 ## Decisão de escopo da fase atual
 
 **Não integrar o Supabase agora.** Já existe um projeto Supabase, mas a integração fica deliberadamente adiada. A prioridade é preparar o fluxo funcional de captação e qualificação de leads e o dashboard administrativo, usando uma camada de repositório local/mock substituível no futuro. Não criar outro projeto Supabase nem aplicar migrations nesta fase.
