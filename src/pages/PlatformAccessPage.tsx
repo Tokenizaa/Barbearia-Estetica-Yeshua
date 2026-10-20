@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Building2, CheckCircle2, CircleAlert, CreditCard, LogIn, LogOut, UserPlus } from 'lucide-react';
+import { ArrowLeft, Building2, CircleAlert, CreditCard, LogIn, LogOut, UserPlus } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
 
 type Plan = {
@@ -35,6 +35,7 @@ export function PlatformAccessPage() {
   const [ownerName, setOwnerName] = useState('');
   const [salonName, setSalonName] = useState('');
   const [slug, setSlug] = useState('');
+  const [slugEdited, setSlugEdited] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -162,7 +163,7 @@ export function PlatformAccessPage() {
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
-              {mode === 'signup' && <><label className="block text-sm">Seu nome<input required autoComplete="name" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Nome do salão<input required maxLength={120} value={salonName} onChange={e => { setSalonName(e.target.value); if (!slug) setSlug(slugify(e.target.value)); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Endereço do site (identificador)<input required maxLength={45} value={slug} onChange={e => setSlug(slugify(e.target.value))} placeholder="meu-salao" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /><span className="mt-1 block text-xs text-neutral-500">Pode ser ajustado posteriormente, se estiver disponível.</span></label></>}
+              {mode === 'signup' && <><label className="block text-sm">Seu nome<input required autoComplete="name" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Nome do salão<input required maxLength={120} value={salonName} onChange={e => { setSalonName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Endereço do site (identificador)<input required maxLength={45} value={slug} onChange={e => { setSlug(slugify(e.target.value)); setSlugEdited(true); }} placeholder="meu-salao" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /><span className="mt-1 block text-xs text-neutral-500">Pode ser ajustado posteriormente, se estiver disponível.</span></label></>}
               <label className="block text-sm">E-mail<input required type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label>
               <label className="block text-sm">Senha<input required type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 10 : 1} value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label>
               {error && <p role="alert" className="rounded-lg bg-rose-950/50 p-3 text-sm text-rose-300">{error}</p>}
