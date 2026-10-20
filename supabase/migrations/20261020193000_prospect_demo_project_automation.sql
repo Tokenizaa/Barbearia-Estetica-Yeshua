@@ -4,10 +4,6 @@ begin;
 alter table public.site_projects
   add column if not exists prospect_id uuid references public.prospects(id) on delete set null;
 
-create unique index if not exists site_projects_prospect_id_unique
-  on public.site_projects (prospect_id)
-  where prospect_id is not null;
-
 alter table public.site_demo_public_links
   add column if not exists publish_task_id bigint references public.prospecting_tasks(id) on delete set null;
 
@@ -29,6 +25,7 @@ declare
   v_columns text;
 begin
   if p_prospect_id is null then raise exception 'prospect_id_required'; end if;
+  perform pg_advisory_xact_lock(hashtext(p_prospect_id::text));
   if p_template_version_id is null or not exists (select 1 from public.site_template_versions where id = p_template_version_id and is_published) then
     raise exception 'published_template_version_required';
   end if;
@@ -39,6 +36,7 @@ begin
   select id into v_project_id
   from public.site_projects
   where prospect_id = p_prospect_id
+  order by created_at desc
   limit 1;
 
   if v_project_id is not null then
