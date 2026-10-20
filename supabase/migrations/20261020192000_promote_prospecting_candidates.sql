@@ -53,7 +53,22 @@ begin
     'qualification_reasons', v_candidate.qualification_reasons,
     'source_captured_at', v_candidate.source_captured_at,
     'last_seen_at', now(),
-    'outreach_eligibility', 'unknown'
+    'outreach_eligibility', 'unknown',
+    'captured_data', jsonb_build_object(
+      'address', v_candidate.address,
+      'description', v_candidate.description,
+      'source_url', v_candidate.source_url,
+      'provider', v_candidate.provider,
+      'provider_record_id', v_candidate.provider_record_id,
+      'raw_evidence', v_candidate.raw_evidence
+    ),
+    'qualification', jsonb_build_object(
+      'score', v_candidate.qualification_score,
+      'reasons', v_candidate.qualification_reasons,
+      'missing_fields', v_candidate.missing_fields
+    ),
+    'public_source_urls', case when v_candidate.source_url is null then array[]::text[] else array[v_candidate.source_url] end,
+    'source_name', v_candidate.provider
   );
 
   select string_agg(format('%I', c.column_name), ', ' order by c.ordinal_position)
@@ -66,7 +81,7 @@ begin
       'website_url','website','normalized_website','phone','phone_number','normalized_phone',
       'email','address','city','region','state','country_code','description','source_url',
       'qualification_score','qualification_reasons','source_captured_at','last_seen_at',
-      'outreach_eligibility'
+      'outreach_eligibility','captured_data','qualification','public_source_urls','source_name'
     ]);
 
   if v_columns is null then raise exception 'prospects_schema_not_compatible'; end if;
