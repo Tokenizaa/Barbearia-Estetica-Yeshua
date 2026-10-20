@@ -505,10 +505,102 @@ async function captureCandidateTask(env: Env, task: ProspectingTask, workerId: s
   return "succeeded";
 }
 
+async function generateDemoTask(env: Env, task: ProspectingTask, workerId: string) {
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const siteProjectId = typeof payload.siteProjectId === "string" ? payload.siteProjectId : "";
+  const templateVersionId = typeof payload.templateVersionId === "string" ? payload.templateVersionId : "";
+  if (!task.prospect_id || !/^[0-9a-f-]{36}$/i.test(siteProjectId) || !/^[0-9a-f-]{36}$/i.test(templateVersionId)) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "demo_context_required",
+      last_error: "Geração de demonstração exige prospect_id, siteProjectId e templateVersionId existentes.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_context_required" },
+    });
+    return "blocked";
+  }
+
+  const prospectResponse = await db(env, `prospects?id=eq.${encodeURIComponent(task.prospect_id)}&select=*&limit=1`);
+  if (!prospectResponse.ok) throw new Error(`demo_prospect_read_http_${prospectResponse.status}`);
+  const prospects = await prospectResponse.json() as Prospect[];
+  if (!prospects.length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "prospect_not_found",
+      last_error: "Prospect não encontrado para gerar a demonstração.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const projectResponse = await db(env, `site_projects?id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
+  if (!projectResponse.ok) throw new Error(`demo_project_read_http_${projectResponse.status}`);
+  if (!(await projectResponse.json() as unknown[]).length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "site_project_not_found",
+      last_error: "O projeto de site informado não existe.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const templateResponse = await db(env, `site_template_versions?id=eq.${encodeURIComponent(templateVersionId)}&select=id&limit=1`);
+  if (!templateResponse.ok) throw new Error(`demo_template_read_http_${templateResponse.status}`);
+  if (!(await templateResponse.json() as unknown[]).length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "template_version_not_found",
+      last_error: "A versão do modelo selecionada não existe.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+
+  const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=version&order=version.desc&limit=1`);
+  if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
+  const versions = await current.json() as Array<{ version: number }>;
+  const version = (versions[0]?.version ?? 0) + 1;
+  const prospect = prospects[0];
+  const generatedContent = {
+    businessName: first(prospect, ["business_name", "name", "company_name"]) ?? "Negócio local",
+    category: first(prospect, ["category", "business_category", "segment"]),
+    headline: first(prospect, ["tagline", "headline", "description", "business_description"]),
+    description: first(prospect, ["description", "business_description"]),
+    website: first(prospect, ["website_url", "website", "url"]),
+    phone: first(prospect, ["normalized_phone", "phone", "phone_number"]),
+    email: first(prospect, ["email", "email_address"]),
+    address: first(prospect, ["address", "formatted_address"]),
+    city: first(prospect, ["city", "locality"]),
+    region: first(prospect, ["region", "state", "province"]),
+    sourceUrl: first(prospect, ["source_url", "sourceUrl", "source_link"]),
+    generatedAt: new Date().toISOString(),
+    generationMode: "deterministic-prospect-profile",
+  };
+  const designOverrides = payload.designOverrides && typeof payload.designOverrides === "object" ? payload.designOverrides : {};
+  const inserted = await db(env, "site_project_versions", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify({
+      site_project_id: siteProjectId,
+      version,
+      template_version_id: templateVersionId,
+      generated_content: generatedContent,
+      design_overrides: designOverrides,
+      selected_by_prospect: false,
+      selection_source: "system",
+    }),
+  });
+  if (!inserted.ok) throw new Error(`demo_version_insert_http_${inserted.status}`);
+  const created = await inserted.json() as Array<{ id: string; version: number }>;
+  if (!created.length) throw new Error("demo_version_insert_no_rows");
+
+  await updateTask(env, task, workerId, {
+    status: "succeeded", last_error_code: null, last_error: null,
+    completed_at: new Date().toISOString(),
+    result: { outcome: "demo_generated", siteProjectId, versionId: created[0].id, version: created[0].version },
+  });
+  return "succeeded";
+}
+
 async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   if (task.task_type === "send_whatsapp") return sendWhatsAppTask(env, task, workerId);
   if (task.task_type === "discover") return discoverCampaignTask(env, task, workerId);
   if (task.task_type === "capture") return captureCandidateTask(env, task, workerId);
+  if (task.task_type === "generate_demo") return generateDemoTask(env, task, workerId);
   if (task.task_type !== "qualify") {
     await updateTask(env, task, workerId, {
       status: "blocked",
