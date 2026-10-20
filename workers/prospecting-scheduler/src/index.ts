@@ -408,6 +408,23 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     const storedRows = await stored.json() as unknown[];
     if (storedRows.length) inserted++;
     else duplicates++;
+
+    const candidateLookup = await db(env, `prospecting_candidates?dedupe_key=eq.${encodeURIComponent(dedupeKey)}&select=id&limit=1`);
+    if (!candidateLookup.ok) throw new Error(`candidate_lookup_http_${candidateLookup.status}`);
+    const candidateRows = await candidateLookup.json() as Array<{ id: string }>;
+    if (candidateRows.length) {
+      const capture = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+        method: "POST",
+        headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+        body: JSON.stringify({
+          campaign_id: campaign.campaignId,
+          task_type: "capture",
+          idempotency_key: `candidate:${dedupeKey}:capture`,
+          payload: { candidateId: candidateRows[0].id, dedupeKey },
+        }),
+      });
+      if (!capture.ok) throw new Error(`candidate_capture_enqueue_http_${capture.status}`);
+    }
   }
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
@@ -417,9 +434,51 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   return "succeeded";
 }
 
+async function captureCandidateTask(env: Env, task: ProspectingTask, workerId: string) {
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const candidateId = typeof payload.candidateId === "string" ? payload.candidateId : "";
+  if (!/^[0-9a-f-]{36}$/i.test(candidateId)) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "candidate_id_required",
+      last_error: "A tarefa de captura não contém um candidateId válido.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const response = await db(env, "rpc/promote_prospecting_candidate", {
+    method: "POST",
+    body: JSON.stringify({ p_candidate_id: candidateId }),
+  });
+  if (!response.ok) throw new Error(`candidate_promotion_http_${response.status}`);
+  const result = await response.json() as { prospectId?: string; created?: boolean; alreadyPromoted?: boolean };
+  if (!result.prospectId) throw new Error("candidate_promotion_missing_prospect_id");
+
+  const qualificationTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+    method: "POST",
+    headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({
+      campaign_id: task.campaign_id,
+      prospect_id: result.prospectId,
+      task_type: "qualify",
+      idempotency_key: `prospect:${result.prospectId}:qualify:v1`,
+      payload: { candidateId, promotedFromCandidate: true },
+    }),
+  });
+  if (!qualificationTask.ok) throw new Error(`qualification_enqueue_http_${qualificationTask.status}`);
+
+  await updateTask(env, task, workerId, {
+    prospect_id: result.prospectId,
+    status: "succeeded", last_error_code: null, last_error: null,
+    completed_at: new Date().toISOString(),
+    result: { outcome: "captured", prospectId: result.prospectId, created: result.created, alreadyPromoted: result.alreadyPromoted },
+  });
+  return "succeeded";
+}
+
 async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   if (task.task_type === "send_whatsapp") return sendWhatsAppTask(env, task, workerId);
   if (task.task_type === "discover") return discoverCampaignTask(env, task, workerId);
+  if (task.task_type === "capture") return captureCandidateTask(env, task, workerId);
   if (task.task_type !== "qualify") {
     await updateTask(env, task, workerId, {
       status: "blocked",
