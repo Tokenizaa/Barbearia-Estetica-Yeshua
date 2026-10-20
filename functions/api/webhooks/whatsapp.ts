@@ -77,7 +77,14 @@ export async function onRequest({ request, env }: Context) {
         if (mapped === "delivered") update.delivered_at = timestamp;
         if (mapped === "read") update.read_at = timestamp;
         if (mapped === "failed") { update.last_error_code = "whatsapp_delivery_failed"; update.last_error = JSON.stringify(status.errors ?? []).slice(0, 500); }
-        const saved = await db(env, `prospect_outbound_messages?id=eq.${encodeURIComponent(message.id)}&select=id`, {
+        const statusGuard = mapped === "sent"
+          ? "&status=not.in.(delivered,read,failed,opted_out)"
+          : mapped === "delivered"
+            ? "&status=not.in.(read,failed,opted_out)"
+            : mapped === "failed"
+              ? "&status=not.in.(delivered,read,opted_out)"
+              : "";
+        const saved = await db(env, `prospect_outbound_messages?id=eq.${encodeURIComponent(message.id)}${statusGuard}&select=id`, {
           method: "PATCH", headers: { prefer: "return=representation" }, body: JSON.stringify(update),
         });
         if (!saved.ok) throw new Error(`message_update_http_${saved.status}`);
