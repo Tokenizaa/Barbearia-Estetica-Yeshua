@@ -597,11 +597,73 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   return "succeeded";
 }
 
+async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string) {
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const siteProjectId = typeof payload.siteProjectId === "string" ? payload.siteProjectId : "";
+  if (!/^[0-9a-f-]{36}$/i.test(siteProjectId)) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "site_project_id_required",
+      last_error: "Publicação exige um siteProjectId válido.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const project = await db(env, `site_projects?id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
+  if (!project.ok) throw new Error(`publish_project_read_http_${project.status}`);
+  if (!(await project.json() as unknown[]).length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "site_project_not_found",
+      last_error: "Projeto de site não encontrado para publicação.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
+  if (!versionsResponse.ok) throw new Error(`publish_versions_read_http_${versionsResponse.status}`);
+  if (!(await versionsResponse.json() as unknown[]).length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "demo_version_required",
+      last_error: "Gere pelo menos uma versão da demonstração antes de publicar.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+
+  const random = new Uint8Array(32);
+  crypto.getRandomValues(random);
+  const token = Array.from(random, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+  const tokenHash = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const rawDays = Number(payload.expiresInDays ?? 14);
+  const days = Number.isFinite(rawDays) ? Math.max(1, Math.min(30, Math.floor(rawDays))) : 14;
+  const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
+  const created = await db(env, "site_demo_public_links", {
+    method: "POST",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify({
+      site_project_id: siteProjectId,
+      token_hash: tokenHash,
+      expires_at: expiresAt,
+    }),
+  });
+  if (!created.ok) throw new Error(`publish_link_create_http_${created.status}`);
+  const rows = await created.json() as Array<{ id: string }>;
+  if (!rows.length) throw new Error("publish_link_create_no_rows");
+
+  await updateTask(env, task, workerId, {
+    status: "succeeded", last_error_code: null, last_error: null,
+    completed_at: new Date().toISOString(),
+    result: { outcome: "published", publicPath: `/demo/${token}`, publicToken: token, linkId: rows[0].id, expiresAt },
+  });
+  return "succeeded";
+}
+
 async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   if (task.task_type === "send_whatsapp") return sendWhatsAppTask(env, task, workerId);
   if (task.task_type === "discover") return discoverCampaignTask(env, task, workerId);
   if (task.task_type === "capture") return captureCandidateTask(env, task, workerId);
   if (task.task_type === "generate_demo") return generateDemoTask(env, task, workerId);
+  if (task.task_type === "publish_demo") return publishDemoTask(env, task, workerId);
   if (task.task_type !== "qualify") {
     await updateTask(env, task, workerId, {
       status: "blocked",
