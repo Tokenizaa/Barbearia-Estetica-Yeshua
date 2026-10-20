@@ -14,6 +14,7 @@ Documentar os secrets e as verificações necessárias antes de habilitar campan
 | `PROSPECTING_WORKER_SECRET` | Autenticar execuções manuais internas do worker | Obrigatória antes de executar jobs |
 | `PROSPECTING_BATCH_SIZE` | Limite de tarefas por execução | Opcional; padrão 10, máximo 25 |
 | `PROSPECTING_SOURCE_PROVIDER` | Identificador do fornecedor de descoberta aprovado | Pendente de seleção/configuração |
+| `PROSPECTING_SOURCE_ENDPOINT` | Endpoint HTTPS do adaptador autorizado de descoberta | Pendente de seleção/configuração |
 | `PROSPECTING_SOURCE_API_KEY` | Credencial do fornecedor de descoberta, quando exigida | Pendente de seleção/configuração |
 | `WHATSAPP_ACCESS_TOKEN` | Credencial do WhatsApp Business Platform | Pendente de configuração |
 | `WHATSAPP_PHONE_NUMBER_ID` | Identificador do número de envio no provedor | Pendente de configuração |
@@ -38,7 +39,13 @@ Endpoint implementado: `GET /api/prospecting/readiness`.
 - Configuração do agendamento: `wrangler.prospecting-scheduler.toml`.
 - Frequência configurada: a cada 5 minutos (`*/5 * * * *`), em lotes de até 10 tarefas por execução.
 - O worker usa a RPC `claim_prospecting_tasks` com credencial `service_role`, processa a fila sequencialmente, registra eventos idempotentes e aplica backoff exponencial limitado para falhas transitórias.
-- Tarefas de qualificação têm handler implementado. `discover`, `capture`, `generate_demo`, `publish_demo`, `send_whatsapp` e `sync_delivery` ficam em `blocked` até que seus provedores/handlers sejam implementados e validados; não são simuladas como sucesso.
+- O worker agenda campanhas ativas com `next_run_at`, cria tarefas idempotentes e avança a próxima execução conforme `schedule.interval_minutes` (mínimo 5 minutos; padrão 24 horas).
+- `discover` chama o adaptador configurado em `PROSPECTING_SOURCE_ENDPOINT` via HTTPS e exige resposta JSON com `results` ou `candidates`; cada candidato precisa conter nome e identidade deduplicável (site, telefone ou nome+localização). O endpoint e o provedor devem ser aprovados conforme os termos de uso antes da ativação.
+- Os candidatos são persistidos em `prospecting_candidates`, deduplicados por SHA-256 e qualificados com pontuação explicável. A campanha respeita o limite diário por contagem de candidatos persistidos.
+- `capture` promove candidatos para `prospects` por RPC que mapeia apenas colunas existentes no esquema legado, e cria tarefa idempotente de qualificação. O mapeamento ainda exige validação no banco real.
+- `send_whatsapp` tem handler para WhatsApp Business Platform. Exige elegibilidade explícita, timestamp e evidência de opt-in, telefone válido e ausência de opt-out. Só marca `sent` após receber ID de mensagem do provedor; tentativas de resultado ambíguo ficam bloqueadas para reconciliação, evitando reenvio cego.
+- `generate_demo`, `publish_demo` e `sync_delivery` permanecem bloqueados até a implementação e validação dos contratos correspondentes; não são simulados como sucesso.
+- A landing pública `/demo/:token` apresenta versões persistidas e permite seleção por token aleatório de uso limitado no tempo; o hash do token é armazenado no banco e a seleção usa RPC server-side.
 - Para configurar os secrets no ambiente Cloudflare do worker, execute os comandos abaixo a partir da raiz do repositório e informe os valores de forma interativa:
 
   ```sh
@@ -60,4 +67,4 @@ Endpoint implementado: `GET /api/prospecting/readiness`.
 
 ## Estado em 2026-10-20
 
-O endpoint de diagnóstico e o esquema persistente foram adicionados anteriormente. O worker agendado e a migration de recuperação foram adicionados à branch. A suíte automatizada inclui testes do worker, mas a execução local/CI e a aplicação da nova migration ainda precisam ser confirmadas. O cron está configurado no arquivo Wrangler, porém não está ativo até o deploy do worker e a configuração dos secrets. Descoberta, geração/publicação de demonstrações e WhatsApp continuam bloqueados até integração real e validação.
+O worker, agendamento, persistência de candidatos, promoção para prospects, handler de WhatsApp, console administrativo e landing pública de seleção foram adicionados à branch. Build, TypeScript e testes ficam para a validação posterior com o agente local. As migrations recentes ainda precisam ser aplicadas e verificadas no Supabase. O cron está configurado no arquivo Wrangler, mas não está ativo até o deploy do worker e a configuração dos secrets. O adaptador de descoberta exige endpoint/provedor real configurado. Geração/publicação de demonstrações e sincronização de entrega permanecem bloqueadas até concluir seus contratos.
