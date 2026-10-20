@@ -609,12 +609,14 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     return "blocked";
   }
 
-  const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=version&order=version.desc&limit=1`);
-  if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
-  const versions = await current.json() as Array<{ version: number }>;
-  const version = (versions[0]?.version ?? 0) + 1;
+  const existingVersionResponse = await db(env, `site_project_versions?generation_task_id=eq.${task.id}&select=id,version,template_version_id,generated_content,design_overrides&limit=1`);
+  if (!existingVersionResponse.ok) throw new Error(`demo_generation_reconcile_http_${existingVersionResponse.status}`);
+  const existingVersions = await existingVersionResponse.json() as Array<{
+    id: string; version: number; template_version_id: string;
+    generated_content: Record<string, unknown>; design_overrides: Record<string, unknown>;
+  }>;
   const prospect = prospects[0];
-  const generatedContent = {
+  const defaultGeneratedContent = {
     businessName: first(prospect, ["business_name", "name", "company_name"]) ?? "Negócio local",
     category: first(prospect, ["category", "business_category", "segment"]),
     headline: first(prospect, ["tagline", "headline", "description", "business_description"]),
@@ -629,23 +631,41 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     generatedAt: new Date().toISOString(),
     generationMode: "deterministic-prospect-profile",
   };
-  const designOverrides = payload.designOverrides && typeof payload.designOverrides === "object" ? payload.designOverrides : {};
-  const inserted = await db(env, "site_project_versions", {
-    method: "POST",
-    headers: { prefer: "return=representation" },
-    body: JSON.stringify({
-      site_project_id: resolvedProjectId,
-      version,
-      template_version_id: resolvedTemplateVersionId,
-      generated_content: generatedContent,
-      design_overrides: designOverrides,
-      selected_by_prospect: false,
-      selection_source: "system",
-    }),
-  });
-  if (!inserted.ok) throw new Error(`demo_version_insert_http_${inserted.status}`);
-  const created = await inserted.json() as Array<{ id: string; version: number }>;
-  if (!created.length) throw new Error("demo_version_insert_no_rows");
+  const requestedDesignOverrides = payload.designOverrides && typeof payload.designOverrides === "object"
+    ? payload.designOverrides as Record<string, unknown> : {};
+  let generatedContent: Record<string, unknown> = defaultGeneratedContent;
+  let designOverrides: Record<string, unknown> = requestedDesignOverrides;
+  let created: Array<{ id: string; version: number }>;
+  if (existingVersions.length) {
+    // Reuse the committed version after a partial failure; never mint a second version for the same task.
+    const existing = existingVersions[0];
+    resolvedTemplateVersionId = existing.template_version_id;
+    generatedContent = existing.generated_content ?? defaultGeneratedContent;
+    designOverrides = existing.design_overrides ?? requestedDesignOverrides;
+    created = [{ id: existing.id, version: existing.version }];
+  } else {
+    const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=version&order=version.desc&limit=1`);
+    if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
+    const versions = await current.json() as Array<{ version: number }>;
+    const version = (versions[0]?.version ?? 0) + 1;
+    const inserted = await db(env, "site_project_versions", {
+      method: "POST",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({
+        site_project_id: resolvedProjectId,
+        version,
+        generation_task_id: task.id,
+        template_version_id: resolvedTemplateVersionId,
+        generated_content: generatedContent,
+        design_overrides: designOverrides,
+        selected_by_prospect: false,
+        selection_source: "system",
+      }),
+    });
+    if (!inserted.ok) throw new Error(`demo_version_insert_http_${inserted.status}`);
+    created = await inserted.json() as Array<{ id: string; version: number }>;
+    if (!created.length) throw new Error("demo_version_insert_no_rows");
+  }
 
   const projectDraft = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id`, {
     method: "PATCH",
