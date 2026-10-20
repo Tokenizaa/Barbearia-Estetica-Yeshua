@@ -22,13 +22,13 @@ export const ContactPage: React.FC = () => {
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-widest">
           <Phone className="w-3.5 h-3.5" />
-          <span>Canais Oficiais Yeshua</span>
+          <span>Canais de Atendimento</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-bold font-display uppercase tracking-wider text-neutral-100">
           Localização & Atendimento
         </h1>
         <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-          Venha nos visitar no Centro de Manaus ou entre em contato pelo WhatsApp para tirar dúvidas, consultar horários e agendar serviços.
+          Consulte os canais de atendimento e as informações configuradas pelo estabelecimento.
         </p>
       </div>
 
@@ -67,7 +67,7 @@ export const ContactPage: React.FC = () => {
           </a>
         </div>
 
-        {/* Instagram */}
+        {company.instagramUrl && (
         <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6 hover:border-pink-500/40 transition-colors">
           <div className="space-y-4">
             <div className="w-12 h-12 rounded-xl bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
@@ -78,11 +78,11 @@ export const ContactPage: React.FC = () => {
                 Rede Social Oficial
               </span>
               <h3 className="text-xl font-bold font-display text-neutral-100 mt-1">
-                Instagram Yeshua
+                Instagram do Estabelecimento
               </h3>
             </div>
             <p className="text-sm text-neutral-400 leading-relaxed">
-              Stories diários, fotos de cortes, extensões de cílios e novidades da semana.
+              Acompanhe as novidades e publicações do estabelecimento.
             </p>
             <p className="text-base font-semibold text-pink-400">
               {company.instagramHandle}
@@ -100,7 +100,7 @@ export const ContactPage: React.FC = () => {
           </a>
         </div>
 
-        {/* Localização */}
+        {company.address && company.cityState && (
         <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6 hover:border-amber-500/40 transition-colors">
           <div className="space-y-4">
             <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
@@ -111,7 +111,7 @@ export const ContactPage: React.FC = () => {
                 Ponto de Atendimento
               </span>
               <h3 className="text-xl font-bold font-display text-neutral-100 mt-1">
-                Endereço em Manaus
+                Endereço do Estabelecimento
               </h3>
             </div>
             <p className="text-sm text-neutral-300 font-medium">
@@ -128,7 +128,7 @@ export const ContactPage: React.FC = () => {
           </div>
 
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
+            href={company.googleMapsUrl || ("https://www.google.com/maps/search/?api=1&query=" + mapsQuery)}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full inline-flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-amber-300 font-semibold text-sm transition-colors"
@@ -137,9 +137,11 @@ export const ContactPage: React.FC = () => {
             <span>Traçar Rota no Mapa</span>
           </a>
         </div>
+
+        )}
       </div>
 
-      {/* Map Section */}
+      {company.address && company.cityState && (
       <div className="bg-neutral-900/70 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -147,12 +149,12 @@ export const ContactPage: React.FC = () => {
               Mapa de Localização
             </h3>
             <p className="text-xs sm:text-sm text-neutral-400 mt-1">
-              Fácil acesso pela Avenida Constantino Nery no Centro de Manaus.
+              Consulte o endereço cadastrado pelo estabelecimento.
             </p>
           </div>
 
           <a
-            href={`https://www.google.com/maps/search/?api=1&query=${mapsQuery}`}
+            href={company.googleMapsUrl || ("https://www.google.com/maps/search/?api=1&query=" + mapsQuery)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-neutral-950 font-bold text-xs shadow-md transition-colors"
@@ -164,14 +166,16 @@ export const ContactPage: React.FC = () => {
 
         <div className="w-full h-96 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-950 relative">
           <iframe
-            title="Localização Barbearia & Estética Yeshua Manaus"
-            src="https://maps.google.com/maps?q=Av.+Constantino+Nery,+50+-+Centro,+Manaus+-+AM&t=&z=16&ie=UTF8&iwloc=&output=embed"
+            title={"Localização de " + company.name}
+            src={"https://maps.google.com/maps?q=" + mapsQuery + "&t=&z=16&ie=UTF8&iwloc=&output=embed"}
             className="w-full h-full border-0 filter invert contrast-90 hue-rotate-180 brightness-95"
             loading="lazy"
             referrerPolicy="no-referrer-when-downgrade"
           />
         </div>
       </div>
+
+      )}
     </div>
   );
 };
