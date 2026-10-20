@@ -63,10 +63,18 @@ export async function onRequestGet({ request, env }: Context) {
   }
   if (!userResponse.ok) return json({ error: 'Sessão inválida ou expirada.' }, 401);
 
-  const user = await userResponse.json() as { app_metadata?: Record<string, unknown> };
-  if (user.app_metadata?.platform_role !== 'platform_admin') {
-    return json({ error: 'Acesso restrito ao Admin Geral.' }, 403);
-  }
+  const user = await userResponse.json() as { id?: string };
+  if (!user.id || !env.SUPABASE_SERVICE_ROLE_KEY) return json({ error: 'Configuração administrativa incompleta.' }, 503);
+  let adminCheck: Response;
+  try {
+    adminCheck = await fetch(`${env.SUPABASE_URL.replace(/\\/$/, '')}/rest/v1/platform_admins?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`, {
+      headers: { apikey: env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}` },
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch { return json({ error: 'Não foi possível verificar a permissão administrativa.' }, 503); }
+  if (!adminCheck.ok) return json({ error: 'Não foi possível verificar a permissão administrativa.' }, 503);
+  const adminRows = await adminCheck.json() as unknown[];
+  if (!adminRows.length) return json({ error: 'Acesso restrito ao Admin Geral.' }, 403);
 
   const checks: Check[] = [];
   const coreConfigured = Boolean(env.SUPABASE_SERVICE_ROLE_KEY);
