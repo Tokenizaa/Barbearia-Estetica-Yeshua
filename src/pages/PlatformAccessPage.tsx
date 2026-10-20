@@ -10,6 +10,7 @@ type Plan = {
   price_brl_cents: number;
   billing_period: 'one_time' | 'monthly' | 'yearly';
   access_days: number;
+  max_booking_horizon_days: number;
 };
 
 type Payment = {
@@ -56,7 +57,7 @@ export function PlatformAccessPage() {
 
   useEffect(() => {
     if (!supabase || !sessionEmail) return;
-    supabase.from('billing_plans').select('id,slug,name,description,price_brl_cents,billing_period,access_days')
+    supabase.from('billing_plans').select('id,slug,name,description,price_brl_cents,billing_period,access_days,max_booking_horizon_days')
       .eq('is_active', true).order('display_order').then(({ data, error: queryError }) => {
         if (queryError) setError('Não foi possível carregar os planos disponíveis.');
         else setPlans((data ?? []) as Plan[]);
@@ -154,7 +155,7 @@ export function PlatformAccessPage() {
               <div className="rounded-xl border border-neutral-800 p-4"><p className="font-medium">Contratação e ativação</p><p className="mt-1 text-sm text-neutral-400">Escolha um plano ativo para gerar uma cobrança PIX. Seu salão permanece como rascunho até a confirmação do pagamento.</p></div>
               {plans.length === 0 ? <p className="text-sm text-neutral-400">Nenhum plano está publicado para contratação no momento.</p> : plans.map((plan) => (
                 <div key={plan.id} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-800 p-4">
-                  <div><p className="font-medium">{plan.name}</p><p className="mt-1 text-sm text-neutral-400">{plan.description || `${plan.access_days} dias de acesso`}</p><p className="mt-2 font-semibold">{formatPrice(plan.price_brl_cents)} <span className="text-xs font-normal text-neutral-500">/ {plan.billing_period === 'one_time' ? 'pagamento único' : plan.billing_period === 'monthly' ? 'mês (renovação não automática)' : 'ano (renovação não automática)'}</span></p></div>
+                  <div><p className="font-medium">{plan.name}</p><p className="mt-1 text-sm text-neutral-400">{plan.description || `${plan.access_days} dias de acesso`}</p><p className="mt-1 text-xs text-neutral-500">Agenda até {plan.max_booking_horizon_days} dias à frente</p><p className="mt-2 font-semibold">{formatPrice(plan.price_brl_cents)} <span className="text-xs font-normal text-neutral-500">/ {plan.billing_period === 'one_time' ? 'pagamento único' : plan.billing_period === 'monthly' ? 'mês (renovação não automática)' : 'ano (renovação não automática)'}</span></p></div>
                   <button disabled={busy} onClick={() => startPayment(plan.id)} className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-amber-400 px-3 py-2 text-sm font-semibold text-neutral-950 disabled:opacity-50"><CreditCard size={16} /> Contratar</button>
                 </div>
               ))}
