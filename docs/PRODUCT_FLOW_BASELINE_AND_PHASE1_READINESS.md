@@ -87,8 +87,8 @@ Inclui editor privado e persistente, isolamento multi-tenant, gestão de conteú
 
 As seguintes entregas foram registradas nesta branch durante o início da execução:
 
-- `supabase/migrations/20261020180000_prospecting_automation_foundation.sql`: modelo persistente de campanhas, fila, eventos, mensagens e versões de projeto; campos de normalização, qualificação e deduplicação.
-- `supabase/migrations/20261020180100_prospecting_worker_rpc.sql`: reivindicação atômica da fila com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
+- `supabase/migrations/20261020185512_prospecting_automation_foundation.sql`: modelo persistente de campanhas, fila, eventos, mensagens e versões de projeto; campos de normalização, qualificação e deduplicação.
+- `supabase/migrations/20261020185517_prospecting_worker_rpc.sql`: reivindicação atômica da fila com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
 - `src/lib/prospecting.ts`: normalização determinística, chave SHA-256 de deduplicação, score explicável e gate de WhatsApp que exige elegibilidade, opt-in comprovado e ausência de opt-out.
 - `tests/prospecting_automation.test.ts`: testes de domínio incluídos no comando `npm test`.
 - `functions/api/prospecting/readiness.ts`: diagnóstico autenticado do esquema e das credenciais necessárias, sem revelar segredos.
