@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Preparar a operação de prospecção e a produção de uma primeira versão personalizada de site, sem integrar Supabase nesta fase. O dashboard é interno; o lead não navega por um marketplace.
+Preparar a operação de prospecção e a produção de uma primeira versão personalizada de site. O esquema inicial do Supabase já foi aplicado, mas a interface ainda precisa de integração persistente e validação antes de depender do banco em produção. O dashboard é interno; o lead não navega por um marketplace.
 
 ## Entidades de domínio
 
@@ -44,7 +44,7 @@ Preparar a operação de prospecção e a produção de uma primeira versão per
 7. Preparar, aprovar, enviar e publicar são estados diferentes. Envio e publicação exigem ação explícita e não ocorrem automaticamente.
 8. O dashboard pode usar um repositório local/mock nesta fase, mas deve exibir um indicador de modo de demonstração/local e não prometer sincronização entre usuários.
 9. Nenhum dado de exemplo pode ser apresentado como lead real.
-10. O Supabase já existente será conectado em fase posterior; esta especificação não autoriza criar outro projeto, conectar credenciais ou aplicar migrations agora.
+10. O projeto Supabase `MeuSalao` (`ifkqrtjhdnolkuucgbpb`) é o banco definido para a plataforma. O esquema inicial está aplicado; a integração da aplicação, configuração segura de credenciais e testes de autorização continuam pendentes.
 
 ## Dashboard mínimo
 
@@ -76,6 +76,13 @@ Preparar a operação de prospecção e a produção de uma primeira versão per
 - O payload inclui somente os campos usados na proposta visual, o modelo, a versão e a data. Como o conteúdo está embutido no URL, o link é copiável e autossuficiente, mas não é um registro persistente no servidor e pode ser encaminhado por terceiros.
 - A prévia não é um site publicado, não cria domínio próprio, não atualiza automaticamente quando o lead muda e não garante cartões Open Graph/social, pois os metadados são renderizados no cliente.
 - A geração do link não envia a proposta automaticamente. O operador decide como e quando compartilhá-lo.
+
+## Estado da integração Supabase
+
+- Banco: `MeuSalao` (`ifkqrtjhdnolkuucgbpb`).
+- Migration inicial aplicada e registrada em `supabase/migrations/20261020154758_white_label_site_builder.sql`.
+- O frontend ainda usa armazenamento local/mock e não deve ser tratado como sincronizado com o banco.
+- Antes de conectar a interface, concluir revisão dos alertas de advisors, configurar autenticação real e testar RLS com usuários de funções distintas.
 
 ## Fora do escopo atual
 
