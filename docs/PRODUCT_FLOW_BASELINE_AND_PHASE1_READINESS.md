@@ -89,12 +89,14 @@ As seguintes entregas foram registradas nesta branch durante o início da execu�
 
 - `supabase/migrations/20261020185512_prospecting_automation_foundation.sql`: modelo persistente de campanhas, fila, eventos, mensagens e versões de projeto; campos de normalização, qualificação e deduplicação.
 - `supabase/migrations/20261020185517_prospecting_worker_rpc.sql`: reivindicação atômica da fila com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
+- `supabase/migrations/20261020185601_prospecting_service_role_grants.sql` e `20261020190124_prospecting_index_policy_tuning.sql`: privilégios server-side explícitos, índices de relacionamentos e simplificação da política RLS.
+- `docs/PROSPECTING_RUNTIME_CONFIGURATION.md`: variáveis server-side e critérios de prontidão para fornecedores.
 - `src/lib/prospecting.ts`: normalização determinística, chave SHA-256 de deduplicação, score explicável e gate de WhatsApp que exige elegibilidade, opt-in comprovado e ausência de opt-out.
 - `tests/prospecting_automation.test.ts`: testes de domínio incluídos no comando `npm test`.
 - `functions/api/prospecting/readiness.ts`: diagnóstico autenticado do esquema e das credenciais necessárias, sem revelar segredos.
 - `docs/LEAD_CAPTURE_DASHBOARD.md` e `docs/DATA_MODEL.md`: atualizados para remover instruções obsoletas de prospecção manual.
 
-**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As três migrations da infraestrutura foram aplicadas ao Supabase `ifkqrtjhdnolkuucgbpb` e a existência das tabelas/RLS e privilégios da fila foi verificada por consulta SQL. O painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. O build de preview do Vercel concluiu com estado `READY` nos commits de código consultados. Lint e testes ainda não têm execução confirmada. Foi adicionada uma workflow de validação para testar, tipar e compilar; ainda não há execução de GitHub Actions registrada. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
+**Estado da execução:** a estrutura e as funções de domínio foram adicionadas ao Git. As quatro migrations da infraestrutura foram aplicadas ao Supabase `ifkqrtjhdnolkuucgbpb` e a existência das tabelas/RLS e privilégios da fila foi verificada por consulta SQL. O painel ainda usa `localStorage`; não há worker/agenda integrado, fornecedor de descoberta configurado, integração de WhatsApp validada ou landing page comercial completa. O build de preview do Vercel concluiu com estado `READY` nos commits de código consultados. Lint e testes ainda não têm execução confirmada. Foi adicionada uma workflow de validação para testar, tipar e compilar; ainda não há execução de GitHub Actions registrada. Portanto, a Fase 1 continua bloqueada para certificação ponta a ponta.
 
 ## 3. Análise de prontidão da Fase 1
 
