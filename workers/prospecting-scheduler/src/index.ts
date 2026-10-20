@@ -64,6 +64,14 @@ function first(prospect: Prospect, keys: string[]): unknown {
   return null;
 }
 
+function firstCaptured(prospect: Prospect, keys: string[]): unknown {
+  const direct = first(prospect, keys);
+  if (direct !== null) return direct;
+  const captured = prospect.captured_data;
+  if (!captured || typeof captured !== "object" || Array.isArray(captured)) return null;
+  return first(captured as Prospect, keys);
+}
+
 function qualify(prospect: Prospect) {
   const name = first(prospect, ["business_name", "name", "businessName", "company_name"]);
   const category = first(prospect, ["category", "business_category", "segment"]);
@@ -71,9 +79,9 @@ function qualify(prospect: Prospect) {
   const phone = first(prospect, ["phone", "phone_number", "whatsapp", "mobile"]);
   const country = first(prospect, ["country_code", "countryCode"]) ?? "BR";
   const email = first(prospect, ["email", "email_address"]);
-  const address = first(prospect, ["address", "formatted_address"]);
-  const description = first(prospect, ["description", "business_description"]);
-  const source = first(prospect, ["source_url", "sourceUrl", "source_link"]);
+  const address = firstCaptured(prospect, ["address", "formatted_address"]);
+  const description = firstCaptured(prospect, ["description", "business_description"]);
+  const source = firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]);
   const fields: Array<[string, number, boolean, string]> = [
     ["businessName", 20, Boolean(normalizeName(String(name ?? ""))), "nome comercial identificado"],
     ["category", 10, Boolean(String(category ?? "").trim()), "categoria identificada"],
@@ -619,15 +627,15 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   const defaultGeneratedContent = {
     businessName: first(prospect, ["business_name", "name", "company_name"]) ?? "Negócio local",
     category: first(prospect, ["category", "business_category", "segment"]),
-    headline: first(prospect, ["tagline", "headline", "description", "business_description"]),
-    description: first(prospect, ["description", "business_description"]),
+    headline: firstCaptured(prospect, ["tagline", "headline", "description", "business_description"]),
+    description: firstCaptured(prospect, ["description", "business_description"]),
     website: first(prospect, ["website_url", "website", "url"]),
     phone: first(prospect, ["normalized_phone", "phone", "phone_number"]),
     email: first(prospect, ["email", "email_address"]),
-    address: first(prospect, ["address", "formatted_address"]),
+    address: firstCaptured(prospect, ["address", "formatted_address"]),
     city: first(prospect, ["city", "locality"]),
     region: first(prospect, ["region", "state", "province"]),
-    sourceUrl: first(prospect, ["source_url", "sourceUrl", "source_link"]),
+    sourceUrl: firstCaptured(prospect, ["source_url", "sourceUrl", "source_link"]),
     generatedAt: new Date().toISOString(),
     generationMode: "deterministic-prospect-profile",
   };
