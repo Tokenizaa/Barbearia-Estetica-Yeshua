@@ -11,8 +11,8 @@ Executar automaticamente o ciclo de aquisição comercial: descobrir negócios p
 - `functions/api/capture.ts`: captura metadados de uma URL pública já conhecida. Não descobre negócios sozinha.
 - `src/pages/LeadsDashboard.tsx`: painel legado com operações manuais e persistência em `localStorage`; ainda não é o repositório operacional compartilhado.
 - `src/pages/SharedSitePreview.tsx`: prévia por payload no URL; ainda não é um projeto público persistido no servidor.
-- `supabase/migrations/20261020180000_prospecting_automation_foundation.sql`: cria tabelas para campanhas, tarefas duráveis, eventos, mensagens e versões de projetos, além de campos de normalização e deduplicação.
-- `supabase/migrations/20261020180100_prospecting_worker_rpc.sql`: adiciona reivindicação atômica de tarefas com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
+- `supabase/migrations/20261020185512_prospecting_automation_foundation.sql`: cria tabelas para campanhas, tarefas duráveis, eventos, mensagens e versões de projetos, além de campos de normalização e deduplicação.
+- `supabase/migrations/20261020185517_prospecting_worker_rpc.sql`: adiciona reivindicação atômica de tarefas com `FOR UPDATE SKIP LOCKED`, limite de tentativas e recuperação de locks antigos.
 - `src/lib/prospecting.ts`: funções determinísticas para normalização, chave de deduplicação, qualificação explicável e bloqueio de WhatsApp sem evidência de opt-in.
 - `tests/prospecting_automation.test.ts`: testes para as funções de domínio da prospecção, incluídos no comando `npm test`.
 
