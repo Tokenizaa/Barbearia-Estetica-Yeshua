@@ -89,10 +89,10 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
     logoUrl: '/logo.jpg',
     coverUrl: '',
     whatsapp: '+55 92 98888-0000',
-    whatsappClean: '5592988880000',
+    whatsappClean: '',
     phone: '',
-    address: 'Manaus — AM',
-    cityState: 'Manaus — Amazonas',
+    address: '',
+    cityState: '',
     instagramHandle: '',
     instagramUrl: '',
     adminName: 'Administrador Local',
@@ -152,10 +152,10 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
         logoUrl: '/logo.jpg',
         coverUrl: '',
         whatsapp: '+55 92 98888-0000',
-        whatsappClean: '5592988880000',
+        whatsappClean: '',
         phone: '',
-        address: 'Manaus — AM',
-        cityState: 'Manaus — Amazonas',
+        address: '',
+        cityState: '',
         instagramHandle: '',
         instagramUrl: '',
         adminName: 'Administrador Local',
@@ -190,7 +190,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
       if (success) {
         showToast(`Estabelecimento "${name}" excluído.`);
       } else {
-        showToast('Não é possível excluir o estabelecimento padrão Yeshua.');
+        showToast('Não é possível excluir o estabelecimento padrão da plataforma.');
       }
     }
   };
@@ -556,7 +556,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                           </span>
                           {est.isDefault && (
                             <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                              Original Yeshua
+                              Modelo inicial
                             </span>
                           )}
                           <span
@@ -694,7 +694,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                             </h3>
                             {est.isDefault && (
                               <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                Matriz Yeshua
+                                Estabelecimento principal
                               </span>
                             )}
                           </div>
@@ -915,7 +915,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                   type="text"
                   value={newEstForm.cityState}
                   onChange={(e) => setNewEstForm({ ...newEstForm, cityState: e.target.value })}
-                  placeholder="Manaus — Amazonas"
+                  placeholder="Cidade e estado"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400"
                 />
               </div>
@@ -943,7 +943,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                   }}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400"
                 >
-                  <option value="amber">Âmbar Dourado (Padrão Yeshua)</option>
+                  <option value="amber">Âmbar Dourado (Padrão)</option>
                   <option value="emerald">Verde Esmeralda</option>
                   <option value="sapphire">Azul Safira</option>
                   <option value="ruby">Vermelho Rubi</option>
@@ -1441,7 +1441,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                     }
                     className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400"
                   >
-                    <option value="amber">Âmbar Dourado (Yeshua)</option>
+                    <option value="amber">Âmbar Dourado</option>
                     <option value="emerald">Verde Esmeralda</option>
                     <option value="sapphire">Azul Safira</option>
                     <option value="ruby">Vermelho Rubi</option>
