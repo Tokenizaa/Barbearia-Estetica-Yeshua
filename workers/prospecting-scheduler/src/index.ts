@@ -308,6 +308,18 @@ async function createDedupeKey(candidate: Record<string, unknown>) {
 
 async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: string) {
   if (!env.PROSPECTING_SOURCE_ENDPOINT || !env.PROSPECTING_SOURCE_API_KEY || !env.PROSPECTING_SOURCE_PROVIDER) {
+    if (task.campaign_id) {
+      const campaignBlock = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(task.campaign_id)}&select=id`, {
+        method: "PATCH", headers: { prefer: "return=minimal" },
+        body: JSON.stringify({
+          status: "blocked",
+          blocked_reason: "Configure provedor autorizado, endpoint HTTPS e credencial server-side antes de reativar.",
+          next_run_at: null,
+          updated_at: new Date().toISOString(),
+        }),
+      });
+      if (!campaignBlock.ok) throw new Error(`campaign_block_http_${campaignBlock.status}`);
+    }
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "discovery_provider_not_configured",
       last_error: "Provedor autorizado de descoberta, endpoint e credencial não estão configurados.",
