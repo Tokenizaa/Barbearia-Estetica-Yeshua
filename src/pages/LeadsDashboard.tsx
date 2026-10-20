@@ -141,7 +141,7 @@ export const LeadsDashboard: React.FC = () => {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     businessName: '', category: '', websiteUrl: '', siteDescription: '', phone: '', email: '',
-    address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal', siteDescription: '' as Lead['priority'],
+    address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' as Lead['priority'],
   });
 
   useEffect(() => {
