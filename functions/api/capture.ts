@@ -129,7 +129,7 @@ async function readLimited(response: Response): Promise<string> {
 
 export const onRequestPost = async ({ request }: { request: Request }) => {
   const origin = request.headers.get("origin");
-  if (origin && origin !== new URL(request.url).origin) return json({ error: "Origem da requisição não permitida." }, 403);
+  if (!origin || origin !== new URL(request.url).origin) return json({ error: "Origem da requisição não permitida." }, 403);
   const contentLength = Number(request.headers.get("content-length") ?? "0");
   if (contentLength > 4096) return json({ error: "Corpo da requisição excede o limite permitido." }, 413);
   let payload: { url?: unknown };
