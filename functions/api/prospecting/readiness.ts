@@ -4,6 +4,7 @@ interface Env {
   SUPABASE_SERVICE_ROLE_KEY?: string;
   PROSPECTING_SOURCE_PROVIDER?: string;
   PROSPECTING_SOURCE_API_KEY?: string;
+  PROSPECTING_SOURCE_ENDPOINT?: string;
   PROSPECTING_WORKER_SECRET?: string;
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
@@ -79,6 +80,8 @@ export async function onRequestGet({ request, env }: Context) {
       ['prospect_events', 'eventos do funil'],
       ['prospect_outbound_messages', 'mensagens de saída'],
       ['site_project_versions', 'versões das demonstrações'],
+      ['prospecting_candidates', 'candidatos descobertos'],
+      ['site_demo_public_links', 'links públicos das demonstrações'],
     ] as const);
     const results = await Promise.all(tables.map(async ([table, label]) => ({
       table,
@@ -98,11 +101,11 @@ export async function onRequestGet({ request, env }: Context) {
     }
   }
 
-  const sourceConfigured = Boolean(env.PROSPECTING_SOURCE_PROVIDER?.trim() && env.PROSPECTING_SOURCE_API_KEY?.trim());
+  const sourceConfigured = Boolean(env.PROSPECTING_SOURCE_PROVIDER?.trim() && env.PROSPECTING_SOURCE_API_KEY?.trim() && env.PROSPECTING_SOURCE_ENDPOINT?.trim());
   checks.push({
     id: 'discovery_provider',
     ready: sourceConfigured,
-    detail: sourceConfigured ? `Provedor de descoberta configurado: ${env.PROSPECTING_SOURCE_PROVIDER!.trim()}.` : 'Configure um provedor de descoberta autorizado e sua credencial server-side.',
+    detail: sourceConfigured ? `Provedor de descoberta configurado: ${env.PROSPECTING_SOURCE_PROVIDER!.trim()}.` : 'Configure PROSPECTING_SOURCE_PROVIDER, PROSPECTING_SOURCE_ENDPOINT HTTPS e a credencial server-side de um provedor autorizado.',
   });
 
   const workerConfigured = Boolean(env.PROSPECTING_WORKER_SECRET?.trim());
