@@ -7,6 +7,15 @@ alter table public.site_projects
 alter table public.site_demo_public_links
   add column if not exists publish_task_id bigint references public.prospecting_tasks(id) on delete set null;
 
+-- A task may be retried after the version insert commits but before its task checkpoint.
+-- Persist the generating task on each version so retries reconcile instead of duplicating versions.
+alter table public.site_project_versions
+  add column if not exists generation_task_id bigint references public.prospecting_tasks(id) on delete set null;
+
+create unique index if not exists site_project_versions_generation_task_unique
+  on public.site_project_versions (generation_task_id)
+  where generation_task_id is not null;
+
 create unique index if not exists site_demo_public_links_publish_task_unique
   on public.site_demo_public_links (publish_task_id);
 
