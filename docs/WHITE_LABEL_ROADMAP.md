@@ -46,7 +46,7 @@ O produto não é marketplace, diretório público nem ferramenta para o visitan
 - Usar implementação local/mock explícita, com dados de exemplo claramente marcados; não simular sucesso de raspagem ou envio externo.
 - Preparar a camada de persistência para que o repositório Supabase possa ser conectado depois sem reescrever os componentes.
 - Registrar falhas e estados da geração do site; não exibir como pronta uma prévia que não foi gerada.
-- A captura automatizada futura deverá usar fontes permitidas, respeitar controles de acesso e operar no servidor, não no browser.
+- A captura automatizada deve usar fontes permitidas, respeitar controles de acesso e operar no servidor; a primeira implementação está em `functions/api/capture.ts` e ainda precisa de validação operacional/rate limiting antes de uso em escala.
 
 ## Estado técnico conhecido
 
