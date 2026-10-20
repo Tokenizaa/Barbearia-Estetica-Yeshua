@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { createShareablePreviewUrl } from './SharedSitePreview';
 import { Activity, ArrowRight, Check, Clock, ExternalLink, FilePlus2, Globe2, Plus, Search, Sparkles, Users } from 'lucide-react';
 
 type LeadStatus =
@@ -30,6 +31,12 @@ interface SiteProject {
   versions: Array<{ templateId: string; templateName: string; version: number; createdAt: string }>;
   previewText: string;
   updatedAt: string;
+}
+
+interface CaptureResponse {
+  requestedUrl: string; finalUrl: string; sourceUrl: string; capturedAt: string;
+  businessName: string; category: string; description: string; phone: string;
+  email: string; address: string; logoUrl: string; evidence: Record<string, boolean>; notice: string;
 }
 
 interface Lead {
@@ -127,6 +134,10 @@ export const LeadsDashboard: React.FC = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [activityText, setActivityText] = useState('');
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [captureBusy, setCaptureBusy] = useState(false);
+  const [captureError, setCaptureError] = useState<string | null>(null);
+  const [captureMessage, setCaptureMessage] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
     businessName: '', category: '', websiteUrl: '', phone: '', email: '',
     address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' as Lead['priority'],
@@ -192,6 +203,83 @@ export const LeadsDashboard: React.FC = () => {
       updatedAt: timestamp,
     };
     updateLead(lead.id, { project, status: 'site_ready' }, 'Primeira versão textual do site preparada para revisão interna. Nenhum site foi publicado ou enviado.');
+  };
+
+  const captureWebsite = async (url: string, targetLead?: Lead) => {
+    const normalizedUrl = url.trim();
+    if (!normalizedUrl) { setCaptureError('Informe a URL do site público para capturar os dados.'); return; }
+    setCaptureBusy(true);
+    setCaptureError(null);
+    setCaptureMessage(null);
+    try {
+      const response = await fetch('/api/capture', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', accept: 'application/json' },
+        body: JSON.stringify({ url: normalizedUrl }),
+      });
+      const result = await response.json() as CaptureResponse | { error?: string };
+      if (!response.ok || !('businessName' in result)) {
+        throw new Error('error' in result && result.error ? result.error : 'Não foi possível capturar os metadados do site.');
+      }
+      const captured = result as CaptureResponse;
+      if (targetLead) {
+        updateLead(targetLead.id, {
+          businessName: captured.businessName || targetLead.businessName,
+          category: captured.category || targetLead.category,
+          websiteUrl: captured.finalUrl || targetLead.websiteUrl,
+          phone: captured.phone || targetLead.phone,
+          email: captured.email || targetLead.email,
+          address: captured.address || targetLead.address,
+          sourceUrl: captured.sourceUrl || normalizedUrl,
+          sourceType: 'Site público',
+          verificationStatus: 'in_review',
+        }, 'Metadados públicos capturados em ' + new Date(captured.capturedAt).toLocaleString('pt-BR') + '. Campos precisam de revisão humana.');
+      } else {
+        setForm((current) => ({
+          ...current,
+          businessName: current.businessName || captured.businessName,
+          category: current.category || captured.category,
+          websiteUrl: captured.finalUrl || normalizedUrl,
+          phone: current.phone || captured.phone,
+          email: current.email || captured.email,
+          address: current.address || captured.address,
+          sourceUrl: captured.sourceUrl || normalizedUrl,
+          sourceType: 'Site público',
+          notes: current.notes || captured.description,
+        }));
+      }
+      const found = Object.values(captured.evidence ?? {}).filter(Boolean).length;
+      setCaptureMessage('Captura concluída: ' + found + ' tipo(s) de dado encontrado(s). Revise todos os campos; a captura não equivale a verificação.');
+    } catch (error) {
+      setCaptureError(error instanceof Error ? error.message : 'Falha inesperada na captura. Verifique se a API /api/capture está implantada.');
+    } finally {
+      setCaptureBusy(false);
+    }
+  };
+
+  const sharePreview = async (lead: Lead) => {
+    if (!lead.project) return;
+    const url = createShareablePreviewUrl({
+      version: 1,
+      businessName: lead.businessName,
+      category: lead.category,
+      description: lead.project.previewText.split('\n')[2] || ('Uma presença digital feita para apresentar os serviços de ' + lead.businessName + ' com clareza e facilitar o contato com novos clientes.'),
+      phone: lead.phone,
+      email: lead.email,
+      address: lead.address,
+      websiteUrl: lead.websiteUrl,
+      templateId: lead.project.templateId,
+      templateName: lead.project.templateName,
+      projectVersion: lead.project.templateVersion,
+      generatedAt: lead.project.updatedAt,
+    });
+    setShareUrl(url);
+    try {
+      await navigator.clipboard.writeText(url);
+      setCaptureMessage('Link de prévia copiado. Qualquer pessoa com o link poderá abrir esta versão; os dados estão embutidos no próprio URL.');
+    } catch {
+      setCaptureMessage('Link de prévia gerado. Copie-o no campo exibido abaixo.');
+    }
   };
 
   const addActivity = (lead: Lead) => {
@@ -283,11 +371,13 @@ export const LeadsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {(captureError || captureMessage) && <div role="status" className={'rounded-lg border px-4 py-3 text-xs ' + (captureError ? 'border-red-500/30 bg-red-500/5 text-red-200' : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-200')}>{captureError || captureMessage}<button onClick={() => { setCaptureError(null); setCaptureMessage(null); }} className="ml-3 underline">Fechar</button></div>}
+      {shareUrl && <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-neutral-900 p-4"><label className="block text-xs font-medium text-neutral-300">Link compartilhável da prévia</label><input readOnly className={inputClass} value={shareUrl} onFocus={(event) => event.currentTarget.select()} /><div className="flex flex-wrap gap-2"><button onClick={() => { void navigator.clipboard.writeText(shareUrl).then(() => setCaptureMessage('Link copiado.')); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950">Copiar link</button><a href={shareUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-200">Abrir prévia</a></div><p className="text-xs text-neutral-500">O link contém apenas os dados usados na prévia. Não é um site publicado nem uma URL de domínio próprio.</p></div>}
       {importMessage && <div role="status" className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-xs text-neutral-200">{importMessage}<button onClick={() => setImportMessage(null)} className="ml-3 underline">Fechar</button></div>}
 
       <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
         <Clock className="h-4 w-4 shrink-0" />
-        <span><strong>Modo local provisório.</strong> Os dados ficam neste navegador. Captura automatizada, sincronização, envio de propostas e publicação ainda não estão conectados.</span>
+        <span><strong>Modo local provisório.</strong> Os leads continuam neste navegador. A captura automatizada usa /api/capture na Cloudflare Pages Function; sincronização e publicação ainda não estão conectadas.</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -307,7 +397,7 @@ export const LeadsDashboard: React.FC = () => {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <label><span className={labelClass}>Nome do negócio *</span><input required className={inputClass} value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} placeholder="Nome comercial" /></label>
           <label><span className={labelClass}>Categoria</span><input className={inputClass} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Ex.: restaurante" /></label>
-          <label><span className={labelClass}>Site atual</span><input type="url" className={inputClass} value={form.websiteUrl} onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })} placeholder="https://" /></label>
+          <label><span className={labelClass}>Site atual</span><div className="flex gap-2"><input type="url" className={inputClass} value={form.websiteUrl} onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })} placeholder="https://" /><button type="button" disabled={captureBusy || !form.websiteUrl.trim()} onClick={() => void captureWebsite(form.websiteUrl)} className="shrink-0 rounded-lg border border-emerald-500/40 px-3 text-xs font-medium text-emerald-300 disabled:opacity-40">{captureBusy ? 'Capturando…' : 'Capturar'}</button></div></label>
           <label><span className={labelClass}>Telefone público</span><input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
           <label><span className={labelClass}>E-mail público</span><input type="email" className={inputClass} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
           <label><span className={labelClass}>Endereço / cidade</span><input className={inputClass} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
@@ -352,7 +442,7 @@ export const LeadsDashboard: React.FC = () => {
               <div className="rounded-lg bg-neutral-950 p-3"><p className={labelClass}>Verificação</p><select className={inputClass} value={selected.verificationStatus} onChange={(e) => updateLead(selected.id, { verificationStatus: e.target.value as VerificationStatus }, `Verificação alterada para ${e.target.value}.`)}><option value="unreviewed">Não revisado</option><option value="in_review">Em revisão</option><option value="verified">Verificado</option><option value="needs_correction">Precisa de correção</option></select></div>
             </div>
             <div className="space-y-2 text-sm">
-              {selected.websiteUrl && <p className="break-all text-neutral-300"><ExternalLink className="mr-2 inline h-3.5 w-3.5" /><a className="text-emerald-300 underline" href={selected.websiteUrl} target="_blank" rel="noreferrer">{selected.websiteUrl}</a></p>}
+              {selected.websiteUrl && <div className="space-y-2"><p className="break-all text-neutral-300"><ExternalLink className="mr-2 inline h-3.5 w-3.5" /><a className="text-emerald-300 underline" href={selected.websiteUrl} target="_blank" rel="noreferrer">{selected.websiteUrl}</a></p><button disabled={captureBusy} onClick={() => void captureWebsite(selected.websiteUrl, selected)} className="rounded-lg border border-emerald-500/40 px-3 py-2 text-xs font-medium text-emerald-300 disabled:opacity-40">{captureBusy ? 'Capturando metadados…' : 'Capturar / atualizar dados do site'}</button></div>}
               <p className="break-all text-xs text-neutral-500">Fonte: {selected.sourceUrl || selected.sourceType || 'Não informada'}</p>
               {selected.notes && <p className="rounded-lg bg-neutral-950 p-3 text-sm text-neutral-300">{selected.notes}</p>}
             </div>
@@ -375,7 +465,7 @@ export const LeadsDashboard: React.FC = () => {
                     <div className={`mt-8 border-t pt-4 text-xs ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'border-neutral-300 text-neutral-600' : 'border-white/15 text-neutral-400'}`}>{selected.address || 'Endereço a confirmar'}{selected.phone ? ` · ${selected.phone}` : ''}</div>
                   </div>
                 </div>
-                <p className="text-xs text-neutral-500">Prévia visual local para avaliação interna. Ainda não é uma URL pública, não foi enviada ao lead e não está publicada.</p>
+                <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-neutral-500">Prévia interativa para revisão. O link compartilhável abre a versão embutida no navegador de quem o recebe.</p><button onClick={() => void sharePreview(selected)} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950">Gerar link compartilhável</button></div>
                 <label className="block"><span className={labelClass}>Após a primeira versão, escolher outro modelo</span><select className={inputClass} value={selected.project.templateId} onChange={(e) => changeTemplate(selected, e.target.value)}><option value={INITIAL_TEMPLATE.id}>{INITIAL_TEMPLATE.name} (original)</option>{ALTERNATIVE_TEMPLATES.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
                 <div className="space-y-2 border-t border-neutral-800 pt-3"><p className="text-xs font-semibold text-neutral-400">Histórico de versões</p>{[...selected.project.versions].reverse().map((version) => <div key={`${version.templateId}-${version.version}`} className="flex items-center justify-between gap-3 text-xs"><span className="text-neutral-300">v{version.version} · {version.templateName}</span><span className="text-neutral-500">{new Date(version.createdAt).toLocaleString('pt-BR')}</span></div>)}</div>
               </div>}
@@ -389,7 +479,7 @@ export const LeadsDashboard: React.FC = () => {
           </div>}
         </div>
       </div>
-      <div className="flex items-start gap-2 text-xs text-neutral-500"><ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0" /><p>Este módulo registra dados e prepara uma prévia textual local. Ainda não faz raspagem automática, envio de propostas, publicação, autenticação de produção nem sincronização entre usuários.</p></div>
+      <div className="flex items-start gap-2 text-xs text-neutral-500"><ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0" /><p>A captura automatizada depende da Cloudflare Pages Function /api/capture estar implantada. Links de prévia são autossuficientes e compartilháveis, mas não são sites publicados nem registros persistidos no servidor.</p></div>
     </section>
   );
 };
