@@ -9,24 +9,64 @@ export type MediaCategory =
   | 'Ambiente'
   | 'Outros';
 
-export interface CompanyInfo {
+export type EstablishmentStatus = 'active' | 'inactive' | 'suspended';
+
+export type EstablishmentTheme =
+  | 'amber'     // Padrão Yeshua (Dourado/Âmbar luxo)
+  | 'emerald'   // Verde Esmeralda
+  | 'sapphire'  // Azul Safira
+  | 'ruby'      // Vermelho Nobre
+  | 'slate';    // Prata / Minimalista
+
+export interface Establishment {
+  id: string;
+  slug: string;
   name: string;
-  instagramHandle: string;
-  instagramUrl: string;
+  tagline?: string;
+  status: EstablishmentStatus;
+  isDefault?: boolean;
+
+  // Identidade Visual
+  logoUrl?: string;
+  coverUrl?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  theme?: EstablishmentTheme;
+
+  // Contato e Localização
+  whatsapp: string;
+  whatsappClean: string;
+  phone?: string;
+  address: string;
+  cityState: string;
+  googleMapsUrl?: string;
+
+  // Instagram e Redes
+  instagramHandle?: string;
+  instagramUrl?: string;
   instagramBio?: string;
   instagramFollowers?: string;
   instagramPostsCount?: string;
-  whatsapp: string;
-  whatsappClean: string;
-  address: string;
-  cityState: string;
-  openingHoursNote?: string;
+  showInstagramGallery?: boolean;
+
+  // Configurações e Acesso Local
   adminPin: string;
-  logoUrl?: string;
+  adminName?: string;
+  adminEmail?: string;
+  openingHoursNote?: string;
+  allowOnlineBooking?: boolean;
+  slotIntervalMinutes?: number;
+
+  createdAt: string;
+  updatedAt?: string;
 }
+
+// Compatibilidade retroativa com código existente
+export type CompanyInfo = Establishment;
 
 export interface InstagramEmbedItem {
   id: string;
+  establishmentId?: string;
   url: string;
   shortcode: string;
   title: string;
@@ -41,6 +81,7 @@ export interface InstagramEmbedItem {
 
 export interface ServiceItem {
   id: string;
+  establishmentId?: string;
   name: string;
   description: string;
   price?: number | null;
@@ -52,6 +93,7 @@ export interface ServiceItem {
 
 export interface ProductItem {
   id: string;
+  establishmentId?: string;
   name: string;
   description: string;
   price: number;
@@ -64,6 +106,7 @@ export interface ProductItem {
 
 export interface MediaItem {
   id: string;
+  establishmentId?: string;
   type: 'image' | 'video';
   title: string;
   url: string;
@@ -76,6 +119,7 @@ export interface MediaItem {
 
 export interface Appointment {
   id: string;
+  establishmentId?: string;
   clientName: string;
   clientPhone: string;
   serviceId: string;
@@ -89,6 +133,40 @@ export interface Appointment {
   createdAt: string;
 }
 
+// Autenticação e Perfis
+export type UserRole = 'super_admin' | 'establishment_admin' | 'client';
+
+export interface AuthSession {
+  role: UserRole;
+  establishmentId?: string;
+  establishmentName?: string;
+  userName?: string;
+  token: string;
+  impersonatedBySuperAdmin?: boolean;
+  createdAt: number;
+}
+
+// Log de Auditoria para Ações Privilegiadas
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  action: string;
+  actorRole: UserRole;
+  actorName: string;
+  targetEstablishmentId?: string;
+  targetEstablishmentName?: string;
+  details: string;
+  severity?: 'info' | 'warning' | 'security';
+}
+
+// Configuração Geral da Plataforma White Label
+export interface PlatformConfig {
+  platformName: string;
+  masterPin: string;
+  supportEmail: string;
+  supportWhatsapp: string;
+}
+
 export type PageView =
   | 'home'
   | 'servicos'
@@ -97,7 +175,8 @@ export type PageView =
   | 'produto-detalhe'
   | 'galeria'
   | 'contato'
-  | 'admin';
+  | 'admin'
+  | 'super-admin';
 
 export type AdminTab =
   | 'dashboard'
@@ -108,3 +187,11 @@ export type AdminTab =
   | 'agendamentos'
   | 'instagram'
   | 'configuracoes';
+
+export type SuperAdminTab =
+  | 'overview'
+  | 'establishments'
+  | 'new-establishment'
+  | 'administrators'
+  | 'audit-logs'
+  | 'settings';

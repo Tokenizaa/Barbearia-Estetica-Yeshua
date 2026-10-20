@@ -44,9 +44,11 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
   const [addedSuccess, setAddedSuccess] = useState(false);
 
   const handleCopyProfileLink = () => {
-    navigator.clipboard.writeText(company.instagramUrl);
-    setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    if (company.instagramUrl) {
+      navigator.clipboard.writeText(company.instagramUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
   };
 
   const toggleLike = (e: React.MouseEvent, id: string) => {

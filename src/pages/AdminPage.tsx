@@ -43,23 +43,37 @@ import {
   Filter,
   ExternalLink,
   Play,
+  ShieldCheck,
 } from 'lucide-react';
 
-export const AdminPage: React.FC = () => {
+interface AdminPageProps {
+  onNavigateToSuperAdmin?: () => void;
+  onBackToApp?: () => void;
+}
+
+export const AdminPage: React.FC<AdminPageProps> = ({
+  onNavigateToSuperAdmin,
+  onBackToApp,
+}) => {
   const {
+    establishment,
     company,
     services,
     products,
     media,
     appointments,
     instagramEmbeds,
+    session,
     store,
   } = useStore();
 
-  // Authentication State
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return sessionStorage.getItem('yeshua_admin_logged') === 'true';
-  });
+  // Authentication State: valid if local session belongs to this establishment OR if super admin
+  const isAuthorized =
+    (session?.role === 'establishment_admin' && session?.establishmentId === establishment.id) ||
+    session?.role === 'super_admin' ||
+    sessionStorage.getItem('yeshua_admin_logged') === 'true';
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(isAuthorized));
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
@@ -104,18 +118,19 @@ export const AdminPage: React.FC = () => {
   // Login handler
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pinInput === company.adminPin) {
+    const res = store.loginLocalAdmin(pinInput, establishment.id);
+    if (res.success) {
       setIsAuthenticated(true);
-      sessionStorage.setItem('yeshua_admin_logged', 'true');
       setPinError(false);
+      showNotification(`Bem-vindo ao painel de ${establishment.name}!`);
     } else {
       setPinError(true);
     }
   };
 
   const handleLogout = () => {
+    store.logout();
     setIsAuthenticated(false);
-    sessionStorage.removeItem('yeshua_admin_logged');
     setPinInput('');
   };
 
@@ -136,21 +151,28 @@ export const AdminPage: React.FC = () => {
     }
   };
 
-  // If not logged in, show simple PIN screen
+  // If not logged in, show PIN screen scoped to current establishment
   if (!isAuthenticated) {
     return (
       <div className="min-h-[75vh] flex items-center justify-center px-4 py-16">
         <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-8 shadow-2xl text-center space-y-6">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
-            <Lock className="w-8 h-8" />
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 overflow-hidden shadow-inner">
+            {establishment.logoUrl ? (
+              <img src={establishment.logoUrl} alt={establishment.name} className="w-full h-full object-cover" />
+            ) : (
+              <Lock className="w-8 h-8" />
+            )}
           </div>
 
           <div>
             <h2 className="text-2xl font-bold font-display text-neutral-100">
               Acesso Administrativo
             </h2>
-            <p className="text-xs text-neutral-400 mt-1">
-              Barbearia & Estética Yeshua
+            <p className="text-xs text-amber-400 font-semibold mt-1">
+              {establishment.name}
+            </p>
+            <p className="text-[11px] text-neutral-400">
+              {establishment.cityState}
             </p>
           </div>
 
@@ -164,13 +186,13 @@ export const AdminPage: React.FC = () => {
                   setPinInput(e.target.value);
                   setPinError(false);
                 }}
-                placeholder="Digite o PIN de acesso"
+                placeholder="Digite o PIN deste estabelecimento"
                 className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-center text-xl tracking-widest text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-amber-400 transition-colors"
                 autoFocus
               />
               {pinError && (
                 <p className="text-xs text-rose-400 mt-2">
-                  PIN incorreto. (PIN padrão inicial: 1234)
+                  PIN incorreto para este estabelecimento. (Padrão: {establishment.adminPin})
                 </p>
               )}
             </div>
@@ -179,13 +201,32 @@ export const AdminPage: React.FC = () => {
               type="submit"
               className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
             >
-              Entrar no Painel
+              Entrar no Painel do Estabelecimento
             </button>
           </form>
 
-          <p className="text-[11px] text-neutral-400">
-            PIN padrão inicial configurado para: <strong className="text-neutral-400">1234</strong> (alterável na aba Configurações).
-          </p>
+          <div className="pt-4 border-t border-neutral-800 flex flex-col gap-2.5">
+            {onNavigateToSuperAdmin && (
+              <button
+                type="button"
+                onClick={onNavigateToSuperAdmin}
+                className="w-full py-2.5 rounded-xl border border-neutral-700 bg-neutral-950/80 hover:bg-neutral-800 text-neutral-300 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Painel do Administrador Geral (Super Admin)</span>
+              </button>
+            )}
+
+            {onBackToApp && (
+              <button
+                type="button"
+                onClick={onBackToApp}
+                className="text-xs text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer"
+              >
+                ← Voltar para o site do estabelecimento
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -193,6 +234,36 @@ export const AdminPage: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      {/* Super Admin Impersonation Notice */}
+      {session?.impersonatedBySuperAdmin && (
+        <div className="bg-amber-500/15 border border-amber-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-amber-500 text-neutral-950 flex items-center justify-center font-bold shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-xs font-bold text-amber-300 block">
+                MODO SUPER ADMIN ATIVO — Inspeção Privilegiada
+              </span>
+              <span className="text-[11px] text-neutral-300">
+                Você está visualizando e gerenciando o estabelecimento: <strong>{establishment.name}</strong>. Todas as ações são auditadas.
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              store.superAdminExitEstablishment();
+              if (onNavigateToSuperAdmin) {
+                onNavigateToSuperAdmin();
+              }
+            }}
+            className="px-3.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-neutral-950 text-xs font-bold transition-all shadow-xs shrink-0 cursor-pointer"
+          >
+            Sair e Voltar ao Painel Master
+          </button>
+        </div>
+      )}
       {/* Toast Notification */}
       {notification && (
         <div className="fixed top-24 right-5 z-50 bg-amber-500 text-neutral-950 px-4 py-3 rounded-xl font-semibold text-xs shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
@@ -205,19 +276,42 @@ export const AdminPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-neutral-800 pb-6">
         <div>
           <span className="text-xs font-semibold uppercase tracking-widest text-amber-400 font-display">
-            Gestão Comercial Yeshua
+            Gestão Comercial • {establishment.name}
           </span>
           <h1 className="text-2xl sm:text-3xl font-bold font-display text-neutral-100 mt-0.5">
-            Painel do Administrador
+            Painel do Administrador Local
           </h1>
+          <p className="text-xs text-neutral-400 mt-0.5">
+            ID: <span className="font-mono text-neutral-300">{establishment.id}</span> (/{establishment.slug}) • {establishment.cityState}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
+          {onBackToApp && (
+            <button
+              onClick={onBackToApp}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-750 text-xs font-medium text-neutral-300 transition-colors cursor-pointer"
+            >
+              <ExternalLink className="w-3.5 h-3.5 text-neutral-400" />
+              <span>Ver Site</span>
+            </button>
+          )}
+
+          {onNavigateToSuperAdmin && (
+            <button
+              onClick={onNavigateToSuperAdmin}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-xs font-semibold text-amber-300 transition-colors cursor-pointer"
+            >
+              <ShieldCheck className="w-4 h-4 text-amber-400" />
+              <span>Painel Master</span>
+            </button>
+          )}
+
           <button
             onClick={handleLogout}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-neutral-900 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-300 border border-neutral-800 text-xs font-medium text-neutral-300 transition-colors cursor-pointer"
           >
-            <LogOut className="w-4 h-4 text-neutral-400" />
+            <LogOut className="w-4 h-4" />
             <span>Sair do Painel</span>
           </button>
         </div>

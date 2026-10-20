@@ -1,14 +1,22 @@
 import { useEffect, useState } from 'react';
 import {
+  Establishment,
   CompanyInfo,
   ServiceItem,
   ProductItem,
   MediaItem,
   Appointment,
   InstagramEmbedItem,
+  AuthSession,
+  AuditLogEntry,
+  PlatformConfig,
+  UserRole,
 } from '../types';
 import {
-  INITIAL_COMPANY_INFO,
+  INITIAL_ESTABLISHMENT_YESHUA,
+  INITIAL_ESTABLISHMENT_DEMO,
+  INITIAL_ESTABLISHMENTS,
+  INITIAL_PLATFORM_CONFIG,
   INITIAL_SERVICES,
   INITIAL_PRODUCTS,
   INITIAL_MEDIA,
@@ -17,246 +25,628 @@ import {
 } from './defaultData';
 
 const STORAGE_KEYS = {
-  COMPANY: 'yeshua_company_info_v4',
-  SERVICES: 'yeshua_services_v1',
-  PRODUCTS: 'yeshua_products_v1',
-  MEDIA: 'yeshua_media_v4',
-  APPOINTMENTS: 'yeshua_appointments_v1',
-  INSTAGRAM_EMBEDS: 'yeshua_instagram_embeds_v4',
+  // Multitenant Core
+  ESTABLISHMENTS: 'wl_establishments_v2',
+  CURRENT_TENANT_ID: 'wl_current_tenant_id_v2',
+  SERVICES: 'wl_services_v2',
+  PRODUCTS: 'wl_products_v2',
+  MEDIA: 'wl_media_v2',
+  APPOINTMENTS: 'wl_appointments_v2',
+  INSTAGRAM_EMBEDS: 'wl_instagram_embeds_v2',
+  AUDIT_LOGS: 'wl_audit_logs_v2',
+  PLATFORM_CONFIG: 'wl_platform_config_v2',
+  AUTH_SESSION: 'wl_auth_session_v2',
+
+  // Legacy single-tenant keys for automatic non-destructive migration
+  LEGACY_COMPANY: 'yeshua_company_info_v4',
+  LEGACY_SERVICES: 'yeshua_services_v1',
+  LEGACY_PRODUCTS: 'yeshua_products_v1',
+  LEGACY_MEDIA: 'yeshua_media_v4',
+  LEGACY_APPOINTMENTS: 'yeshua_appointments_v1',
+  LEGACY_INSTAGRAM_EMBEDS: 'yeshua_instagram_embeds_v4',
 };
 
-// Listeners for multi-component reactivity without heavy Redux
+// Listeners for multi-component reactivity
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
 function notify() {
-  listeners.forEach((listener) => listener());
+  listeners.forEach((listener) => {
+    try {
+      listener();
+    } catch (e) {
+      console.error('Error in store listener', e);
+    }
+  });
 }
-
-// In-memory cache loaded from LocalStorage
-let currentCompany: CompanyInfo = (() => {
-  const loaded = loadFromStorage<CompanyInfo>(
-    STORAGE_KEYS.COMPANY,
-    INITIAL_COMPANY_INFO
-  );
-  // Ensure the latest official logo and exact Instagram URL are present
-  return {
-    ...INITIAL_COMPANY_INFO,
-    ...loaded,
-    instagramUrl: INITIAL_COMPANY_INFO.instagramUrl,
-    instagramHandle: INITIAL_COMPANY_INFO.instagramHandle,
-    logoUrl: '/logo.jpg',
-  };
-})();
-
-let currentServices: ServiceItem[] = loadFromStorage(
-  STORAGE_SERVICES_KEY(STORAGE_KEYS.SERVICES),
-  INITIAL_SERVICES
-);
-let currentProducts: ProductItem[] = loadFromStorage(
-  STORAGE_KEYS.PRODUCTS,
-  INITIAL_PRODUCTS
-);
-let currentMedia: MediaItem[] = loadFromStorage(
-  STORAGE_KEYS.MEDIA,
-  INITIAL_MEDIA
-);
-let currentAppointments: Appointment[] = loadFromStorage(
-  STORAGE_KEYS.APPOINTMENTS,
-  INITIAL_APPOINTMENTS
-);
-
-function STORAGE_SERVICES_KEY(k: string) { return k; }
-
-let currentInstagramEmbeds: InstagramEmbedItem[] = (() => {
-  const loaded = loadFromStorage<InstagramEmbedItem[]>(
-    STORAGE_KEYS.INSTAGRAM_EMBEDS,
-    INITIAL_INSTAGRAM_EMBEDS
-  );
-  // Reset if empty, has old unsplash images, old fake shortcodes, or synthetic generic haircuts
-  const hasLegacyOrGeneric = loaded.some(
-    (item) =>
-      !item.shortcode ||
-      item.shortcode === 'CGnw1SIhPs1' ||
-      item.shortcode === 'C_1vY5ksw5F' ||
-      item.shortcode.endsWith('Yesh') ||
-      (item.previewImageUrl &&
-        (item.previewImageUrl.includes('images.unsplash.com') ||
-          item.previewImageUrl.includes('yeshua_post_')))
-  );
-  if (hasLegacyOrGeneric || loaded.length === 0) {
-    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, INITIAL_INSTAGRAM_EMBEDS);
-    return INITIAL_INSTAGRAM_EMBEDS;
-  }
-  return loaded;
-})();
 
 function loadFromStorage<T>(key: string, fallback: T): T {
   try {
+    if (typeof localStorage === 'undefined') return fallback;
     const item = localStorage.getItem(key);
     if (!item) return fallback;
     return JSON.parse(item);
   } catch (err) {
-    console.warn(`Erro ao carregar chave ${key} do localStorage`, err);
     return fallback;
   }
 }
 
 function saveToStorage<T>(key: string, data: T) {
   try {
+    if (typeof localStorage === 'undefined') return;
     localStorage.setItem(key, JSON.stringify(data));
   } catch (err) {
     console.error(`Erro ao salvar no localStorage para ${key}`, err);
   }
 }
 
+// -------------------------------------------------------------
+// IN-MEMORY MULTITENANT STATE WITH AUTOMATIC MIGRATION
+// -------------------------------------------------------------
+
+// 1. Establishments Repository
+let allEstablishments: Establishment[] = (() => {
+  const loaded = loadFromStorage<Establishment[]>(
+    STORAGE_KEYS.ESTABLISHMENTS,
+    []
+  );
+
+  if (loaded.length === 0) {
+    // Check if there is legacy single-tenant company info to migrate into Yeshua
+    const legacyCompany = loadFromStorage<Partial<Establishment> | null>(
+      STORAGE_KEYS.LEGACY_COMPANY,
+      null
+    );
+
+    const yeshuaTenant: Establishment = {
+      ...INITIAL_ESTABLISHMENT_YESHUA,
+      ...(legacyCompany ? legacyCompany : {}),
+      id: 'est-yeshua',
+      slug: 'yeshua',
+      isDefault: true,
+      logoUrl: legacyCompany?.logoUrl || '/logo.jpg',
+    };
+
+    const initialList: Establishment[] = [yeshuaTenant, INITIAL_ESTABLISHMENT_DEMO];
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, initialList);
+    return initialList;
+  }
+
+  // Ensure default Yeshua tenant is always present and active
+  const hasYeshua = loaded.some((e) => e.id === 'est-yeshua' || e.slug === 'yeshua');
+  if (!hasYeshua) {
+    const updated = [INITIAL_ESTABLISHMENT_YESHUA, ...loaded];
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, updated);
+    return updated;
+  }
+
+  return loaded;
+})();
+
+// 2. Active Tenant Selector
+function detectInitialTenant(): string {
+  // Check URL search params (e.g. ?tenant=imperio or ?estabelecimento=yeshua)
+  if (typeof window !== 'undefined') {
+    const params = new URLSearchParams(window.location.search);
+    const tenantParam = params.get('tenant') || params.get('estabelecimento') || params.get('e');
+    if (tenantParam) {
+      const match = allEstablishments.find(
+        (e) => e.slug.toLowerCase() === tenantParam.toLowerCase() || e.id === tenantParam
+      );
+      if (match) return match.id;
+    }
+  }
+
+  // Check saved choice in localStorage
+  const savedId = loadFromStorage<string>(STORAGE_KEYS.CURRENT_TENANT_ID, 'est-yeshua');
+  if (allEstablishments.some((e) => e.id === savedId)) {
+    return savedId;
+  }
+
+  return 'est-yeshua';
+}
+
+let activeTenantId: string = detectInitialTenant();
+
+// 3. Operational Data (Services, Products, Media, Appointments, Instagram Embeds)
+let allServices: ServiceItem[] = (() => {
+  const loaded = loadFromStorage<ServiceItem[]>(STORAGE_KEYS.SERVICES, []);
+  if (loaded.length === 0) {
+    // Check legacy services
+    const legacy = loadFromStorage<ServiceItem[]>(STORAGE_KEYS.LEGACY_SERVICES, []);
+    const initial = legacy.length > 0
+      ? legacy.map((s) => ({ ...s, establishmentId: 'est-yeshua' }))
+      : INITIAL_SERVICES;
+    saveToStorage(STORAGE_KEYS.SERVICES, initial);
+    return initial;
+  }
+  return loaded;
+})();
+
+let allProducts: ProductItem[] = (() => {
+  const loaded = loadFromStorage<ProductItem[]>(STORAGE_KEYS.PRODUCTS, []);
+  if (loaded.length === 0) {
+    const legacy = loadFromStorage<ProductItem[]>(STORAGE_KEYS.LEGACY_PRODUCTS, []);
+    const initial = legacy.length > 0
+      ? legacy.map((p) => ({ ...p, establishmentId: 'est-yeshua' }))
+      : INITIAL_PRODUCTS;
+    saveToStorage(STORAGE_KEYS.PRODUCTS, initial);
+    return initial;
+  }
+  return loaded;
+})();
+
+let allMedia: MediaItem[] = (() => {
+  const loaded = loadFromStorage<MediaItem[]>(STORAGE_KEYS.MEDIA, []);
+  if (loaded.length === 0) {
+    const legacy = loadFromStorage<MediaItem[]>(STORAGE_KEYS.LEGACY_MEDIA, []);
+    const initial = legacy.length > 0
+      ? legacy.map((m) => ({ ...m, establishmentId: 'est-yeshua' }))
+      : INITIAL_MEDIA;
+    saveToStorage(STORAGE_KEYS.MEDIA, initial);
+    return initial;
+  }
+  return loaded;
+})();
+
+let allAppointments: Appointment[] = (() => {
+  const loaded = loadFromStorage<Appointment[]>(STORAGE_KEYS.APPOINTMENTS, []);
+  if (loaded.length === 0) {
+    const legacy = loadFromStorage<Appointment[]>(STORAGE_KEYS.LEGACY_APPOINTMENTS, []);
+    const initial = legacy.length > 0
+      ? legacy.map((a) => ({ ...a, establishmentId: 'est-yeshua' }))
+      : INITIAL_APPOINTMENTS;
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, initial);
+    return initial;
+  }
+  return loaded;
+})();
+
+let allInstagramEmbeds: InstagramEmbedItem[] = (() => {
+  const loaded = loadFromStorage<InstagramEmbedItem[]>(STORAGE_KEYS.INSTAGRAM_EMBEDS, []);
+  if (loaded.length === 0) {
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, INITIAL_INSTAGRAM_EMBEDS);
+    return INITIAL_INSTAGRAM_EMBEDS;
+  }
+  return loaded;
+})();
+
+let auditLogs: AuditLogEntry[] = loadFromStorage<AuditLogEntry[]>(
+  STORAGE_KEYS.AUDIT_LOGS,
+  [
+    {
+      id: 'log-init',
+      timestamp: new Date().toISOString(),
+      action: 'PLATFORM_INITIALIZATION',
+      actorRole: 'super_admin',
+      actorName: 'Sistema White Label',
+      details: 'Plataforma multiestabelecimento inicializada com Barbearia Yeshua como primeiro cliente.',
+      severity: 'info',
+    },
+  ]
+);
+
+let platformConfig: PlatformConfig = loadFromStorage<PlatformConfig>(
+  STORAGE_KEYS.PLATFORM_CONFIG,
+  INITIAL_PLATFORM_CONFIG
+);
+
+// Session State
+let currentSession: AuthSession | null = (() => {
+  try {
+    const sessionStr = sessionStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+    if (!sessionStr) return null;
+    return JSON.parse(sessionStr);
+  } catch {
+    return null;
+  }
+})();
+
+// -------------------------------------------------------------
+// STORE ENGINE API
+// -------------------------------------------------------------
+
 export const store = {
-  // Getters
+  // --- Multitenant Establishment Management ---
+
+  getAllEstablishments(): Establishment[] {
+    return allEstablishments;
+  },
+
+  getActiveEstablishments(): Establishment[] {
+    return allEstablishments.filter((e) => e.status === 'active');
+  },
+
+  getCurrentEstablishmentId(): string {
+    return activeTenantId;
+  },
+
+  getCurrentEstablishment(): Establishment {
+    const current = allEstablishments.find((e) => e.id === activeTenantId);
+    if (current) return current;
+    // Fallback to Yeshua
+    const yeshua = allEstablishments.find((e) => e.id === 'est-yeshua') || INITIAL_ESTABLISHMENT_YESHUA;
+    return yeshua;
+  },
+
+  // Alias for backward compatibility
   getCompany(): CompanyInfo {
-    return currentCompany;
-  },
-  getServices(): ServiceItem[] {
-    return currentServices;
-  },
-  getProducts(): ProductItem[] {
-    return currentProducts;
-  },
-  getMedia(): MediaItem[] {
-    return currentMedia;
+    return this.getCurrentEstablishment();
   },
 
-  // Company info actions
-  updateCompany(newInfo: Partial<CompanyInfo>) {
-    currentCompany = { ...currentCompany, ...newInfo };
-    saveToStorage(STORAGE_KEYS.COMPANY, currentCompany);
+  getEstablishmentById(id: string): Establishment | undefined {
+    return allEstablishments.find((e) => e.id === id);
+  },
+
+  getEstablishmentBySlug(slug: string): Establishment | undefined {
+    const cleanSlug = slug.toLowerCase().trim();
+    return allEstablishments.find((e) => e.slug.toLowerCase() === cleanSlug);
+  },
+
+  selectEstablishment(idOrSlug: string): boolean {
+    const target = allEstablishments.find(
+      (e) => e.id === idOrSlug || e.slug.toLowerCase() === idOrSlug.toLowerCase()
+    );
+    if (!target) return false;
+
+    activeTenantId = target.id;
+    saveToStorage(STORAGE_KEYS.CURRENT_TENANT_ID, activeTenantId);
+
+    // Update URL param without full reload
+    if (typeof window !== 'undefined' && window.history?.pushState) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('tenant', target.slug);
+      window.history.pushState({}, '', url.toString());
+    }
+
     notify();
+    return true;
   },
 
-  // Services actions
-  addService(service: Omit<ServiceItem, 'id'>) {
+  addEstablishment(data: Omit<Establishment, 'id' | 'createdAt'>): Establishment {
+    // Generate clean slug
+    const baseSlug = (data.slug || data.name)
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_-]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+    const finalSlug = allEstablishments.some((e) => e.slug === baseSlug)
+      ? `${baseSlug}-${Date.now().toString().slice(-4)}`
+      : baseSlug;
+
+    const newEst: Establishment = {
+      ...data,
+      id: `est-${Date.now()}`,
+      slug: finalSlug,
+      isDefault: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    allEstablishments = [...allEstablishments, newEst];
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+
+    this.addAuditLog({
+      action: 'ESTABLISHMENT_CREATED',
+      actorRole: currentSession?.role || 'super_admin',
+      actorName: currentSession?.userName || 'Administrador Geral',
+      targetEstablishmentId: newEst.id,
+      targetEstablishmentName: newEst.name,
+      details: `Novo estabelecimento cadastrado: ${newEst.name} (slug: ${newEst.slug})`,
+      severity: 'info',
+    });
+
+    notify();
+    return newEst;
+  },
+
+  updateEstablishment(id: string, updates: Partial<Establishment>): boolean {
+    const index = allEstablishments.findIndex((e) => e.id === id);
+    if (index === -1) return false;
+
+    const current = allEstablishments[index];
+    const updated: Establishment = {
+      ...current,
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+
+    allEstablishments = allEstablishments.map((e) => (e.id === id ? updated : e));
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+
+    this.addAuditLog({
+      action: 'ESTABLISHMENT_UPDATED',
+      actorRole: currentSession?.role || 'establishment_admin',
+      actorName: currentSession?.userName || 'Administrador',
+      targetEstablishmentId: updated.id,
+      targetEstablishmentName: updated.name,
+      details: `Dados do estabelecimento ${updated.name} atualizados`,
+      severity: 'info',
+    });
+
+    notify();
+    return true;
+  },
+
+  // Backward compatibility method
+  updateCompany(newInfo: Partial<CompanyInfo>) {
+    this.updateEstablishment(activeTenantId, newInfo);
+  },
+
+  toggleEstablishmentStatus(id: string): boolean {
+    const est = allEstablishments.find((e) => e.id === id);
+    if (!est) return false;
+
+    // Protection: default Yeshua establishment should not be easily disabled
+    const newStatus = est.status === 'active' ? 'inactive' : 'active';
+    const updated = this.updateEstablishment(id, { status: newStatus });
+
+    this.addAuditLog({
+      action: 'ESTABLISHMENT_STATUS_TOGGLED',
+      actorRole: currentSession?.role || 'super_admin',
+      actorName: currentSession?.userName || 'Super Admin',
+      targetEstablishmentId: est.id,
+      targetEstablishmentName: est.name,
+      details: `Status do estabelecimento alterado para ${newStatus}`,
+      severity: newStatus === 'inactive' ? 'warning' : 'info',
+    });
+
+    return updated;
+  },
+
+  deleteEstablishment(id: string): boolean {
+    const est = allEstablishments.find((e) => e.id === id);
+    if (!est || est.isDefault) {
+      console.warn('Não é permitido excluir o estabelecimento padrão Yeshua.');
+      return false;
+    }
+
+    allEstablishments = allEstablishments.filter((e) => e.id !== id);
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+
+    // Also purge child operational data to maintain database consistency
+    allServices = allServices.filter((s) => s.establishmentId !== id);
+    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+
+    allProducts = allProducts.filter((p) => p.establishmentId !== id);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+
+    allMedia = allMedia.filter((m) => m.establishmentId !== id);
+    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+
+    allAppointments = allAppointments.filter((a) => a.establishmentId !== id);
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+
+    allInstagramEmbeds = allInstagramEmbeds.filter((ig) => ig.establishmentId !== id);
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, allInstagramEmbeds);
+
+    if (activeTenantId === id) {
+      this.selectEstablishment('est-yeshua');
+    }
+
+    this.addAuditLog({
+      action: 'ESTABLISHMENT_DELETED',
+      actorRole: currentSession?.role || 'super_admin',
+      actorName: currentSession?.userName || 'Super Admin',
+      targetEstablishmentId: est.id,
+      targetEstablishmentName: est.name,
+      details: `Estabelecimento ${est.name} e todos os seus dados operacionais foram excluídos`,
+      severity: 'security',
+    });
+
+    notify();
+    return true;
+  },
+
+  // --- Strict Scoped Operational Data Getters ---
+
+  getServices(targetEstablishmentId?: string): ServiceItem[] {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allServices.filter(
+      (s) => (s.establishmentId || 'est-yeshua') === tenantId
+    );
+  },
+
+  getProducts(targetEstablishmentId?: string): ProductItem[] {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allProducts.filter(
+      (p) => (p.establishmentId || 'est-yeshua') === tenantId
+    );
+  },
+
+  getMedia(targetEstablishmentId?: string): MediaItem[] {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allMedia.filter(
+      (m) => (m.establishmentId || 'est-yeshua') === tenantId
+    );
+  },
+
+  getAppointments(targetEstablishmentId?: string): Appointment[] {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allAppointments.filter(
+      (a) => (a.establishmentId || 'est-yeshua') === tenantId
+    );
+  },
+
+  getInstagramEmbeds(targetEstablishmentId?: string): InstagramEmbedItem[] {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allInstagramEmbeds.filter(
+      (ig) => (ig.establishmentId || 'est-yeshua') === tenantId
+    );
+  },
+
+  // --- Scoped Operational Data Mutators ---
+
+  addService(service: Omit<ServiceItem, 'id'>, targetEstablishmentId?: string): ServiceItem {
+    const tenantId = targetEstablishmentId || activeTenantId;
     const newService: ServiceItem = {
       ...service,
       id: `srv-${Date.now()}`,
+      establishmentId: tenantId,
     };
-    currentServices = [newService, ...currentServices];
-    saveToStorage(STORAGE_KEYS.SERVICES, currentServices);
+    allServices = [newService, ...allServices];
+    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
     return newService;
   },
 
   updateService(id: string, updates: Partial<ServiceItem>) {
-    currentServices = currentServices.map((item) =>
+    allServices = allServices.map((item) =>
       item.id === id ? { ...item, ...updates } : item
     );
-    saveToStorage(STORAGE_KEYS.SERVICES, currentServices);
+    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
   deleteService(id: string) {
-    currentServices = currentServices.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.SERVICES, currentServices);
+    allServices = allServices.filter((item) => item.id !== id);
+    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
   toggleFeaturedService(id: string) {
-    currentServices = currentServices.map((item) =>
+    allServices = allServices.map((item) =>
       item.id === id ? { ...item, featured: !item.featured } : item
     );
-    saveToStorage(STORAGE_KEYS.SERVICES, currentServices);
+    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
-  // Products actions
-  addProduct(product: Omit<ProductItem, 'id'>) {
+  addProduct(product: Omit<ProductItem, 'id'>, targetEstablishmentId?: string): ProductItem {
+    const tenantId = targetEstablishmentId || activeTenantId;
     const newProduct: ProductItem = {
       ...product,
       id: `prod-${Date.now()}`,
+      establishmentId: tenantId,
     };
-    currentProducts = [newProduct, ...currentProducts];
-    saveToStorage(STORAGE_KEYS.PRODUCTS, currentProducts);
+    allProducts = [newProduct, ...allProducts];
+    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
     return newProduct;
   },
 
   updateProduct(id: string, updates: Partial<ProductItem>) {
-    currentProducts = currentProducts.map((item) =>
+    allProducts = allProducts.map((item) =>
       item.id === id ? { ...item, ...updates } : item
     );
-    saveToStorage(STORAGE_KEYS.PRODUCTS, currentProducts);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
   deleteProduct(id: string) {
-    currentProducts = currentProducts.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.PRODUCTS, currentProducts);
+    allProducts = allProducts.filter((item) => item.id !== id);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
   toggleFeaturedProduct(id: string) {
-    currentProducts = currentProducts.map((item) =>
+    allProducts = allProducts.map((item) =>
       item.id === id ? { ...item, featured: !item.featured } : item
     );
-    saveToStorage(STORAGE_KEYS.PRODUCTS, currentProducts);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
-  // Media actions
-  addMedia(media: Omit<MediaItem, 'id' | 'dateAdded'>) {
+  addMedia(media: Omit<MediaItem, 'id' | 'dateAdded'>, targetEstablishmentId?: string): MediaItem {
+    const tenantId = targetEstablishmentId || activeTenantId;
     const newMedia: MediaItem = {
       ...media,
       id: `med-${Date.now()}`,
+      establishmentId: tenantId,
       dateAdded: new Date().toISOString().split('T')[0],
     };
-    currentMedia = [newMedia, ...currentMedia];
-    saveToStorage(STORAGE_KEYS.MEDIA, currentMedia);
+    allMedia = [newMedia, ...allMedia];
+    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
     return newMedia;
   },
 
   updateMedia(id: string, updates: Partial<MediaItem>) {
-    currentMedia = currentMedia.map((item) =>
+    allMedia = allMedia.map((item) =>
       item.id === id ? { ...item, ...updates } : item
     );
-    saveToStorage(STORAGE_KEYS.MEDIA, currentMedia);
+    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
 
   deleteMedia(id: string) {
-    currentMedia = currentMedia.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.MEDIA, currentMedia);
+    allMedia = allMedia.filter((item) => item.id !== id);
+    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
 
-  // Reset to default
-  resetAllData() {
-    currentCompany = INITIAL_COMPANY_INFO;
-    currentServices = INITIAL_SERVICES;
-    currentProducts = INITIAL_PRODUCTS;
-    currentMedia = INITIAL_MEDIA;
-    currentAppointments = INITIAL_APPOINTMENTS;
-    currentInstagramEmbeds = INITIAL_INSTAGRAM_EMBEDS;
+  addAppointment(
+    appointment: Omit<Appointment, 'id' | 'createdAt'>,
+    targetEstablishmentId?: string
+  ): Appointment {
+    const tenantId = targetEstablishmentId || appointment.establishmentId || activeTenantId;
+    const newAppt: Appointment = {
+      ...appointment,
+      id: `apt-${Date.now()}`,
+      establishmentId: tenantId,
+      createdAt: new Date().toISOString(),
+    };
+    allAppointments = [newAppt, ...allAppointments];
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    notify();
+    return newAppt;
+  },
 
-    saveToStorage(STORAGE_KEYS.COMPANY, currentCompany);
-    saveToStorage(STORAGE_KEYS.SERVICES, currentServices);
-    saveToStorage(STORAGE_KEYS.PRODUCTS, currentProducts);
-    saveToStorage(STORAGE_KEYS.MEDIA, currentMedia);
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, currentAppointments);
-    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, currentInstagramEmbeds);
+  updateAppointmentStatus(
+    id: string,
+    status: 'pendente' | 'confirmado' | 'cancelado' | 'concluido'
+  ) {
+    allAppointments = allAppointments.map((item) =>
+      item.id === id ? { ...item, status } : item
+    );
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
     notify();
   },
 
-  // Instagram Embeds actions
-  getInstagramEmbeds(): InstagramEmbedItem[] {
-    return currentInstagramEmbeds;
+  deleteAppointment(id: string) {
+    allAppointments = allAppointments.filter((item) => item.id !== id);
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    notify();
   },
+
+  // Conflict prevention helpers scoped to tenant
+  isTimeSlotBooked(date: string, time: string, targetEstablishmentId?: string): boolean {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allAppointments.some(
+      (item) =>
+        (item.establishmentId || 'est-yeshua') === tenantId &&
+        item.date === date &&
+        item.time === time &&
+        item.status === 'confirmado'
+    );
+  },
+
+  getConfirmedTimesForDate(date: string, targetEstablishmentId?: string): string[] {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    return allAppointments
+      .filter(
+        (item) =>
+          (item.establishmentId || 'est-yeshua') === tenantId &&
+          item.date === date &&
+          item.status === 'confirmado'
+      )
+      .map((item) => item.time);
+  },
+
+  // --- Instagram Embeds Scoped ---
 
   addInstagramEmbed(
-    item: Omit<InstagramEmbedItem, 'id'>
+    item: Omit<InstagramEmbedItem, 'id'>,
+    targetEstablishmentId?: string
   ): InstagramEmbedItem {
+    const tenantId = targetEstablishmentId || activeTenantId;
     const parsed = this.parseInstagramUrl(item.url);
     const newEmbed: InstagramEmbedItem = {
       ...item,
       id: `ig-${Date.now()}`,
+      establishmentId: tenantId,
       shortcode: parsed.shortcode,
       type: item.type || parsed.type,
       likesCount: item.likesCount || '500+',
@@ -264,14 +654,14 @@ export const store = {
       date: item.date || new Date().toISOString().split('T')[0],
       featured: item.featured ?? true,
     };
-    currentInstagramEmbeds = [newEmbed, ...currentInstagramEmbeds];
-    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, currentInstagramEmbeds);
+    allInstagramEmbeds = [newEmbed, ...allInstagramEmbeds];
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, allInstagramEmbeds);
     notify();
     return newEmbed;
   },
 
   updateInstagramEmbed(id: string, updates: Partial<InstagramEmbedItem>) {
-    currentInstagramEmbeds = currentInstagramEmbeds.map((item) => {
+    allInstagramEmbeds = allInstagramEmbeds.map((item) => {
       if (item.id !== id) return item;
       const updatedUrl = updates.url || item.url;
       const parsed = updates.url ? this.parseInstagramUrl(updatedUrl) : null;
@@ -281,13 +671,13 @@ export const store = {
         ...(parsed ? { shortcode: parsed.shortcode, type: updates.type || parsed.type } : {}),
       };
     });
-    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, currentInstagramEmbeds);
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, allInstagramEmbeds);
     notify();
   },
 
   deleteInstagramEmbed(id: string) {
-    currentInstagramEmbeds = currentInstagramEmbeds.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, currentInstagramEmbeds);
+    allInstagramEmbeds = allInstagramEmbeds.filter((item) => item.id !== id);
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, allInstagramEmbeds);
     notify();
   },
 
@@ -302,23 +692,18 @@ export const store = {
   } {
     let clean = (inputUrl || '').trim();
 
-    // 1. If user pasted a full HTML blockquote or iframe snippet from Instagram Embed
-    // e.g. <blockquote ... data-instgrm-permalink="https://www.instagram.com/p/CODE/..."
     const permalinkMatch = clean.match(/data-instgrm-permalink=["']([^"']+)["']/i);
     if (permalinkMatch && permalinkMatch[1]) {
       clean = permalinkMatch[1];
     } else {
-      // e.g. <iframe ... src="https://www.instagram.com/p/CODE/embed/..."
       const iframeSrcMatch = clean.match(/<iframe[^>]+src=["']([^"']+)["']/i);
       if (iframeSrcMatch && iframeSrcMatch[1]) {
         clean = iframeSrcMatch[1];
       }
     }
 
-    // Strip URL query parameters and hashes for shortcode extraction
     const urlWithoutQuery = clean.split('?')[0].split('#')[0];
 
-    // 2. Reel or Reels match (/reel/CODE or /reels/CODE)
     const reelMatch = urlWithoutQuery.match(/(?:reel|reels)\/([A-Za-z0-9_-]+)/i);
     if (reelMatch && reelMatch[1]) {
       const code = reelMatch[1];
@@ -333,7 +718,6 @@ export const store = {
       };
     }
 
-    // 3. Post match (/p/CODE)
     const postMatch = urlWithoutQuery.match(/\/p\/([A-Za-z0-9_-]+)/i);
     if (postMatch && postMatch[1]) {
       const code = postMatch[1];
@@ -348,7 +732,6 @@ export const store = {
       };
     }
 
-    // 4. IGTV match (/tv/CODE)
     const tvMatch = urlWithoutQuery.match(/\/tv\/([A-Za-z0-9_-]+)/i);
     if (tvMatch && tvMatch[1]) {
       const code = tvMatch[1];
@@ -363,7 +746,6 @@ export const store = {
       };
     }
 
-    // 5. Profile check (e.g. instagram.com/barbearia_estetica_yeshua or starts with @)
     const profileMatch = clean.match(/(?:instagram\.com\/|@)([A-Za-z0-9_.-]+)/i);
     if (profileMatch && profileMatch[1]) {
       const username = profileMatch[1];
@@ -382,7 +764,6 @@ export const store = {
       };
     }
 
-    // 6. Direct shortcode if alphanumeric (e.g. "C_1vY5ksw5F") without url
     const codeMatch = clean.replace(/[^A-Za-z0-9_-]/g, '');
     if (codeMatch && codeMatch.length >= 6 && codeMatch.length <= 25) {
       const isReel = clean.toLowerCase().includes('reel');
@@ -399,7 +780,6 @@ export const store = {
       };
     }
 
-    // Fallback to official Yeshua profile
     const defaultProfile =
       'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D';
     return {
@@ -413,72 +793,37 @@ export const store = {
     };
   },
 
-  getAppointments(): Appointment[] {
-    return currentAppointments;
-  },
+  // --- Dynamic WhatsApp URL Builders Scoped to Active Establishment ---
 
-  addAppointment(appointment: Omit<Appointment, 'id' | 'createdAt'>): Appointment {
-    const newAppt: Appointment = {
-      ...appointment,
-      id: `apt-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    currentAppointments = [newAppt, ...currentAppointments];
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, currentAppointments);
-    notify();
-    return newAppt;
-  },
-
-  updateAppointmentStatus(
-    id: string,
-    status: 'pendente' | 'confirmado' | 'cancelado' | 'concluido'
-  ) {
-    currentAppointments = currentAppointments.map((item) =>
-      item.id === id ? { ...item, status } : item
-    );
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, currentAppointments);
-    notify();
-  },
-
-  deleteAppointment(id: string) {
-    currentAppointments = currentAppointments.filter((item) => item.id !== id);
-    saveToStorage(STORAGE_KEYS.APPOINTMENTS, currentAppointments);
-    notify();
-  },
-
-  // Conflict prevention helpers
-  isTimeSlotBooked(date: string, time: string): boolean {
-    return currentAppointments.some(
-      (item) => item.date === date && item.time === time && item.status === 'confirmado'
-    );
-  },
-
-  getConfirmedTimesForDate(date: string): string[] {
-    return currentAppointments
-      .filter((item) => item.date === date && item.status === 'confirmado')
-      .map((item) => item.time);
-  },
-
-  // WhatsApp link generator
-  buildWhatsAppUrl(customMessage: string): string {
-    const cleanPhone = currentCompany.whatsappClean || '5592986187766';
+  buildWhatsAppUrl(customMessage: string, targetEstablishmentId?: string): string {
+    const est = targetEstablishmentId
+      ? this.getEstablishmentById(targetEstablishmentId) || this.getCurrentEstablishment()
+      : this.getCurrentEstablishment();
+    const cleanPhone = est.whatsappClean || '5592986187766';
     const encoded = encodeURIComponent(customMessage);
     return `https://wa.me/${cleanPhone}?text=${encoded}`;
   },
 
-  buildScheduledAppointmentWhatsAppUrl(appointment: {
-    clientName: string;
-    clientPhone: string;
-    serviceName: string;
-    date: string;
-    time: string;
-    notes?: string;
-  }): string {
+  buildScheduledAppointmentWhatsAppUrl(
+    appointment: {
+      clientName: string;
+      clientPhone: string;
+      serviceName: string;
+      date: string;
+      time: string;
+      notes?: string;
+    },
+    targetEstablishmentId?: string
+  ): string {
+    const est = targetEstablishmentId
+      ? this.getEstablishmentById(targetEstablishmentId) || this.getCurrentEstablishment()
+      : this.getCurrentEstablishment();
+
     const [year, month, day] = appointment.date.split('-');
     const formattedDate = `${day}/${month}/${year}`;
 
     const text = [
-      '💈 *SOLICITAÇÃO DE AGENDAMENTO — YESHUA* 💈',
+      `💈 *SOLICITAÇÃO DE AGENDAMENTO — ${est.name.toUpperCase()}* 💈`,
       '',
       `👤 *Cliente:* ${appointment.clientName}`,
       `📱 *Telefone/WhatsApp:* ${appointment.clientPhone}`,
@@ -487,33 +832,308 @@ export const store = {
       `⏰ *Horário Preferencial:* ${appointment.time}`,
       appointment.notes ? `💬 *Observações:* ${appointment.notes}` : '',
       '',
-      'Olá equipe da Barbearia & Estética Yeshua! Vim pelo site e gostaria de confirmar este horário para meu atendimento. Aguardo confirmação!',
+      `Olá equipe da ${est.name}! Vim pelo site e gostaria de confirmar este horário para meu atendimento. Aguardo confirmação!`,
     ]
       .filter((line) => line !== null && line !== undefined)
       .join('\n');
 
-    return this.buildWhatsAppUrl(text);
+    return this.buildWhatsAppUrl(text, targetEstablishmentId);
   },
 
-  buildServiceAppointmentUrl(serviceName?: string): string {
+  buildServiceAppointmentUrl(serviceName?: string, targetEstablishmentId?: string): string {
+    const est = targetEstablishmentId
+      ? this.getEstablishmentById(targetEstablishmentId) || this.getCurrentEstablishment()
+      : this.getCurrentEstablishment();
+
     if (serviceName) {
       return this.buildWhatsAppUrl(
-        `Olá! Vim pelo site da Barbearia & Estética Yeshua e gostaria de agendar o serviço de ${serviceName}.`
+        `Olá! Vim pelo site da ${est.name} e gostaria de agendar o serviço de ${serviceName}.`,
+        targetEstablishmentId
       );
     }
     return this.buildWhatsAppUrl(
-      `Olá! Vim pelo site da Barbearia & Estética Yeshua e gostaria de agendar um horário.`
+      `Olá! Vim pelo site da ${est.name} e gostaria de agendar um horário.`,
+      targetEstablishmentId
     );
   },
 
-  buildProductInquiryUrl(productName: string): string {
+  buildProductInquiryUrl(productName: string, targetEstablishmentId?: string): string {
+    const est = targetEstablishmentId
+      ? this.getEstablishmentById(targetEstablishmentId) || this.getCurrentEstablishment()
+      : this.getCurrentEstablishment();
+
     return this.buildWhatsAppUrl(
-      `Olá! Vim pelo site da Barbearia & Estética Yeshua e gostaria de saber mais sobre o produto ${productName}.`
+      `Olá! Vim pelo site da ${est.name} e gostaria de saber mais sobre o produto ${productName}.`,
+      targetEstablishmentId
     );
+  },
+
+  // --- Authentication & Role Management ---
+
+  getCurrentSession(): AuthSession | null {
+    return currentSession;
+  },
+
+  loginLocalAdmin(pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
+    const targetId = requestedEstablishmentId || activeTenantId;
+    const est = allEstablishments.find((e) => e.id === targetId);
+
+    if (!est) {
+      return { success: false, message: 'Estabelecimento não encontrado.' };
+    }
+
+    if (est.status !== 'active') {
+      return { success: false, message: 'Este estabelecimento está temporariamente inativo ou suspenso.' };
+    }
+
+    if (pin.trim() !== est.adminPin.trim()) {
+      this.addAuditLog({
+        action: 'LOCAL_LOGIN_FAILED',
+        actorRole: 'client',
+        actorName: 'Tentativa de Acesso',
+        targetEstablishmentId: est.id,
+        targetEstablishmentName: est.name,
+        details: 'Tentativa de login local com PIN inválido',
+        severity: 'warning',
+      });
+      return { success: false, message: 'PIN incorreto para este estabelecimento.' };
+    }
+
+    const session: AuthSession = {
+      role: 'establishment_admin',
+      establishmentId: est.id,
+      establishmentName: est.name,
+      userName: est.adminName || `Admin ${est.name}`,
+      token: `token-est-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: Date.now(),
+    };
+
+    currentSession = session;
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(session));
+      sessionStorage.setItem('yeshua_admin_logged', 'true');
+    } catch {}
+
+    this.addAuditLog({
+      action: 'LOCAL_LOGIN_SUCCESS',
+      actorRole: 'establishment_admin',
+      actorName: session.userName || 'Admin Local',
+      targetEstablishmentId: est.id,
+      targetEstablishmentName: est.name,
+      details: 'Login administrativo local realizado com sucesso',
+      severity: 'info',
+    });
+
+    notify();
+    return { success: true, session };
+  },
+
+  loginSuperAdmin(masterPin: string): { success: boolean; session?: AuthSession; message?: string } {
+    if (masterPin.trim() !== platformConfig.masterPin.trim()) {
+      this.addAuditLog({
+        action: 'SUPER_ADMIN_LOGIN_FAILED',
+        actorRole: 'client',
+        actorName: 'Tentativa Master',
+        details: 'Tentativa de login no Painel Master com Chave/PIN inválido',
+        severity: 'security',
+      });
+      return { success: false, message: 'Chave Mestre de Plataforma incorreta.' };
+    }
+
+    const session: AuthSession = {
+      role: 'super_admin',
+      userName: 'Super Administrador Geral',
+      token: `token-master-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: Date.now(),
+    };
+
+    currentSession = session;
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(session));
+      sessionStorage.setItem('yeshua_admin_logged', 'true');
+    } catch {}
+
+    this.addAuditLog({
+      action: 'SUPER_ADMIN_LOGIN_SUCCESS',
+      actorRole: 'super_admin',
+      actorName: 'Super Admin',
+      details: 'Acesso autenticado ao Painel Master da Plataforma',
+      severity: 'info',
+    });
+
+    notify();
+    return { success: true, session };
+  },
+
+  logout(): void {
+    if (currentSession) {
+      this.addAuditLog({
+        action: 'LOGOUT',
+        actorRole: currentSession.role,
+        actorName: currentSession.userName || 'Usuário',
+        targetEstablishmentId: currentSession.establishmentId,
+        details: 'Sessão administrativa finalizada',
+        severity: 'info',
+      });
+    }
+
+    currentSession = null;
+    try {
+      sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
+      sessionStorage.removeItem('yeshua_admin_logged');
+    } catch {}
+    notify();
+  },
+
+  // Super Admin Impersonation: View/Operate local admin with explicit auditing
+  superAdminEnterEstablishment(establishmentId: string): boolean {
+    if (!currentSession || currentSession.role !== 'super_admin') {
+      console.warn('Apenas o Super Administrador pode acessar a visão do estabelecimento.');
+      return false;
+    }
+
+    const target = allEstablishments.find((e) => e.id === establishmentId);
+    if (!target) return false;
+
+    activeTenantId = target.id;
+    saveToStorage(STORAGE_KEYS.CURRENT_TENANT_ID, activeTenantId);
+
+    const impersonatedSession: AuthSession = {
+      ...currentSession,
+      establishmentId: target.id,
+      establishmentName: target.name,
+      impersonatedBySuperAdmin: true,
+    };
+
+    currentSession = impersonatedSession;
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(impersonatedSession));
+    } catch {}
+
+    this.addAuditLog({
+      action: 'SUPER_ADMIN_IMPERSONATION_START',
+      actorRole: 'super_admin',
+      actorName: 'Super Admin',
+      targetEstablishmentId: target.id,
+      targetEstablishmentName: target.name,
+      details: `Super Admin acessou o ambiente administrativo de: ${target.name}`,
+      severity: 'warning',
+    });
+
+    notify();
+    return true;
+  },
+
+  superAdminExitEstablishment(): void {
+    if (!currentSession || currentSession.role !== 'super_admin') return;
+
+    const previousEstName = currentSession.establishmentName;
+    const restoredSession: AuthSession = {
+      role: 'super_admin',
+      userName: currentSession.userName,
+      token: currentSession.token,
+      createdAt: currentSession.createdAt,
+    };
+
+    currentSession = restoredSession;
+    try {
+      sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(restoredSession));
+    } catch {}
+
+    this.addAuditLog({
+      action: 'SUPER_ADMIN_IMPERSONATION_END',
+      actorRole: 'super_admin',
+      actorName: 'Super Admin',
+      details: `Super Admin encerrou a inspeção do estabelecimento ${previousEstName || ''}`,
+      severity: 'info',
+    });
+
+    notify();
+  },
+
+  // --- Audit Logging API ---
+
+  getAuditLogs(): AuditLogEntry[] {
+    return auditLogs;
+  },
+
+  addAuditLog(entry: Omit<AuditLogEntry, 'id' | 'timestamp'>): void {
+    const newLog: AuditLogEntry = {
+      ...entry,
+      id: `log-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      timestamp: new Date().toISOString(),
+    };
+    auditLogs = [newLog, ...auditLogs.slice(0, 99)]; // Keep latest 100 logs
+    saveToStorage(STORAGE_KEYS.AUDIT_LOGS, auditLogs);
+  },
+
+  clearAuditLogs(): void {
+    if (currentSession?.role !== 'super_admin') return;
+    auditLogs = [];
+    saveToStorage(STORAGE_KEYS.AUDIT_LOGS, auditLogs);
+    notify();
+  },
+
+  // --- Platform Metrics API ---
+
+  getPlatformMetrics() {
+    return {
+      totalEstablishments: allEstablishments.length,
+      activeEstablishments: allEstablishments.filter((e) => e.status === 'active').length,
+      inactiveEstablishments: allEstablishments.filter((e) => e.status !== 'active').length,
+      totalServices: allServices.length,
+      totalProducts: allProducts.length,
+      totalMedia: allMedia.length,
+      totalAppointments: allAppointments.length,
+      confirmedAppointments: allAppointments.filter((a) => a.status === 'confirmado').length,
+      pendingAppointments: allAppointments.filter((a) => a.status === 'pendente').length,
+    };
+  },
+
+  getPlatformConfig(): PlatformConfig {
+    return platformConfig;
+  },
+
+  updatePlatformConfig(updates: Partial<PlatformConfig>): void {
+    if (currentSession?.role !== 'super_admin') return;
+    platformConfig = { ...platformConfig, ...updates };
+    saveToStorage(STORAGE_KEYS.PLATFORM_CONFIG, platformConfig);
+
+    this.addAuditLog({
+      action: 'PLATFORM_CONFIG_UPDATED',
+      actorRole: 'super_admin',
+      actorName: currentSession?.userName || 'Super Admin',
+      details: 'Configurações globais da plataforma foram alteradas',
+      severity: 'security',
+    });
+
+    notify();
+  },
+
+  // Reset demo / all data while protecting Yeshua tenant
+  resetAllData() {
+    allEstablishments = INITIAL_ESTABLISHMENTS;
+    activeTenantId = 'est-yeshua';
+    allServices = INITIAL_SERVICES;
+    allProducts = INITIAL_PRODUCTS;
+    allMedia = INITIAL_MEDIA;
+    allAppointments = INITIAL_APPOINTMENTS;
+    allInstagramEmbeds = INITIAL_INSTAGRAM_EMBEDS;
+    platformConfig = INITIAL_PLATFORM_CONFIG;
+
+    saveToStorage(STORAGE_KEYS.ESTABLISHMENTS, allEstablishments);
+    saveToStorage(STORAGE_KEYS.CURRENT_TENANT_ID, activeTenantId);
+    saveToStorage(STORAGE_KEYS.SERVICES, allServices);
+    saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
+    saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
+    saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
+    saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, allInstagramEmbeds);
+    saveToStorage(STORAGE_KEYS.PLATFORM_CONFIG, platformConfig);
+    notify();
   },
 };
 
-// Custom React Hook to subscribe to store changes
+// React Hook with full multitenant reactivity
 export function useStore() {
   const [, setTick] = useState(0);
 
@@ -525,13 +1145,26 @@ export function useStore() {
     };
   }, []);
 
+  const currentEstablishment = store.getCurrentEstablishment();
+
   return {
-    company: store.getCompany(),
+    // Current Scoped Tenant Entities
+    establishment: currentEstablishment,
+    company: currentEstablishment, // backward compatibility
     services: store.getServices(),
     products: store.getProducts(),
     media: store.getMedia(),
     appointments: store.getAppointments(),
     instagramEmbeds: store.getInstagramEmbeds(),
+
+    // Global Multitenant Entities
+    allEstablishments: store.getAllEstablishments(),
+    activeEstablishments: store.getActiveEstablishments(),
+    session: store.getCurrentSession(),
+    auditLogs: store.getAuditLogs(),
+    platformMetrics: store.getPlatformMetrics(),
+    platformConfig: store.getPlatformConfig(),
+
     store,
   };
 }
