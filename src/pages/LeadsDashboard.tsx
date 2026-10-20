@@ -189,7 +189,7 @@ export const LeadsDashboard: React.FC = () => {
     setLeads((current) => [lead, ...current]);
     setSelectedId(lead.id);
     setShowCreate(false);
-    setForm({ businessName: '', category: '', websiteUrl: '', phone: '', email: '', address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' });
+    setForm({ businessName: '', category: '', websiteUrl: '', siteDescription: '', phone: '', email: '', address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' });
   };
 
   const prepareSite = (lead: Lead) => {
@@ -248,7 +248,7 @@ export const LeadsDashboard: React.FC = () => {
           address: current.address || captured.address,
           sourceUrl: captured.sourceUrl || normalizedUrl,
           sourceType: 'Site público',
-          notes: current.notes || captured.description,
+          notes: current.notes,
         }));
       }
       const found = Object.values(captured.evidence ?? {}).filter(Boolean).length;
