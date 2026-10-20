@@ -54,14 +54,14 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
             <div className="w-12 h-12 rounded-xl bg-neutral-950 border border-amber-500/40 p-1 flex items-center justify-center shrink-0 shadow-md">
               <img
                 src="/pwa-192x192.png"
-                alt="Yeshua App"
+                alt="Aplicativo do estabelecimento"
                 className="w-full h-full object-contain rounded-lg"
               />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm sm:text-base font-bold text-neutral-100 font-display">
-                  Instale o App Barbearia Yeshua
+                  Instale o aplicativo do estabelecimento
                 </span>
                 <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
                   Grátis
