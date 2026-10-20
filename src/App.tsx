@@ -99,8 +99,7 @@ export default function App() {
         return (
           <AdminPage
             onNavigateToSuperAdmin={() => {
-              setCurrentPage('super-admin');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
+              window.location.assign('/plataforma/login');
             }}
             onBackToApp={() => {
               setCurrentPage('home');
@@ -109,18 +108,9 @@ export default function App() {
           />
         );
       case 'super-admin':
-        return (
-          <SuperAdminPage
-            onBackToApp={() => {
-              setCurrentPage('home');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-            onEnterEstablishmentAdmin={(estId) => {
-              setCurrentPage('admin');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        );
+        // Administração geral usa a autenticação real da plataforma (Supabase),
+        // nunca o PIN mestre legado armazenado no estado local do navegador.
+        return <PlatformAccessPage />;
       default:
         return (
           <HomePage
