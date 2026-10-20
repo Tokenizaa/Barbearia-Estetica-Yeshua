@@ -133,10 +133,10 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
     });
     return "blocked";
   }
-  if (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_TEMPLATE_NAME) {
+  if (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_TEMPLATE_NAME || !env.WHATSAPP_API_VERSION) {
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "whatsapp_provider_not_configured",
-      last_error: "Credenciais e modelo aprovado do WhatsApp Business Platform não estão configurados.",
+      last_error: "Credenciais, versão da Graph API e modelo aprovado do WhatsApp Business Platform não estão configurados.",
       completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "provider_not_configured" },
     });
     return "blocked";
@@ -217,7 +217,8 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
   const components = Array.isArray(payload.templateComponents) ? payload.templateComponents : [];
   const templateName = typeof payload.templateName === "string" && payload.templateName.trim()
     ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME;
-  const apiVersion = (env.WHATSAPP_API_VERSION || "v23.0").replace(/[^v0-9.]/g, "");
+  const apiVersion = env.WHATSAPP_API_VERSION.trim();
+  if (!/^v\\d+\\.\\d+$/.test(apiVersion)) throw new Error("whatsapp_api_version_invalid");
   const endpoint = `https://graph.facebook.com/${apiVersion}/${encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID)}/messages`;
   let response: Response;
   try {
