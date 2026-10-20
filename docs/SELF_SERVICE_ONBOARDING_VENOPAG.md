@@ -47,3 +47,13 @@ As variáveis Vite e os secrets das Pages Functions têm escopos diferentes. Nã
 - Configurar confirmação de e-mail e URLs de redirecionamento no Supabase Auth.
 - Criar testes para isolamento entre salões, trigger de cadastro, webhook válido/inválido/repetido, valor divergente, renovação antecipada, vencimento e limites de agenda.
 - Não liberar produção até que o prazo de acesso e o horizonte de agenda sejam verificados no servidor; a atual persistência em `localStorage` não oferece essa garantia.
+
+
+## Persistência e validação server-side de agendamentos
+
+- Novos agendamentos públicos passam por `POST /api/appointments/create`, que chama uma RPC transacional no Supabase.
+- A RPC associa o registro ao estabelecimento encontrado pelo slug no servidor, valida estado da assinatura, vencimento e horizonte futuro, e impede dois pedidos pendentes/confirmados no mesmo horário por estabelecimento.
+- A tabela `establishment_appointments` tem RLS ativada e acesso direto de `anon`/`authenticated` revogado; o cliente só pode criar pela RPC validada.
+- O fluxo existente do Yeshua está temporariamente preservado durante a migração. Novos estabelecimentos precisam de assinatura ativa e não vencida.
+- **Limitação ainda aberta:** a listagem/gestão de agendamentos no painel administrativo ainda usa o store local. A escrita no banco já é server-side, mas a sincronização do painel, edição/cancelamento autenticados e a migração do catálogo de serviços para o banco ainda precisam ser concluídas antes de declarar a operação multi-tenant integralmente pronta.
+- Configure `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` nas variáveis do runtime Cloudflare Pages para a função de agendamento.
