@@ -182,13 +182,13 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   <div className="w-6 h-6 rounded-md overflow-hidden border border-amber-500/40 shrink-0">
                     <img
                       src={company.logoUrl || '/logo.jpg'}
-                      alt="Logo Yeshua"
+                      alt={establishment.name}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
                   </div>
                   <span className="font-semibold text-sm text-neutral-200">
-                    Barbearia & Estética Yeshua
+                    {establishment.name}
                   </span>
                 </div>
                 <button
