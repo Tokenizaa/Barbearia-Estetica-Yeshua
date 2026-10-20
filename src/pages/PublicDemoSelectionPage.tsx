@@ -94,17 +94,48 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
             const title = contentText(version, ["businessName", "business_name", "title", "name", "brandName"]) || `Proposta ${version.version}`;
             const headline = contentText(version, ["headline", "heroTitle", "hero_title", "tagline"]);
             const description = contentText(version, ["description", "about", "subtitle", "summary"]);
-            const services = version.generated_content?.services;
-            return <article key={version.id} className={`overflow-hidden rounded-2xl border bg-neutral-900 ${isSelected ? "border-emerald-600" : "border-neutral-800"}`}>
-              <div className="flex aspect-[4/3] flex-col justify-between bg-gradient-to-br from-neutral-800 to-neutral-950 p-5">
-                <div className="flex items-start justify-between gap-3"><span className="rounded-full border border-white/10 bg-black/30 px-3 py-1 text-xs text-neutral-300">Versão {version.version}</span>{isSelected && <span className="flex items-center gap-1 rounded-full bg-emerald-500/15 px-3 py-1 text-xs text-emerald-300"><Check className="h-3 w-3" /> Selecionada</span>}</div>
-                <div><div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"><Palette className="h-5 w-5 text-amber-300" /></div><h2 className="text-2xl font-semibold">{title}</h2>{headline && <p className="mt-2 max-w-sm text-sm text-neutral-300">{headline}</p>}</div>
+            const services = Array.isArray(version.generated_content?.services)
+              ? version.generated_content.services.filter((item): item is string => typeof item === "string" && item.trim().length > 0).slice(0, 6)
+              : [];
+            const phone = contentText(version, ["phone", "normalized_phone", "phone_number"]);
+            const email = contentText(version, ["email", "email_address"]);
+            const address = contentText(version, ["address", "formatted_address"]);
+            const city = [contentText(version, ["city", "locality"]), contentText(version, ["region", "state", "province"])].filter(Boolean).join(" · ");
+            const website = contentText(version, ["website", "website_url", "url"]);
+            return <article key={version.id} className={`overflow-hidden rounded-2xl border bg-white text-neutral-900 shadow-sm ${isSelected ? "border-emerald-600 ring-1 ring-emerald-600" : "border-neutral-200"}`}>
+              <div className="border-b border-neutral-200 bg-neutral-50 p-4">
+                <div className="flex items-center justify-between gap-3"><span className="text-xs font-medium uppercase tracking-wider text-neutral-500">Prévia do site · versão {version.version}</span>{isSelected && <span className="flex items-center gap-1 text-xs font-medium text-emerald-700"><Check className="h-3 w-3" /> Selecionada</span>}</div>
+                <div className="mt-5 flex items-center gap-3">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white"><Palette className="h-5 w-5" /></div>
+                  <div className="min-w-0"><p className="truncate text-lg font-semibold">{title}</p><p className="text-xs text-neutral-500">{contentText(version, ["category", "business_category", "segment"]) || "Negócio local"}</p></div>
+                </div>
+                <div className="pb-3 pt-8">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Bem-vindo</p>
+                  <h2 className="mt-2 text-2xl font-bold leading-tight">{headline || title}</h2>
+                  <p className="mt-3 text-sm leading-6 text-neutral-600">{description || "Uma apresentação clara do negócio, dos serviços e das formas de contato."}</p>
+                  <div className="mt-5 inline-flex rounded-lg bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white">Conheça nossos serviços</div>
+                </div>
               </div>
-              <div className="space-y-4 p-5">
-                <p className="min-h-12 text-sm leading-6 text-neutral-400">{description || "Proposta visual personalizada, preparada para apresentar a identidade e os serviços do seu negócio."}</p>
-                {Array.isArray(services) && services.length > 0 && <p className="text-xs text-neutral-500">{services.length} itens de serviço incluídos na proposta</p>}
-                <p className="break-all text-[11px] text-neutral-600">Modelo: {version.template_version_id}</p>
-                <button disabled={saving !== null || isSelected} onClick={() => chooseVersion(version.id)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 transition hover:bg-amber-300 disabled:cursor-not-allowed disabled:opacity-50">
+              <div className="space-y-4 p-4">
+                <div>
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Serviços</h3>
+                  {services.length ? <ul className="mt-2 space-y-2">{services.map((service, index) => <li key={`${version.id}-service-${index}`} className="flex items-start gap-2 text-sm text-neutral-700"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" />{service}</li>)}</ul> : <p className="mt-2 text-sm text-neutral-500">A seção de serviços será personalizada com as informações confirmadas do negócio.</p>}
+                </div>
+                {(phone || email || address || city || website) && <div className="border-t border-neutral-200 pt-3">
+                  <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Contato e localização</h3>
+                  <div className="mt-2 space-y-1.5 text-sm text-neutral-700">
+                    {phone && <p>Telefone: {phone}</p>}
+                    {email && <p className="break-all">E-mail: {email}</p>}
+                    {address && <p>{address}</p>}
+                    {city && <p>{city}</p>}
+                    {website && <p className="break-all">{website}</p>}
+                  </div>
+                </div>}
+                <details className="border-t border-neutral-200 pt-3">
+                  <summary className="cursor-pointer text-xs text-neutral-500">Detalhes técnicos da proposta</summary>
+                  <p className="mt-2 break-all text-[11px] text-neutral-500">Modelo: {version.template_version_id}</p>
+                </details>
+                <button disabled={saving !== null || isSelected} onClick={() => chooseVersion(version.id)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50">
                   {saving === version.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : isSelected ? <Check className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
                   {saving === version.id ? "Registrando escolha..." : isSelected ? "Versão selecionada" : "Selecionar esta versão"}
                 </button>
