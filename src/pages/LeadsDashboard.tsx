@@ -89,7 +89,7 @@ const STATUS_STYLES: Record<LeadStatus, string> = {
 const now = () => new Date().toISOString();
 const makeId = () => globalThis.crypto?.randomUUID?.() ?? `lead-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-function parseCsvRow(line: string): string[] {
+function parseCsvRow(line: string, delimiter = ','): string[] {
   const values: string[] = [];
   let value = '';
   let quoted = false;
@@ -97,7 +97,7 @@ function parseCsvRow(line: string): string[] {
     const character = line[index];
     if (character === '"' && quoted && line[index + 1] === '"') { value += '"'; index++; }
     else if (character === '"') quoted = !quoted;
-    else if (character === ',' && !quoted) { values.push(value.trim()); value = ''; }
+    else if (character === delimiter && !quoted) { values.push(value.trim()); value = ''; }
     else value += character;
   }
   values.push(value.trim());
@@ -240,13 +240,14 @@ export const LeadsDashboard: React.FC = () => {
                 const raw = String(reader.result ?? '').replace(/^\\uFEFF/, '');
                 const lines = raw.split(/\\r?\\n/).filter((line) => line.trim());
                 if (lines.length < 2) { setImportMessage('CSV sem linhas de dados.'); return; }
-                const headers = parseCsvRow(lines[0]).map((header) => header.toLowerCase().replace(/[ _-]/g, ''));
+                const delimiter = (lines[0].match(/;/g) ?? []).length > (lines[0].match(/,/g) ?? []).length ? ';' : ',';
+                const headers = parseCsvRow(lines[0], delimiter).map((header) => header.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().replace(/[ _-]/g, ''));
                 const getValue = (row: string[], ...names: string[]) => {
                   const index = headers.findIndex((header) => names.includes(header));
                   return index >= 0 ? (row[index] ?? '').trim() : '';
                 };
                 const imported: Lead[] = lines.slice(1).map((line) => {
-                  const row = parseCsvRow(line);
+                  const row = parseCsvRow(line, delimiter);
                   const timestamp = now();
                   const businessName = getValue(row, 'businessname', 'nome', 'nomedonegocio', 'empresa', 'name');
                   if (!businessName) return null;
@@ -266,7 +267,7 @@ export const LeadsDashboard: React.FC = () => {
                 }).filter((lead): lead is Lead => lead !== null);
                 if (imported.length) {
                   const existing = new Set(leads.map((lead) => lead.businessName.trim().toLowerCase()));
-                  const unique = imported.filter((lead) => !existing.has(lead.businessName.trim().toLowerCase()));
+                  const unique = imported.filter((lead) => { const key = lead.businessName.trim().toLowerCase(); if (existing.has(key)) return false; existing.add(key); return true; });
                   setLeads((current) => [...unique, ...current]);
                   setImportMessage(`${unique.length} lead(s) importado(s). ${imported.length - unique.length} duplicado(s) ignorado(s) por nome.`);
                   if (unique[0]) setSelectedId(unique[0].id);
