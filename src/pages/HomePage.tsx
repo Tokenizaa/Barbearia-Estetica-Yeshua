@@ -79,8 +79,8 @@ export const HomePage: React.FC<HomePageProps> = ({
         {/* Subtle Luxury Atmospheric Background */}
         <div className="absolute inset-0 z-0 opacity-30">
           <img
-            src="/images/yeshua_og_banner_1791913374687.jpg"
-            alt="Barbearia e Estética Yeshua"
+            src={company.coverUrl || "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80"}
+            alt={company.name}
             className="w-full h-full object-cover filter contrast-115 scale-105"
             referrerPolicy="no-referrer"
           />
@@ -97,24 +97,21 @@ export const HomePage: React.FC<HomePageProps> = ({
             <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden border border-amber-500/50 bg-neutral-900 shadow-2xl p-0.5 group">
               <img
                 src={company.logoUrl || '/logo.jpg'}
-                alt="Logo Barbearia & Estética Yeshua"
+                alt={company.name}
                 className="w-full h-full object-cover rounded-xl group-hover:scale-105 transition-transform"
                 referrerPolicy="no-referrer"
               />
             </div>
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-neutral-900/90 border border-amber-500/30 text-amber-300 text-xs sm:text-sm font-medium backdrop-blur-md shadow-sm">
               <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>Centro de Manaus • Atendimento Premium & Exclusivo</span>
+              <span>{company.tagline || "Personalize a identidade do seu estabelecimento"}</span>
             </div>
           </div>
 
           {/* Title */}
           <div className="space-y-4">
             <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-wider text-neutral-100 leading-tight">
-              Barbearia & Estética <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-amber-600">
-                Yeshua
-              </span>
+              {company.name}
             </h1>
             <p className="max-w-2xl mx-auto text-base sm:text-lg text-neutral-300 leading-relaxed font-light">
               Harmonia, visagismo e autocuidado completo em um só lugar. Cortes masculinos impecáveis, design de sobrancelhas, cílios volumosos, tranças e cosméticos selecionados.
@@ -356,7 +353,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <div className="p-3 rounded-xl bg-neutral-950/60 border border-neutral-800 text-[11px] text-neutral-400 flex items-start gap-2">
                 <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                 <p>
-                  <strong className="text-neutral-200">Anti-conflito Yeshua:</strong> Quando o administrador confirma um horário, ele fica visivelmente travado com o cadeado <span className="text-rose-400 font-semibold">Reservado</span> para todos os clientes.
+                  <strong className="text-neutral-200">Proteção contra conflitos de horário:</strong> Quando o administrador confirma um horário, ele fica visivelmente travado com o cadeado <span className="text-rose-400 font-semibold">Reservado</span> para todos os clientes.
                 </p>
               </div>
             </div>
@@ -471,7 +468,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   type="button"
                   onClick={() => {
                     const chosenService = services.find((s) => s.id === homeSelectedServiceId);
-                    const serviceName = chosenService ? chosenService.name : 'Procedimento Yeshua';
+                    const serviceName = chosenService ? chosenService.name : 'Serviço';
                     const [year, month, day] = homeSelectedDate.split('-');
                     const formattedDate = `${day}/${month}/${year}`;
 
@@ -490,13 +487,13 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                     // Mensagem pronta
                     const msg = [
-                      '💈 *SOLICITAÇÃO DE AGENDAMENTO — YESHUA* 💈',
+                      `*SOLICITAÇÃO DE AGENDAMENTO — ${company.name}*`',
                       '',
                       `✂️ *Serviço:* ${serviceName}`,
                       `📅 *Data Escolhida:* ${formattedDate}`,
                       `⏰ *Horário Preferencial:* ${homeSelectedTime}`,
                       '',
-                      'Olá equipe da Barbearia & Estética Yeshua! Vim pelo site e verifiquei que este horário está disponível. Gostaria de confirmar meu atendimento!',
+                      `Olá equipe de ${company.name}! Solicito confirmar meu atendimento neste horário.`,
                     ].join('\n');
 
                     window.open(store.buildWhatsAppUrl(msg), '_blank');
@@ -535,7 +532,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               Trabalhos Recentes
             </h2>
             <p className="text-sm text-neutral-400 mt-1 max-w-xl">
-              Confira os resultados reais realizados com dedicação e precisão no espaço Yeshua.
+              Explore os trabalhos e mídias cadastrados pelo estabelecimento.
             </p>
           </div>
 
@@ -585,7 +582,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               Vídeos & Reels
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold font-display text-neutral-100 mt-1">
-              Yeshua em Movimento
+              Conteúdo em Destaque
             </h2>
             <p className="text-sm text-neutral-400 mt-1">
               Assista aos bastidores e resultados dos nossos procedimentos.
@@ -734,7 +731,8 @@ export const HomePage: React.FC<HomePageProps> = ({
       />
       */}
 
-      {/* 7. LOCALIZAÇÃO SECTION (MANAUS - CENTRO) */}
+      {company.address && company.cityState && (
+      {/* 7. LOCALIZAÇÃO SECTION */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 sm:p-10">
           <div className="space-y-6">
@@ -743,7 +741,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                 Onde Estamos
               </span>
               <h3 className="text-3xl font-bold font-display text-neutral-100 mt-1">
-                Localização Privilegiada em Manaus
+                Localização do Estabelecimento
               </h3>
             </div>
 
@@ -777,7 +775,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
             <div className="pt-2 flex flex-wrap gap-3">
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Av. Constantino Nery, 50, Centro, Manaus, AM')}`}
+                href={company.googleMapsUrl || ('https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(company.address + ', ' + company.cityState))}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-100 text-xs font-semibold transition-all"
@@ -801,8 +799,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           {/* Interactive Map Embed */}
           <div className="w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-neutral-800 bg-neutral-950 relative">
             <iframe
-              title="Localização Barbearia & Estética Yeshua"
-              src="https://maps.google.com/maps?q=Av.+Constantino+Nery,+50+-+Centro,+Manaus+-+AM&t=&z=15&ie=UTF8&iwloc=&output=embed"
+              title={"Localização de " + company.name}
+              src={"https://maps.google.com/maps?q=" + encodeURIComponent(company.address + ", " + company.cityState) + "&t=&z=15&ie=UTF8&iwloc=&output=embed"}
               className="w-full h-full border-0 filter invert contrast-90 hue-rotate-180 brightness-95"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
@@ -810,6 +808,8 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
       </section>
+
+      )}
 
       {/* 8. FINAL WHATSAPP CTA BANNER */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -819,7 +819,7 @@ export const HomePage: React.FC<HomePageProps> = ({
             Pronto para transformar seu visual?
           </h3>
           <p className="max-w-xl mx-auto text-sm sm:text-base text-neutral-300">
-            Reserve agora mesmo seu horário pelo WhatsApp oficial da Yeshua. Respondemos com agilidade para encontrar o melhor momento para você.
+            Consulte a disponibilidade e entre em contato com {company.name} para solicitar seu horário.
           </p>
           <div className="pt-2">
             <a
@@ -829,7 +829,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               className="inline-flex items-center gap-3 px-8 py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-base shadow-xl hover:shadow-emerald-600/30 transition-all transform active:scale-95 cursor-pointer"
             >
               <MessageCircle className="w-6 h-6 fill-white" />
-              <span>Falar no WhatsApp com a Yeshua</span>
+              <span>Falar no WhatsApp com {company.name}</span>
             </a>
           </div>
         </div>
