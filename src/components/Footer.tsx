@@ -35,22 +35,22 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
               <div className="w-12 h-12 rounded-xl overflow-hidden bg-neutral-900 border border-amber-500/40 flex items-center justify-center shrink-0 shadow-md">
                 <img
                   src={company.logoUrl || '/logo.jpg'}
-                  alt="Barbearia & Estética Yeshua"
+                  alt={company.name}
                   className="w-full h-full object-cover"
                   referrerPolicy="no-referrer"
                 />
               </div>
               <div>
                 <span className="block font-display text-lg font-bold text-neutral-100 uppercase tracking-wider">
-                  Yeshua
+                  {company.name}
                 </span>
                 <span className="block text-xs uppercase tracking-widest text-amber-400 font-medium">
-                  Barbearia & Estética • Manaus
+                  {company.tagline || "Agendamentos e informações do estabelecimento"}
                 </span>
               </div>
             </div>
             <p className="text-sm text-neutral-400 leading-relaxed">
-              Excelência e cuidado com sua autoestima no coração de Manaus. Cortes, barboterapia, extensão de cílios, sobrancelhas, unhas, tranças e produtos exclusivos.
+              Conheça os serviços, consulte a disponibilidade e personalize esta página com as informações do seu estabelecimento.
             </p>
             <div className="pt-2 flex items-center gap-3">
               <a
@@ -190,7 +190,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
               rel="noopener noreferrer"
               className="inline-flex items-center justify-center w-full py-2.5 px-4 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-700 text-amber-300 hover:text-amber-200 text-sm font-medium transition-colors"
             >
-              Falar com a Yeshua no WhatsApp
+              Falar com o estabelecimento no WhatsApp
             </a>
 
             <div className="pt-2 space-y-2">
@@ -214,10 +214,10 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
         {/* Bottom Bar */}
         <div className="mt-12 pt-6 border-t border-neutral-900 flex flex-col sm:flex-row items-center justify-between text-xs text-neutral-400 gap-4">
           <p>
-            © {new Date().getFullYear()} Barbearia & Estética Yeshua. Todos os direitos reservados.
+            © {new Date().getFullYear()} {company.name}. Todos os direitos reservados.
           </p>
           <p className="flex items-center gap-1">
-            <span>Manaus, Amazonas</span>
+            {company.cityState && <span>{company.cityState}</span>}
             <span className="text-neutral-400">•</span>
             <span className="flex items-center gap-1 text-neutral-400">
               Feito com excelência <Heart className="w-3 h-3 text-rose-500/80 fill-rose-500/80" />
