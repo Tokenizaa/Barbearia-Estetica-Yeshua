@@ -90,3 +90,20 @@ O produto não é marketplace, diretório público nem ferramenta para o visitan
 - Não há marketplace nem seletor global de estabelecimento no fluxo de prospecção.
 - A primeira versão é preparada antes de oferecer modelos alternativos ao lead.
 - Nenhum contato externo ou publicação acontece automaticamente.
+
+## Estado da execução — 2026-10-19
+
+Implementação inicial da Fase 1 adicionada à branch:
+- Aba interna "Prospecção de Leads" no painel administrativo existente.
+- Cadastro manual de leads, pesquisa, filtro por status, edição de status/verificação e histórico de atividades.
+- Importação CSV com reconhecimento de cabeçalhos comuns e deduplicação por nome dentro dos dados existentes.
+- Preparação de uma prévia visual local após os dados do lead serem marcados como verificados.
+- Opções de modelos alternativos aparecem somente depois da primeira versão; a troca cria uma versão registrada no histórico.
+- Persistência provisória em localStorage, sem Supabase.
+- Nome global padrão da plataforma neutralizado, preservando Yeshua como estabelecimento existente.
+
+Limitações ainda abertas:
+- A prévia é uma demonstração visual local, não um site hospedado nem uma URL compartilhável.
+- A captura automatizada/raspagem não está implementada; nesta etapa há cadastro manual e importação CSV.
+- Não há envio de proposta, e-mail ou WhatsApp, publicação, autenticação de produção ou sincronização multiusuário.
+- Build e testes automatizados ainda precisam ser executados num ambiente com dependências instaladas. Não há execução de GitHub Actions registrada para os commits desta fase.
