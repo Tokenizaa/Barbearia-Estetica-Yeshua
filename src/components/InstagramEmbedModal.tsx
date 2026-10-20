@@ -15,14 +15,14 @@ export const InstagramEmbedModal: React.FC<InstagramEmbedModalProps> = ({
   onSave,
 }) => {
   const [url, setUrl] = useState(
-    embedItem?.url || 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D'
+    embedItem?.url || ''
   );
   const [title, setTitle] = useState(
-    embedItem?.title || 'Publicação Oficial @barbearia_estetica_yeshua'
+    embedItem?.title || 'Publicação do estabelecimento'
   );
   const [caption, setCaption] = useState(
     embedItem?.caption ||
-      'Confira os trabalhos da Barbearia & Estética Yeshua em Manaus!'
+      'Confira os trabalhos do estabelecimento.'
   );
   const [previewImageUrl, setPreviewImageUrl] = useState(
     embedItem?.previewImageUrl || '/logo.jpg'
@@ -136,7 +136,7 @@ export const InstagramEmbedModal: React.FC<InstagramEmbedModalProps> = ({
                 <span className="text-neutral-500">Exemplos:</span>
                 <button
                   type="button"
-                  onClick={() => handleUrlChange('https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D')}
+                  onClick={() => handleUrlChange('')}
                   className="px-2 py-0.5 rounded bg-neutral-800 hover:bg-neutral-700 text-amber-300 transition-colors cursor-pointer"
                 >
                   Perfil Oficial
