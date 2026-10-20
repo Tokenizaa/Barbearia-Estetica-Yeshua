@@ -626,6 +626,37 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   const created = await inserted.json() as Array<{ id: string; version: number }>;
   if (!created.length) throw new Error("demo_version_insert_no_rows");
 
+  const projectDraft = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id`, {
+    method: "PATCH",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify({
+      template_version_id: resolvedTemplateVersionId,
+      generated_content: generatedContent,
+      design_overrides: designOverrides,
+      updated_at: new Date().toISOString(),
+    }),
+  });
+  if (!projectDraft.ok || !(await projectDraft.json() as unknown[]).length) {
+    throw new Error("demo_project_draft_persistence_failed");
+  }
+
+  if (task.prospect_id) {
+    const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+      body: JSON.stringify({
+        prospect_id: task.prospect_id,
+        campaign_id: task.campaign_id,
+        site_project_id: resolvedProjectId,
+        event_type: "demo_generated",
+        source_provider: "prospecting-worker",
+        idempotency_key: `site-project:${resolvedProjectId}:version:${created[0].version}:generated`,
+        evidence: { versionId: created[0].id, version: created[0].version, templateVersionId: resolvedTemplateVersionId },
+      }),
+    });
+    if (!event.ok) throw new Error("demo_generated_event_persistence_failed");
+  }
+
   const publishTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
     method: "POST",
     headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
@@ -699,6 +730,23 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
   if (!created.ok) throw new Error(`publish_link_create_http_${created.status}`);
   const rows = await created.json() as Array<{ id: string }>;
   if (!rows.length) throw new Error("publish_link_create_no_rows");
+
+  if (task.prospect_id) {
+    const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+      body: JSON.stringify({
+        prospect_id: task.prospect_id,
+        campaign_id: task.campaign_id,
+        site_project_id: siteProjectId,
+        event_type: "demo_published",
+        source_provider: "prospecting-worker",
+        idempotency_key: `site-project:${siteProjectId}:link:${rows[0].id}:published`,
+        evidence: { linkId: rows[0].id, expiresAt },
+      }),
+    });
+    if (!event.ok) throw new Error("demo_published_event_persistence_failed");
+  }
 
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
