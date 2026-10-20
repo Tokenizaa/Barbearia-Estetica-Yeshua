@@ -23,8 +23,18 @@ export async function onRequestPost({ request, env }: Context) {
     });
   } catch { return json({ error: "auth_service_unavailable" }, 502); }
   if (!auth.ok) return json({ error: "invalid_session" }, 401);
-  const user = await auth.json() as { id?: string; app_metadata?: Record<string, unknown> };
-  if (user.app_metadata?.platform_role !== "platform_admin") return json({ error: "platform_admin_required" }, 403);
+  const user = await auth.json() as { id?: string };
+  if (!user.id) return json({ error: "invalid_session" }, 401);
+  const adminCheck = await fetch(`${env.SUPABASE_URL.replace(/\\/$/, "")}/rest/v1/platform_admins?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`, {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
+      authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}`,
+    },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!adminCheck.ok) return json({ error: "admin_membership_check_unavailable" }, 503);
+  const adminRows = await adminCheck.json() as unknown[];
+  if (!adminRows.length) return json({ error: "platform_admin_required" }, 403);
 
   let body: { siteProjectId?: unknown; expiresInDays?: unknown };
   try { body = await request.json() as { siteProjectId?: unknown; expiresInDays?: unknown }; } catch { return json({ error: "invalid_json" }, 400); }
