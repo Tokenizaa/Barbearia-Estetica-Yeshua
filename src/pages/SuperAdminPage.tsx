@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { LeadsDashboard } from './LeadsDashboard';
 import {
   Establishment,
   EstablishmentTheme,
@@ -434,6 +435,18 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('leads')}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+            activeTab === 'leads'
+              ? 'bg-emerald-500 text-neutral-950 shadow-md'
+              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Prospecção de Leads</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('settings')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
             activeTab === 'settings'
@@ -445,6 +458,8 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
           <span>Configurações Globais</span>
         </button>
       </div>
+
+      {activeTab === 'leads' && <LeadsDashboard />}
 
       {/* TAB 1: OVERVIEW & KPIS */}
       {activeTab === 'overview' && (

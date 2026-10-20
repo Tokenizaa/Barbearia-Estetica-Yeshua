@@ -231,6 +231,12 @@ let platformConfig: PlatformConfig = loadFromStorage<PlatformConfig>(
   INITIAL_PLATFORM_CONFIG
 );
 
+// Migration non-destrutiva: Yeshua é um estabelecimento, não a marca global da plataforma.
+if (platformConfig.platformName === 'Yeshua White Label Network') {
+  platformConfig = { ...platformConfig, platformName: INITIAL_PLATFORM_CONFIG.platformName };
+  saveToStorage(STORAGE_KEYS.PLATFORM_CONFIG, platformConfig);
+}
+
 // Session State
 let currentSession: AuthSession | null = (() => {
   try {

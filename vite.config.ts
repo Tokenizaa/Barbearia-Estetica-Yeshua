@@ -4,11 +4,55 @@ import path from 'path';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function devCapturePlugin() {
+  return {
+    name: 'dev-api-capture',
+    configureServer(server: any) {
+      server.middlewares.use(async (req: any, res: any, next: any) => {
+        if (req.url === '/api/capture' && req.method === 'POST') {
+          try {
+            const chunks: Buffer[] = [];
+            for await (const chunk of req) {
+              chunks.push(Buffer.from(chunk));
+            }
+            const bodyText = Buffer.concat(chunks).toString('utf-8');
+            const protocol = req.headers['x-forwarded-proto'] || 'http';
+            const host = req.headers.host || 'localhost:3000';
+            const origin = `${protocol}://${host}`;
+            const fetchReq = new Request(`${origin}/api/capture`, {
+              method: 'POST',
+              headers: {
+                ...req.headers,
+                'content-type': 'application/json',
+                origin: origin,
+              },
+              body: bodyText,
+            });
+            const { onRequestPost } = await import('./functions/api/capture');
+            const response = await onRequestPost({ request: fetchReq });
+            res.statusCode = response.status;
+            response.headers.forEach((val, key) => res.setHeader(key, val));
+            const responseBody = await response.text();
+            res.end(responseBody);
+          } catch (err: any) {
+            res.statusCode = 500;
+            res.setHeader('content-type', 'application/json');
+            res.end(JSON.stringify({ error: err?.message || 'Falha no endpoint de captura.' }));
+          }
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
+
 export default defineConfig(() => {
   return {
     plugins: [
       react(),
       tailwindcss(),
+      devCapturePlugin(),
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.png', 'apple-touch-icon.png', 'icon.svg', 'logo.jpg', 'og-image.jpg'],
