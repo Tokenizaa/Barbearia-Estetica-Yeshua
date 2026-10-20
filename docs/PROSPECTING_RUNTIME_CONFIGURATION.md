@@ -19,6 +19,10 @@ Documentar os secrets e as verificações necessárias antes de habilitar campan
 | `WHATSAPP_ACCESS_TOKEN` | Credencial do WhatsApp Business Platform | Pendente de configuração |
 | `WHATSAPP_PHONE_NUMBER_ID` | Identificador do número de envio no provedor | Pendente de configuração |
 | `WHATSAPP_TEMPLATE_NAME` | Modelo de mensagem aprovado pelo provedor | Pendente de configuração |
+| `WHATSAPP_TEMPLATE_LANGUAGE` | Código de idioma do modelo | Opcional; padrão `pt_BR` |
+| `WHATSAPP_API_VERSION` | Versão da Graph API | Opcional; padrão `v23.0` |
+| `WHATSAPP_APP_SECRET` | Validar assinatura HMAC de webhooks | Pendente de configuração |
+| `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Validar desafio inicial do webhook | Pendente de configuração |
 
 Não usar uma chave de Google Maps/Places como padrão para montar lista de prospecção sem validar expressamente os termos do provedor para armazenamento e uso comercial dos dados. O provedor de descoberta precisa autorizar a finalidade pretendida, respeitar limites e fornecer evidência de origem.
 
@@ -44,6 +48,7 @@ Endpoint implementado: `GET /api/prospecting/readiness`.
 - Os candidatos são persistidos em `prospecting_candidates`, deduplicados por SHA-256 e qualificados com pontuação explicável. A campanha respeita o limite diário por contagem de candidatos persistidos.
 - `capture` promove candidatos para `prospects` por RPC que mapeia apenas colunas existentes no esquema legado, e cria tarefa idempotente de qualificação. O mapeamento ainda exige validação no banco real.
 - `send_whatsapp` tem handler para WhatsApp Business Platform. Exige elegibilidade explícita, timestamp e evidência de opt-in, telefone válido e ausência de opt-out. Só marca `sent` após receber ID de mensagem do provedor; tentativas de resultado ambíguo ficam bloqueadas para reconciliação, evitando reenvio cego.
+- Webhook: `POST /api/webhooks/whatsapp`; valida `X-Hub-Signature-256` por HMAC-SHA256 com `WHATSAPP_APP_SECRET`. O `GET` implementa o desafio de verificação com `WHATSAPP_WEBHOOK_VERIFY_TOKEN`. Recibos atualizam o estado persistido; mensagens com palavras de opt-out (`SAIR`, `PARAR`, `CANCELAR`, `STOP`, `UNSUBSCRIBE`, `NÃO QUERO`) bloqueiam novos envios para o telefone identificado.
 - `generate_demo`, `publish_demo` e `sync_delivery` permanecem bloqueados até a implementação e validação dos contratos correspondentes; não são simulados como sucesso.
 - A landing pública `/demo/:token` apresenta versões persistidas e permite seleção por token aleatório de uso limitado no tempo; o hash do token é armazenado no banco e a seleção usa RPC server-side.
 - Para configurar os secrets no ambiente Cloudflare do worker, execute os comandos abaixo a partir da raiz do repositório e informe os valores de forma interativa:
@@ -67,4 +72,4 @@ Endpoint implementado: `GET /api/prospecting/readiness`.
 
 ## Estado em 2026-10-20
 
-O worker, agendamento, persistência de candidatos, promoção para prospects, handler de WhatsApp, console administrativo e landing pública de seleção foram adicionados à branch. Build, TypeScript e testes ficam para a validação posterior com o agente local. As migrations recentes ainda precisam ser aplicadas e verificadas no Supabase. O cron está configurado no arquivo Wrangler, mas não está ativo até o deploy do worker e a configuração dos secrets. O adaptador de descoberta exige endpoint/provedor real configurado. Geração/publicação de demonstrações e sincronização de entrega permanecem bloqueadas até concluir seus contratos.
+O worker, agendamento, persistência de candidatos, promoção para prospects, handler de WhatsApp, webhook de recibos/opt-out, console administrativo e landing pública de seleção foram adicionados à branch. Build, TypeScript e testes ficam para a validação posterior com o agente local. As migrations recentes ainda precisam ser aplicadas e verificadas no Supabase. O cron está configurado no arquivo Wrangler, mas não está ativo até o deploy do worker e a configuração dos secrets. O adaptador de descoberta exige endpoint/provedor real configurado. Geração/publicação de demonstrações e sincronização de entrega permanecem bloqueadas até concluir seus contratos.
