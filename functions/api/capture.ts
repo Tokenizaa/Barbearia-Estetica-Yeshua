@@ -18,8 +18,9 @@ function isBlockedHost(hostname: string): boolean {
     if (octets.some((part) => part < 0 || part > 255)) return true;
     const [a, b] = octets;
     if (a === 0 || a === 10 || a === 127 || a >= 224 || (a === 169 && b === 254) ||
-        (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) ||
-        (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19))) return true;
+        (a === 172 && b >= 16 && b <= 31) || (a === 192 && (b === 0 || b === 168)) ||
+        (a === 100 && b >= 64 && b <= 127) || (a === 198 && (b === 18 || b === 19 || b === 51)) ||
+        (a === 203 && b === 0)) return true;
   }
   return false;
 }
@@ -127,6 +128,10 @@ async function readLimited(response: Response): Promise<string> {
 }
 
 export const onRequestPost = async ({ request }: { request: Request }) => {
+  const origin = request.headers.get("origin");
+  if (origin && origin !== new URL(request.url).origin) return json({ error: "Origem da requisição não permitida." }, 403);
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > 4096) return json({ error: "Corpo da requisição excede o limite permitido." }, 413);
   let payload: { url?: unknown };
   try { payload = await request.json() as { url?: unknown }; } catch { return json({ error: "Envie um JSON válido com o campo url." }, 400); }
   if (typeof payload.url !== "string" || payload.url.length > 2048) return json({ error: "Informe uma URL pública válida (até 2048 caracteres)." }, 400);
