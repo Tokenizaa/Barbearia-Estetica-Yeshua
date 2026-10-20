@@ -92,7 +92,7 @@ let allEstablishments: Establishment[] = (() => {
   );
 
   if (loaded.length === 0) {
-    // Check if there is legacy single-tenant company info to migrate into Yeshua
+    // Check for legacy single-establishment data to migrate
     const legacyCompany = loadFromStorage<Partial<Establishment> | null>(
       STORAGE_KEYS.LEGACY_COMPANY,
       null
@@ -220,7 +220,7 @@ let auditLogs: AuditLogEntry[] = loadFromStorage<AuditLogEntry[]>(
       action: 'PLATFORM_INITIALIZATION',
       actorRole: 'super_admin',
       actorName: 'Sistema White Label',
-      details: 'Plataforma multiestabelecimento inicializada com Barbearia Yeshua como primeiro cliente.',
+      details: 'Plataforma multiestabelecimento inicializada com dados neutros de demonstração.',
       severity: 'info',
     },
   ]
@@ -231,7 +231,7 @@ let platformConfig: PlatformConfig = loadFromStorage<PlatformConfig>(
   INITIAL_PLATFORM_CONFIG
 );
 
-// Migration non-destrutiva: Yeshua é um estabelecimento, não a marca global da plataforma.
+// Migration non-destrutiva: a marca da plataforma é independente dos estabelecimentos.
 if (platformConfig.platformName === 'Yeshua White Label Network') {
   platformConfig = { ...platformConfig, platformName: INITIAL_PLATFORM_CONFIG.platformName };
   saveToStorage(STORAGE_KEYS.PLATFORM_CONFIG, platformConfig);
@@ -270,7 +270,7 @@ export const store = {
   getCurrentEstablishment(): Establishment {
     const current = allEstablishments.find((e) => e.id === activeTenantId);
     if (current) return current;
-    // Fallback to Yeshua
+    // Fallback to the neutral default establishment
     const yeshua = allEstablishments.find((e) => e.id === 'est-yeshua') || INITIAL_ESTABLISHMENT_YESHUA;
     return yeshua;
   },
@@ -385,7 +385,7 @@ export const store = {
     const est = allEstablishments.find((e) => e.id === id);
     if (!est) return false;
 
-    // Protection: default Yeshua establishment should not be easily disabled
+    // Protect the default template establishment from accidental deactivation
     const newStatus = est.status === 'active' ? 'inactive' : 'active';
     const updated = this.updateEstablishment(id, { status: newStatus });
 
@@ -405,7 +405,7 @@ export const store = {
   deleteEstablishment(id: string): boolean {
     const est = allEstablishments.find((e) => e.id === id);
     if (!est || est.isDefault) {
-      console.warn('Não é permitido excluir o estabelecimento padrão Yeshua.');
+      console.warn('Não é permitido excluir o estabelecimento padrão da plataforma.');
       return false;
     }
 
@@ -755,10 +755,7 @@ export const store = {
     const profileMatch = clean.match(/(?:instagram\.com\/|@)([A-Za-z0-9_.-]+)/i);
     if (profileMatch && profileMatch[1]) {
       const username = profileMatch[1];
-      const isYeshua = username.toLowerCase().includes('yeshua');
-      const profileUrl = isYeshua
-        ? 'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D'
-        : `https://www.instagram.com/${username}/`;
+      const profileUrl = `https://www.instagram.com/${username}/`;
       return {
         shortcode: username,
         type: 'post',
@@ -786,10 +783,9 @@ export const store = {
       };
     }
 
-    const defaultProfile =
-      'https://www.instagram.com/barbearia_estetica_yeshua?igsh=MTdsZ21rODA1Zjlvdg%3D%3D';
+    const defaultProfile = '';
     return {
-      shortcode: 'barbearia_estetica_yeshua',
+      shortcode: '',
       type: 'post',
       embedUrl: defaultProfile,
       compactEmbedUrl: defaultProfile,
@@ -805,9 +801,9 @@ export const store = {
     const est = targetEstablishmentId
       ? this.getEstablishmentById(targetEstablishmentId) || this.getCurrentEstablishment()
       : this.getCurrentEstablishment();
-    const cleanPhone = est.whatsappClean || '5592986187766';
+    const cleanPhone = est.whatsappClean || '';
     const encoded = encodeURIComponent(customMessage);
-    return `https://wa.me/${cleanPhone}?text=${encoded}`;
+    return cleanPhone ? `https://wa.me/${cleanPhone}?text=${encoded}` : `https://wa.me/?text=${encoded}`;
   },
 
   buildScheduledAppointmentWhatsAppUrl(
