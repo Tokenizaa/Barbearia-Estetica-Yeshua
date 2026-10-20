@@ -321,7 +321,25 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
 
   const campaign = task.payload && typeof task.payload === "object" ? task.payload : {};
   const limitRaw = Number(campaign.dailyDiscoveryLimit ?? 100);
-  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 1000)) : 100;
+  const dailyLimit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 10000)) : 100;
+  const now = new Date();
+  const dayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  const countResponse = await db(env, `prospecting_candidates?campaign_id=eq.${encodeURIComponent(String(campaign.campaignId ?? ""))}&created_at=gte.${encodeURIComponent(dayStart)}&select=id&limit=1`, {
+    headers: { prefer: "count=exact" },
+  });
+  if (!countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
+  const range = countResponse.headers.get("content-range") ?? "";
+  const countMatch = range.match(/\\/(\\d+|\\*)$/);
+  const discoveredToday = countMatch && countMatch[1] !== "*" ? Number(countMatch[1]) : 0;
+  const limit = Math.max(0, dailyLimit - discoveredToday);
+  if (limit === 0) {
+    await updateTask(env, task, workerId, {
+      status: "succeeded", last_error_code: null, last_error: null,
+      completed_at: new Date().toISOString(),
+      result: { outcome: "daily_limit_reached", dailyLimit, discoveredToday },
+    });
+    return "succeeded";
+  }
   const response = await fetch(endpoint.toString(), {
     method: "POST",
     headers: {
