@@ -487,7 +487,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 
                     // Mensagem pronta
                     const msg = [
-                      `*SOLICITAÇÃO DE AGENDAMENTO — ${company.name}*`',
+                      `*SOLICITAÇÃO DE AGENDAMENTO — ${company.name}*`,
                       '',
                       `✂️ *Serviço:* ${serviceName}`,
                       `📅 *Data Escolhida:* ${formattedDate}`,
