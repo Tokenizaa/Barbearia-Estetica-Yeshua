@@ -10,7 +10,7 @@ import {
 } from '../types';
 
 export const INITIAL_PLATFORM_CONFIG: PlatformConfig = {
-  platformName: 'Yeshua White Label Network',
+  platformName: 'Plataforma de Sites Personalizados',
   masterPin: '9988',
   supportEmail: 'contato@tokenizaa.com',
   supportWhatsapp: '+55 92 98618-7766',
