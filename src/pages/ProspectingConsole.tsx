@@ -14,12 +14,14 @@ type Candidate = {
 };
 type Event = { id: number; event_type: string; source_provider: string | null; occurred_at: string; evidence: Record<string, unknown> };
 type Metrics = Record<string, number>;
+type DemoLink = { id: number; prospectId: string | null; url: string; expiresAt: string; createdAt: string };
 
 export function ProspectingConsole() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [demoLinks, setDemoLinks] = useState<DemoLink[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -42,11 +44,23 @@ export function ProspectingConsole() {
     const { data: sessionData } = await supabase.auth.getSession();
     const accessToken = sessionData.session?.access_token;
     if (accessToken) {
-      try {
-        const response = await fetch("/api/prospecting/overview", { headers: { authorization: `Bearer ${accessToken}` } });
-        const body = await response.json();
-        if (response.ok && body.status === "ok") setMetrics(body.counts as Metrics);
-      } catch { /* Keep the administrative overview available even if metrics endpoint is temporarily unavailable. */ }
+      const headers = { authorization: `Bearer ${accessToken}` };
+      const [overviewResponse, linksResponse] = await Promise.allSettled([
+        fetch("/api/prospecting/overview", { headers }),
+        fetch("/api/prospecting/demo-links", { headers }),
+      ]);
+      if (overviewResponse.status === "fulfilled") {
+        try {
+          const body = await overviewResponse.value.json();
+          if (overviewResponse.value.ok && body.status === "ok") setMetrics(body.counts as Metrics);
+        } catch { /* Preserve last known metrics if the endpoint returns invalid JSON. */ }
+      }
+      if (linksResponse.status === "fulfilled") {
+        try {
+          const body = await linksResponse.value.json();
+          if (linksResponse.value.ok && Array.isArray(body.links)) setDemoLinks(body.links as DemoLink[]);
+        } catch { /* Keep the console usable when link history is unavailable. */ }
+      }
     }
     setBusy(false);
   }, []);
@@ -141,9 +155,16 @@ export function ProspectingConsole() {
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3"><Users size={17} /><h3 className="font-medium">Candidatos recentes</h3></div>
       {candidates.length === 0 ? <p className="p-5 text-sm text-neutral-500">Ainda não há candidatos persistidos.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-neutral-900 text-xs text-neutral-500"><tr><th className="px-4 py-3">Negócio</th><th className="px-4 py-3">Local</th><th className="px-4 py-3">Pontuação</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3">Origem</th></tr></thead><tbody className="divide-y divide-neutral-800">{candidates.map((candidate) => <tr key={candidate.id}><td className="px-4 py-3"><p className="font-medium">{candidate.business_name}</p><p className="text-xs text-neutral-500">{candidate.category ?? "Sem categoria"}</p></td><td className="px-4 py-3 text-neutral-400">{[candidate.city, candidate.region].filter(Boolean).join(", ") || "—"}</td><td className="px-4 py-3 tabular-nums">{candidate.qualification_score ?? "—"}</td><td className="px-4 py-3">{candidate.status}</td><td className="px-4 py-3">{candidate.source_url ? <a href={candidate.source_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-amber-300"><ExternalLink size={13} /> Fonte</a> : "—"}</td></tr>)}</tbody></table></div>}
     </div>
+    <div className="overflow-hidden rounded-2xl border border-neutral-800">
+      <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3"><ExternalLink size={17} /><h3 className="font-medium">Demonstrações geradas automaticamente</h3></div>
+      {demoLinks.length === 0 ? <p className="p-5 text-sm text-neutral-500">Os links aparecerão aqui após a geração e publicação automáticas de uma demonstração.</p> : <div className="divide-y divide-neutral-800">{demoLinks.map((link) => <div key={link.id} className="flex flex-wrap items-center justify-between gap-3 p-4">
+        <div className="min-w-0"><a href={link.url} target="_blank" rel="noreferrer" className="break-all text-sm text-amber-300 hover:underline">{link.url}</a><p className="mt-1 text-xs text-neutral-500">Expira em {new Date(link.expiresAt).toLocaleString("pt-BR")}</p></div>
+        <button type="button" onClick={() => { void navigator.clipboard?.writeText(link.url); setNotice("Link da demonstração copiado."); }} className="rounded-lg border border-neutral-700 px-3 py-2 text-xs">Copiar link</button>
+      </div>)}</div>}
+    </div>
     <div className="rounded-2xl border border-neutral-800 p-4">
-      <div className="flex items-center gap-2"><ExternalLink size={17} /><h3 className="font-medium">Link público da demonstração</h3></div>
-      <p className="mt-1 text-sm text-neutral-400">Gere um link temporário para um projeto de site já criado. O projeto precisa ter versões persistidas para que o cliente possa escolher.</p>
+      <div className="flex items-center gap-2"><ExternalLink size={17} /><h3 className="font-medium">Criar link manual</h3></div>
+      <p className="mt-1 text-sm text-neutral-400">Use apenas para republicar manualmente um projeto existente. O fluxo automatizado publica os links e os lista acima.</p>
       <form className="mt-3 flex flex-col gap-2 sm:flex-row" onSubmit={(event) => { event.preventDefault(); if (siteProjectId.trim()) void createDemoLink(siteProjectId.trim()); }}>
         <input value={siteProjectId} onChange={(event) => setSiteProjectId(event.target.value)} required placeholder="UUID do projeto de site" className="min-w-0 flex-1 rounded-lg border border-neutral-700 bg-neutral-950 p-3 text-sm" />
         <button disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-lg bg-amber-400 px-4 py-3 text-sm font-semibold text-neutral-950 disabled:opacity-50"><ExternalLink size={15} /> Criar link privado</button>
