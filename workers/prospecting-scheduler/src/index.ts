@@ -510,11 +510,40 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
   const siteProjectId = typeof payload.siteProjectId === "string" ? payload.siteProjectId : "";
   const templateVersionId = typeof payload.templateVersionId === "string" ? payload.templateVersionId : "";
-  if (!task.prospect_id || !/^[0-9a-f-]{36}$/i.test(siteProjectId) || !/^[0-9a-f-]{36}$/i.test(templateVersionId)) {
+  if (!task.prospect_id || (siteProjectId && !/^[0-9a-f-]{36}$/i.test(siteProjectId)) || (templateVersionId && !/^[0-9a-f-]{36}$/i.test(templateVersionId))) {
     await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "demo_context_required",
-      last_error: "Geração de demonstração exige prospect_id, siteProjectId e templateVersionId existentes.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_context_required" },
+      status: "blocked", last_error_code: "demo_context_invalid",
+      last_error: "Geração de demonstração exige um prospect_id válido; IDs opcionais, quando informados, devem ser UUIDs.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "demo_context_invalid" },
+    });
+    return "blocked";
+  }
+
+  let resolvedProjectId = siteProjectId;
+  if (!resolvedProjectId) {
+    const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id }),
+    });
+    if (!projectResult.ok) throw new Error(`demo_project_create_http_${projectResult.status}`);
+    const projectBody = await projectResult.json() as { siteProjectId?: string };
+    if (!projectBody.siteProjectId || !/^[0-9a-f-]{36}$/i.test(projectBody.siteProjectId)) {
+      throw new Error("demo_project_create_missing_id");
+    }
+    resolvedProjectId = projectBody.siteProjectId;
+  }
+
+  let resolvedTemplateVersionId = templateVersionId;
+  if (!resolvedTemplateVersionId) {
+    const templateLookup = await db(env, "site_template_versions?select=id&order=created_at.desc&limit=1");
+    if (!templateLookup.ok) throw new Error(`demo_template_lookup_http_${templateLookup.status}`);
+    const templates = await templateLookup.json() as Array<{ id: string }>;
+    resolvedTemplateVersionId = templates[0]?.id ?? "";
+  }
+  if (!resolvedTemplateVersionId || !/^[0-9a-f-]{36}$/i.test(resolvedTemplateVersionId)) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "template_version_required",
+      last_error: "O projeto foi preparado, mas não existe versão de modelo disponível para gerar a demonstração.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "template_version_required", siteProjectId: resolvedProjectId },
     });
     return "blocked";
   }
@@ -530,7 +559,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     });
     return "blocked";
   }
-  const projectResponse = await db(env, `site_projects?id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
+  const projectResponse = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
   if (!projectResponse.ok) throw new Error(`demo_project_read_http_${projectResponse.status}`);
   if (!(await projectResponse.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
@@ -540,7 +569,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     });
     return "blocked";
   }
-  const templateResponse = await db(env, `site_template_versions?id=eq.${encodeURIComponent(templateVersionId)}&select=id&limit=1`);
+  const templateResponse = await db(env, `site_template_versions?id=eq.${encodeURIComponent(resolvedTemplateVersionId)}&select=id&limit=1`);
   if (!templateResponse.ok) throw new Error(`demo_template_read_http_${templateResponse.status}`);
   if (!(await templateResponse.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
@@ -551,7 +580,7 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     return "blocked";
   }
 
-  const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=version&order=version.desc&limit=1`);
+  const current = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=version&order=version.desc&limit=1`);
   if (!current.ok) throw new Error(`demo_version_read_http_${current.status}`);
   const versions = await current.json() as Array<{ version: number }>;
   const version = (versions[0]?.version ?? 0) + 1;
@@ -576,9 +605,9 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
     method: "POST",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({
-      site_project_id: siteProjectId,
+      site_project_id: resolvedProjectId,
       version,
-      template_version_id: templateVersionId,
+      template_version_id: resolvedTemplateVersionId,
       generated_content: generatedContent,
       design_overrides: designOverrides,
       selected_by_prospect: false,
@@ -589,10 +618,23 @@ async function generateDemoTask(env: Env, task: ProspectingTask, workerId: strin
   const created = await inserted.json() as Array<{ id: string; version: number }>;
   if (!created.length) throw new Error("demo_version_insert_no_rows");
 
+  const publishTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+    method: "POST",
+    headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({
+      campaign_id: task.campaign_id,
+      prospect_id: task.prospect_id,
+      task_type: "publish_demo",
+      idempotency_key: `site-project:${resolvedProjectId}:publish-demo:v1`,
+      payload: { siteProjectId: resolvedProjectId, expiresInDays: 14 },
+    }),
+  });
+  if (!publishTask.ok) throw new Error(`demo_publish_enqueue_http_${publishTask.status}`);
+
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "demo_generated", siteProjectId, versionId: created[0].id, version: created[0].version },
+    result: { outcome: "demo_generated", siteProjectId: resolvedProjectId, versionId: created[0].id, version: created[0].version },
   });
   return "succeeded";
 }
@@ -608,7 +650,7 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     });
     return "blocked";
   }
-  const project = await db(env, `site_projects?id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
+  const project = await db(env, `site_projects?id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
   if (!project.ok) throw new Error(`publish_project_read_http_${project.status}`);
   if (!(await project.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
@@ -618,7 +660,7 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     });
     return "blocked";
   }
-  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(siteProjectId)}&select=id&limit=1`);
+  const versionsResponse = await db(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(resolvedProjectId)}&select=id&limit=1`);
   if (!versionsResponse.ok) throw new Error(`publish_versions_read_http_${versionsResponse.status}`);
   if (!(await versionsResponse.json() as unknown[]).length) {
     await updateTask(env, task, workerId, {
@@ -641,7 +683,7 @@ async function publishDemoTask(env: Env, task: ProspectingTask, workerId: string
     method: "POST",
     headers: { prefer: "return=representation" },
     body: JSON.stringify({
-      site_project_id: siteProjectId,
+      site_project_id: resolvedProjectId,
       token_hash: tokenHash,
       expires_at: expiresAt,
     }),
@@ -724,10 +766,35 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   });
   if (!event.ok) throw new Error(`prospect_event_http_${event.status}`);
 
+  let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold" };
+  if (result.score >= 50) {
+    const projectResult = await db(env, "rpc/ensure_prospect_site_project", {
+      method: "POST", body: JSON.stringify({ p_prospect_id: task.prospect_id }),
+    });
+    if (!projectResult.ok) throw new Error(`qualified_project_create_http_${projectResult.status}`);
+    const projectBody = await projectResult.json() as { siteProjectId?: string; created?: boolean };
+    if (!projectBody.siteProjectId || !/^[0-9a-f-]{36}$/i.test(projectBody.siteProjectId)) {
+      throw new Error("qualified_project_create_missing_id");
+    }
+    const demoTask = await db(env, "prospecting_tasks?on_conflict=idempotency_key", {
+      method: "POST",
+      headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+      body: JSON.stringify({
+        campaign_id: task.campaign_id,
+        prospect_id: task.prospect_id,
+        task_type: "generate_demo",
+        idempotency_key: `prospect:${task.prospect_id}:generate-demo:v1`,
+        payload: { siteProjectId: projectBody.siteProjectId, expiresInDays: 14 },
+      }),
+    });
+    if (!demoTask.ok) throw new Error(`qualified_demo_enqueue_http_${demoTask.status}`);
+    demoPipeline = { status: "queued", siteProjectId: projectBody.siteProjectId, projectCreated: Boolean(projectBody.created) };
+  }
+
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "qualified", score: result.score, missingFields: result.missingFields },
+    result: { outcome: "qualified", score: result.score, missingFields: result.missingFields, demoPipeline },
   });
   return "succeeded";
 }
