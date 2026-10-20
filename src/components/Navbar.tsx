@@ -173,16 +173,16 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Super Admin Direct Link */}
             <button
-              onClick={() => handleNavClick('super-admin')}
+              onClick={() => { setMobileMenuOpen(false); window.location.assign('/plataforma/login'); }}
               className={`p-2 rounded-lg text-xs font-medium border transition-colors flex items-center gap-1.5 cursor-pointer ${
                 currentPage === 'super-admin'
                   ? 'bg-amber-500 text-neutral-950 font-bold border-amber-400'
                   : 'text-neutral-400 border-neutral-800 hover:text-amber-400 hover:border-neutral-700 bg-neutral-900/50'
               }`}
-              title="Painel Geral da Plataforma White Label"
+              title="Entrar na administração geral da plataforma"
             >
               <Building2 className="w-4 h-4 text-amber-400" />
-              <span className="hidden xl:inline text-[11px]">Rede WL</span>
+              <span className="hidden xl:inline text-[11px]">Admin Geral</span>
             </button>
 
             <button
@@ -281,11 +281,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
 
             <button
-              onClick={() => handleNavClick('super-admin')}
+              onClick={() => { setMobileMenuOpen(false); window.location.assign('/plataforma/login'); }}
               className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 font-semibold"
             >
               <Building2 className="w-4 h-4 text-amber-400" />
-              <span>Painel Geral da Plataforma (Super Admin)</span>
+              <span>Administração Geral da Plataforma</span>
             </button>
 
             {company.instagramUrl && (
