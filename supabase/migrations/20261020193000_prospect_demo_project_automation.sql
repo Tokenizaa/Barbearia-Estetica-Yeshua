@@ -8,7 +8,7 @@ create unique index if not exists site_projects_prospect_id_unique
   on public.site_projects (prospect_id)
   where prospect_id is not null;
 
-create or replace function public.ensure_prospect_site_project(p_prospect_id uuid)
+create or replace function public.ensure_prospect_site_project(p_prospect_id uuid, p_template_version_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -23,6 +23,9 @@ declare
   v_columns text;
 begin
   if p_prospect_id is null then raise exception 'prospect_id_required'; end if;
+  if p_template_version_id is null or not exists (select 1 from public.site_template_versions where id = p_template_version_id and is_published) then
+    raise exception 'published_template_version_required';
+  end if;
 
   select * into v_prospect from public.prospects where id = p_prospect_id;
   if not found then raise exception 'prospect_not_found'; end if;
@@ -47,6 +50,7 @@ begin
 
   v_data := jsonb_build_object(
     'prospect_id', p_prospect_id,
+    'template_version_id', p_template_version_id,
     'name', v_name,
     'title', v_name,
     'business_name', v_name,
@@ -61,7 +65,7 @@ begin
   where c.table_schema = 'public'
     and c.table_name = 'site_projects'
     and c.column_name = any(array[
-      'prospect_id','name','title','business_name','project_name','slug','description'
+      'prospect_id','template_version_id','name','title','business_name','project_name','slug','description'
     ]);
 
   if v_columns is null then raise exception 'site_projects_schema_not_compatible'; end if;
@@ -81,7 +85,7 @@ begin
 end;
 $$;
 
-revoke all on function public.ensure_prospect_site_project(uuid) from public, anon, authenticated;
-grant execute on function public.ensure_prospect_site_project(uuid) to service_role;
+revoke all on function public.ensure_prospect_site_project(uuid, uuid) from public, anon, authenticated;
+grant execute on function public.ensure_prospect_site_project(uuid, uuid) to service_role;
 
 commit;
