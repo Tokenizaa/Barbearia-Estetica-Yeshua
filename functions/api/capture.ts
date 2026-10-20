@@ -11,7 +11,7 @@ function json(data: unknown, status = 200): Response {
 function isBlockedHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (!host || host === "localhost" || host.endsWith(".localhost") || host.endsWith(".local") || host.endsWith(".internal")) return true;
-  if (host === "::1" || host === "::" || host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd")) return true;
+  if (host.includes(":") && (host === "::1" || host === "::" || host.startsWith("fe80:") || host.startsWith("fc") || host.startsWith("fd") || host.startsWith("::ffff:"))) return true;
   const parts = host.split(".");
   if (parts.length === 4 && parts.every((part) => /^\d+$/.test(part))) {
     const octets = parts.map(Number);
@@ -167,7 +167,8 @@ export const onRequestPost = async ({ request }: { request: Request }) => {
     const canonical = html.match(/<link\b(?=[^>]*\brel=["']canonical["'])(?=[^>]*\bhref=["']([^"']+)["'])[^>]*>/i)?.[1];
     const phones = html.match(/(?:href=["']tel:([^"'?]+)|(?:telephone|phone|telefone|whatsapp)["']?\s*[:=]\s*["']?([^"'<>\s]{7,24}))/i);
     const emails = html.match(/(?:href=["']mailto:([^"'?]+)|[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,})/i);
-    const category = textValue(business?.["@type"]);
+    const typeValue = business?.["@type"];
+    const category = typeof typeValue === "string" ? typeValue : Array.isArray(typeValue) ? typeValue.find((item) => typeof item === "string") as string ?? "" : "";
     const address = textValue(business?.address) || getMeta(html, "og:street-address");
     const result = {
       requestedUrl: payload.url,
