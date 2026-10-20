@@ -463,7 +463,12 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
           campaign_id: campaign.campaignId,
           task_type: "capture",
           idempotency_key: `candidate:${dedupeKey}:capture`,
-          payload: { candidateId: candidateRows[0].id, dedupeKey },
+          payload: {
+            candidateId: candidateRows[0].id,
+            dedupeKey,
+            minimumScore: typeof campaign.qualificationRules === "object" && campaign.qualificationRules !== null
+              ? (campaign.qualificationRules as Record<string, unknown>).minimum_score ?? 50 : 50,
+          },
         }),
       });
       if (!capture.ok) throw new Error(`candidate_capture_enqueue_http_${capture.status}`);
@@ -504,7 +509,11 @@ async function captureCandidateTask(env: Env, task: ProspectingTask, workerId: s
       prospect_id: result.prospectId,
       task_type: "qualify",
       idempotency_key: `prospect:${result.prospectId}:qualify:v1`,
-      payload: { candidateId, promotedFromCandidate: true },
+      payload: {
+        candidateId,
+        promotedFromCandidate: true,
+        minimumScore: typeof payload.minimumScore === "number" ? payload.minimumScore : 50,
+      },
     }),
   });
   if (!qualificationTask.ok) throw new Error(`qualification_enqueue_http_${qualificationTask.status}`);
@@ -858,8 +867,11 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   });
   if (!event.ok) throw new Error(`prospect_event_http_${event.status}`);
 
-  let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold" };
-  if (result.score >= 50) {
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const minimumScoreRaw = Number(payload.minimumScore ?? 50);
+  const minimumScore = Number.isFinite(minimumScoreRaw) ? Math.max(0, Math.min(100, Math.floor(minimumScoreRaw))) : 50;
+  let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold", minimumScore };
+  if (result.score >= minimumScore) {
     const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
     if (!templateLookup.ok) throw new Error(`qualified_template_lookup_http_${templateLookup.status}`);
     const templates = await templateLookup.json() as Array<{ id: string }>;
