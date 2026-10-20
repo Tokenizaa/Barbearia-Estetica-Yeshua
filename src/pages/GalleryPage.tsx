@@ -46,13 +46,13 @@ export const GalleryPage: React.FC = () => {
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold uppercase tracking-widest">
           <Images className="w-3.5 h-3.5" />
-          <span>Galeria Oficial Yeshua</span>
+          <span>Galeria do Estabelecimento</span>
         </div>
         <h1 className="text-3xl sm:text-5xl font-bold font-display uppercase tracking-wider text-neutral-100">
           Trabalhos, Fotos & Vídeos
         </h1>
         <p className="text-neutral-400 text-sm sm:text-base leading-relaxed">
-          Nossa galeria própria reúne transformações reais em barbearia, cílios, sobrancelhas, unhas, tranças e nosso ambiente em Manaus.
+          Adicione fotos e vídeos para apresentar os serviços, a equipe e o ambiente do seu estabelecimento.
         </p>
       </div>
 
