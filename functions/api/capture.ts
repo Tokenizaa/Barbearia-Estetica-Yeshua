@@ -1,7 +1,3 @@
-interface Env {
-  ASSETS?: Fetcher;
-}
-
 const MAX_HTML_BYTES = 1_000_000;
 const USER_AGENT = "YeshuaLeadResearch/1.0 (+public-business-metadata; contact: admin)";
 
@@ -130,7 +126,7 @@ async function readLimited(response: Response): Promise<string> {
   return new TextDecoder("utf-8", { fatal: false }).decode(bytes);
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request }) => {
+export const onRequestPost = async ({ request }: { request: Request }) => {
   let payload: { url?: unknown };
   try { payload = await request.json() as { url?: unknown }; } catch { return json({ error: "Envie um JSON válido com o campo url." }, 400); }
   if (typeof payload.url !== "string" || payload.url.length > 2048) return json({ error: "Informe uma URL pública válida (até 2048 caracteres)." }, 400);
