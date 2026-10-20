@@ -178,7 +178,9 @@ let activeTenantId: string = detectInitialTenant();
 
 // 3. Operational Data (Services, Products, Media, Appointments, Instagram Embeds)
 let allServices: ServiceItem[] = (() => {
-  const loaded = loadFromStorage<ServiceItem[]>(STORAGE_KEYS.SERVICES, []);
+  const stored = loadFromStorage<ServiceItem[]>(STORAGE_KEYS.SERVICES, []);
+  const loaded = stored.map((item) => item.name.includes('Império') ? { ...item, name: item.name.replace(/Império/g, 'Demonstração') } : item);
+  if (loaded.some((item, index) => item !== stored[index])) saveToStorage(STORAGE_KEYS.SERVICES, loaded);
   if (loaded.length === 0) {
     // Check legacy services
     const legacy = loadFromStorage<ServiceItem[]>(STORAGE_KEYS.LEGACY_SERVICES, []);
@@ -192,7 +194,9 @@ let allServices: ServiceItem[] = (() => {
 })();
 
 let allProducts: ProductItem[] = (() => {
-  const loaded = loadFromStorage<ProductItem[]>(STORAGE_KEYS.PRODUCTS, []);
+  const stored = loadFromStorage<ProductItem[]>(STORAGE_KEYS.PRODUCTS, []);
+  const loaded = stored.map((item) => item.name.includes('Yeshua') || item.name.includes('Império') ? { ...item, name: item.name.replace(/Yeshua/g, 'Demonstração').replace(/Império/g, 'Demonstração') } : item);
+  if (loaded.some((item, index) => item !== stored[index])) saveToStorage(STORAGE_KEYS.PRODUCTS, loaded);
   if (loaded.length === 0) {
     const legacy = loadFromStorage<ProductItem[]>(STORAGE_KEYS.LEGACY_PRODUCTS, []);
     const initial = legacy.length > 0
@@ -205,7 +209,14 @@ let allProducts: ProductItem[] = (() => {
 })();
 
 let allMedia: MediaItem[] = (() => {
-  const loaded = loadFromStorage<MediaItem[]>(STORAGE_KEYS.MEDIA, []);
+  const stored = loadFromStorage<MediaItem[]>(STORAGE_KEYS.MEDIA, []);
+  const loaded = stored.map((item) => ({
+    ...item,
+    title: item.title.replace(/Yeshua|Império/g, 'Demonstração'),
+    url: item.url.includes('/images/yeshua_') ? 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80' : item.url,
+    thumbnailUrl: item.thumbnailUrl?.includes('/images/yeshua_') ? 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=600&q=80' : item.thumbnailUrl,
+  }));
+  if (loaded.some((item, index) => JSON.stringify(item) !== JSON.stringify(stored[index]))) saveToStorage(STORAGE_KEYS.MEDIA, loaded);
   if (loaded.length === 0) {
     const legacy = loadFromStorage<MediaItem[]>(STORAGE_KEYS.LEGACY_MEDIA, []);
     const initial = legacy.length > 0
@@ -232,11 +243,13 @@ let allAppointments: Appointment[] = (() => {
 
 let allInstagramEmbeds: InstagramEmbedItem[] = (() => {
   const loaded = loadFromStorage<InstagramEmbedItem[]>(STORAGE_KEYS.INSTAGRAM_EMBEDS, []);
-  if (loaded.length === 0) {
+  const filtered = loaded.filter((item) => !/barbearia_estetica_yeshua|imperiobarberclub/i.test(item.url || ''));
+  if (filtered.length !== loaded.length) saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, filtered);
+  if (filtered.length === 0) {
     saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, INITIAL_INSTAGRAM_EMBEDS);
     return INITIAL_INSTAGRAM_EMBEDS;
   }
-  return loaded;
+  return filtered;
 })();
 
 let auditLogs: AuditLogEntry[] = loadFromStorage<AuditLogEntry[]>(
