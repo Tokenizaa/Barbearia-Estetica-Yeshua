@@ -111,8 +111,7 @@ create unique index if not exists prospect_events_provider_event_uidx
   where source_provider is not null and provider_event_id is not null;
 
 create unique index if not exists prospect_events_idempotency_uidx
-  on public.prospect_events (idempotency_key)
-  where idempotency_key is not null;
+  on public.prospect_events (idempotency_key);
 
 create index if not exists prospect_events_prospect_timeline_idx
   on public.prospect_events (prospect_id, occurred_at desc);
