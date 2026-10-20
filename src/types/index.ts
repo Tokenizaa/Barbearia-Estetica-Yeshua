@@ -190,6 +190,7 @@ export type AdminTab =
 
 export type SuperAdminTab =
   | 'overview'
+  | 'leads'
   | 'establishments'
   | 'new-establishment'
   | 'administrators'
