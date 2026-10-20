@@ -130,7 +130,7 @@ export async function onRequestGet({ request, env }: Context) {
     env.WHATSAPP_ACCESS_TOKEN?.trim() &&
     env.WHATSAPP_PHONE_NUMBER_ID?.trim() &&
     env.WHATSAPP_TEMPLATE_NAME?.trim() &&
-    /^v\\d+\\.\\d+$/.test(env.WHATSAPP_API_VERSION ?? '')
+    /^v\d+\.\d+$/.test(env.WHATSAPP_API_VERSION ?? '')
   );
   checks.push({
     id: 'whatsapp_provider',
