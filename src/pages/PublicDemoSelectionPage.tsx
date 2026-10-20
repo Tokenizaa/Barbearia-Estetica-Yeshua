@@ -131,11 +131,11 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
                 </div>
               </div>
               <div className="space-y-4 p-4">
-                <div>
+                {sections.includes("services") && <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Serviços</h3>
-                  {services.length ? <ul className="mt-2 space-y-2">{services.map((service, index) => <li key={`${version.id}-service-${index}`} className="flex items-start gap-2 text-sm text-neutral-700"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-600" />{service}</li>)}</ul> : <p className="mt-2 text-sm text-neutral-500">A seção de serviços será personalizada com as informações confirmadas do negócio.</p>}
-                </div>
-                {(phone || email || address || city || website) && <div className="border-t border-neutral-200 pt-3">
+                  {services.length ? <ul className="mt-2 space-y-2">{services.map((service, index) => <li key={`${version.id}-service-${index}`} className="flex items-start gap-2 text-sm text-neutral-700"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: primaryColor }} />{service}</li>)}</ul> : <p className="mt-2 text-sm text-neutral-500">A seção de serviços será personalizada com as informações confirmadas do negócio.</p>}
+                </div>}
+                {sections.includes("contact") && (phone || email || address || city || website) && <div className="border-t border-neutral-200 pt-3">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">Contato e localização</h3>
                   <div className="mt-2 space-y-1.5 text-sm text-neutral-700">
                     {phone && <p>Telefone: {phone}</p>}
