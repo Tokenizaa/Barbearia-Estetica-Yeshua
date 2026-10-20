@@ -54,7 +54,7 @@ export const Footer: React.FC<FooterProps> = ({ setCurrentPage }) => {
             </p>
             <div className="pt-2 flex items-center gap-3">
               <a
-                href={company.instagramUrl}
+                href={company.instagramUrl || undefined}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-9 h-9 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center text-neutral-300 hover:text-amber-400 hover:border-amber-500/40 transition-colors"
