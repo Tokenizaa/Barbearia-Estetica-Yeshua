@@ -1,143 +1,116 @@
-# Roadmap de Implementação White Label Multiestabelecimento
-**Projeto:** Tokenizaa / Barbearia Estética Yeshua -> Plataforma White Label Multiestabelecimento  
-**Data:** 2026-10-19  
-**Status:** Em Implementação Ativa  
+# Roadmap — Plataforma de sites personalizados white label
 
----
+## Direção do produto
 
-## 1. Arquitetura Existente (Diagnóstico Inicial)
+O produto não é um marketplace e não deve pedir ao visitante que escolha um estabelecimento em uma lista global. O fluxo é de prospecção assistida e criação de uma proposta personalizada para um negócio específico:
 
-### 1.1 Stack e Execução
-- **Frontend / Aplicação:** React 19 + TypeScript + Vite + Tailwind CSS v4.
-- **Armazenamento e Estado:** LocalStorage reativo com cache em memória no módulo `src/data/store.ts`, com listener pattern e hook `useStore()`.
-- **Servidor / Deploy:** Configuração para SPA estático (Cloudflare Pages com `wrangler`, Vite Preview, dev server local na porta 3000).
-- **Entidades atuais:**
-  - `CompanyInfo`: Nome, contatos, Instagram, endereço, PIN do administrador, logotipo.
-  - `ServiceItem`: Serviços de barbearia, estética, valores, durações e destaque.
-  - `ProductItem`: Produtos para venda, estoque, categoria, imagens e preços.
-  - `MediaItem`: Fotos e vídeos da galeria categorizados.
-  - `Appointment`: Agendamentos com prevenção de conflitos de horários e integração com WhatsApp.
-  - `InstagramEmbedItem`: Publicações e reels incorporados.
+1. Capturar dados públicos e permitidos de um negócio e registrar as fontes.
+2. Revisar e qualificar os dados; distinguir fatos verificados de campos ausentes ou inferidos.
+3. Gerar um rascunho de site usando dados aprovados, sem publicar nem contatar automaticamente o negócio.
+4. Permitir que o operador visualize e selecione entre modelos de site ativos.
+5. Renderizar a proposta no modelo e permitir revisão humana do conteúdo, imagens, links e identidade visual.
+6. Aprovar a proposta antes de compartilhar/publicar.
+7. Quando o negócio aceitar, convertê-lo em estabelecimento/cliente e vincular o projeto do site à sua conta.
+8. Publicar usando um slug/domínio próprio, com configuração por estabelecimento.
 
-### 1.2 Limitações do Modelo Anterior
-- Monotenant implícito: todas as chaves de storage (`yeshua_company_info_v4`, `yeshua_services_v1`, etc.) e os seletores pressupunham apenas 1 estabelecimento (Barbearia & Estética Yeshua).
-- Área administrativa única protegida apenas por PIN único de 4 dígitos armazenado no objeto da empresa.
-- Sem distinção entre o Super Administrador da Plataforma (SaaS / White Label Owner) e o Administrador Local do Estabelecimento.
-- Sem suporte a múltiplos estabelecimentos com identidades visuais distintas (cores, logotipos, slugs de URL, WhatsApps, endereços).
+## Marca e navegação
 
----
+- “Yeshua” não é a marca da plataforma nem o modelo padrão.
+- O registro do Yeshua é preservado como primeiro estabelecimento legado, sem PINs ou credenciais hardcoded.
+- Remover seletor global de estabelecimento e seleção automática por query string/localStorage. O contexto do estabelecimento deve vir de uma rota/domínio resolvido e de autorização validada no servidor.
+- A escolha de modelo é uma etapa do editor/projeto: catálogo de modelos ativos, pré-visualização, escolha explícita e possibilidade de trocar o modelo antes da aprovação.
+- Começar com um modelo neutro, responsivo e reutilizável. Novos modelos são registros e versões de configuração, não duplicações da aplicação.
+- Não implementar marketplace, busca pública de estabelecimentos, checkout, assinatura ou envio automático de prospecção nesta fase.
 
-## 2. Arquitetura Multiestabelecimento Proposta
+## Estado atual encontrado
 
-### 2.1 Modelo Multitenancy Baseado em Isolamento Lógico Rigoroso
-- **Entidade Central `Establishment`:**
-  - `id`: Identificador único (ex: `est-yeshua-01`, `est-xyz-02`).
-  - `slug`: Identificador amigável de rota/URL (ex: `yeshua`, `barbearia-imperio`).
-  - `name`: Nome comercial do estabelecimento.
-  - `tagline`: Subtítulo / especialidade (ex: `Barbearia & Estética • Manaus`).
-  - `status`: `'active' | 'inactive' | 'suspended'`.
-  - `branding`: Identidade visual completa:
-    - `logoUrl`: URL ou imagem base64 do logotipo.
-    - `coverUrl`: Imagem de capa / hero banner.
-    - `primaryColor`: Cor de destaque primária (ex: `#f59e0b` para âmbar Yeshua).
-    - `secondaryColor`: Cor secundária de suporte.
-    - `accentColor`: Cor de acento para botões e detalhes.
-    - `theme`: `'dark' | 'light' | 'luxury-gold' | 'emerald' | 'sapphire'`.
-  - `contact`:
-    - `whatsapp`: Número formatado e link.
-    - `whatsappClean`: Dígitos puros para API do WhatsApp.
-    - `phone`: Telefone fixo ou alternativo.
-    - `address`: Logradouro e número.
-    - `cityState`: Cidade e Estado.
-    - `googleMapsUrl`: Link opcional do Google Maps.
-  - `instagram`:
-    - `handle`: Ex: `@barbearia_estetica_yeshua`.
-    - `url`: Link oficial do perfil.
-    - `bio`: Descrição oficial do perfil.
-    - `followers`: Número aproximado de seguidores.
-    - `postsCount`: Contagem de publicações.
-    - `showGallery`: Opção para exibir ou ocultar provisoriamente a galeria de embeds.
-  - `settings`:
-    - `openingHoursNote`: Mensagem sobre horários de atendimento.
-    - `adminPin`: PIN criptografado/protegido do administrador do estabelecimento.
-    - `slotIntervalMinutes`: Intervalo padrão entre agendamentos (ex: 45 min).
-    - `allowOnlineBooking`: Habilita/desabilita agendamentos pelo cliente.
-  - `createdAt` e `updatedAt`: Carimbos de auditoria.
+- Aplicação React + TypeScript + Vite.
+- Deploy configurado para Cloudflare Pages (barbearia-yeshua).
+- O estado atual multiestabelecimento está principalmente em localStorage/sessionStorage (src/data/store.ts).
+- Existem PINs de administrador no bundle cliente e autenticação local que gera tokens fictícios. Isso não é uma fronteira de segurança.
+- A base atual possui exemplos de Yeshua e Império; esses dados demo não devem ser tratados como clientes reais nem copiados automaticamente para produção.
+- Os projetos Supabase atualmente acessíveis foram consultados e nenhum corresponde a esta aplicação. A migration está preparada no repositório, mas ainda não foi aplicada a um banco.
 
-### 2.2 Isolamento de Dados das Entidades Operacionais
-Todas as entidades filhas passam a conter o campo obrigatório `establishmentId`:
-- `ServiceItem`: `establishmentId: string`
-- `ProductItem`: `establishmentId: string`
-- `MediaItem`: `establishmentId: string`
-- `Appointment`: `establishmentId: string`
-- `InstagramEmbedItem`: `establishmentId: string`
-- `AuditLogEntry`: Registro de logs de auditoria administrativa vinculados ou não a um estabelecimento.
+## Arquitetura alvo
 
-O `store.ts` garante que qualquer operação (`getServices`, `getProducts`, `addAppointment`, etc.) seja estritamente escopada ao estabelecimento ativo selecionado. Nunca dados de um estabelecimento vazam para outro.
+- Frontend: preservar React + TypeScript + Vite e o deploy atual na Cloudflare enquanto o fluxo é migrado.
+- Auth e banco: Supabase Auth + Postgres + RLS.
+- Browser: usar apenas publishable key no frontend; nunca colocar service-role/secret key no bundle.
+- Operações privilegiadas (captura automatizada, tarefas de IA, provisionamento, publicação e integrações): camada server-side/Cloudflare Worker ou função server-side segura com segredos em ambiente.
+- Dados de prospecção: armazenar origem, URLs públicas e evidências, data da captura e estado de revisão. Não contornar CAPTCHA, login, paywall ou controles de acesso.
+- Geração de site: JSON de conteúdo separado da configuração/versão do modelo.
+- Auditoria: registrar alterações de privilégios, conversão de prospect, aprovação e publicação.
 
----
+## Modelo de autorização
 
-## 3. Modelo de Permissões e Perfis de Acesso
+- Administrador da plataforma: atribuído somente por processo privilegiado confiável; app_metadata não pode ser editado pelo usuário final. A tabela platform_admins serve como registro; a claim autorizadora deve ser provisionada pelo backend/admin API.
+- Owner/admin/editor/viewer local: associação explícita em establishment_memberships.
+- Um estabelecimento só vê e altera seus próprios projetos e configurações.
+- Prospects ainda não convertidos e tarefas de prospecção são acessíveis apenas à administração da plataforma.
+- Modelos publicados podem ser listados por usuários autenticados; criar, editar, ativar e versionar modelos é ação da plataforma.
+- RLS em todas as tabelas expostas; as rotas e o frontend não substituem as políticas.
+- Não permitir autoatribuição de papel, nem cadastro público que crie administrador geral.
 
-### 3.1 Níveis de Acesso
-1. **Público / Cliente (`role: 'client'`):**
-   - Acesso apenas de leitura aos dados do estabelecimento ativo (serviços ativos, produtos disponíveis, galeria, horários).
-   - Pode solicitar agendamentos vinculados exclusivamente ao estabelecimento que está visitando.
-   - Não possui acesso a nenhuma interface administrativa.
-2. **Administrador do Estabelecimento (`role: 'establishment_admin'`):**
-   - Autenticado através de PIN/Credenciais exclusivas daquele estabelecimento.
-   - Pode visualizar e editar apenas os dados do próprio estabelecimento (catálogo, preços, produtos, fotos, agenda, agendamentos, dados de contato e cores).
-   - Totalmente bloqueado de visualizar ou editar outros estabelecimentos ou a administração geral da plataforma.
-   - Não pode se autopromover para Administrador Geral da Plataforma.
-3. **Administrador Geral da Plataforma (`role: 'super_admin'`):**
-   - Autenticado através de chave mestre/PIN exclusivo da plataforma (`PLATFORM_MASTER_PIN`).
-   - Visão holística da plataforma (todos os estabelecimentos, métricas globais, novos cadastros, bloqueio/desativação).
-   - Capacidade de "Entrar como estabelecimento" em modo de auditoria/suporte com banner de aviso explícito.
-   - Acesso aos logs de auditoria da plataforma.
+## Modelo de dados preparado
 
----
+A migration supabase/migrations/20261019000000_white_label_site_builder.sql define:
+- platform_admins
+- establishments
+- establishment_memberships
+- prospects
+- site_templates
+- site_template_versions
+- site_projects
+- audit_events
+- Funções de autorização no schema não exposto private, políticas RLS, grants e um modelo inicial neutro versionado.
 
-## 4. Alterações Necessárias no Armazenamento / Banco
+O registro inicial de Yeshua é preservado como estabelecimento. Não são inseridos usuários administrativos, PINs, agendamentos de exemplo nem prospects fictícios.
 
-- **Chaves de Storage Multitenant:**
-  - `wl_establishments_v1`: Registro central de todos os estabelecimentos da plataforma.
-  - `wl_current_tenant_id`: Estabelecimento ativo na navegação pública/admin.
-  - `wl_services_v1`: Array com todos os serviços particionados por `establishmentId`.
-  - `wl_products_v1`: Array com todos os produtos particionados por `establishmentId`.
-  - `wl_media_v1`: Array com fotos/vídeos particionados por `establishmentId`.
-  - `wl_appointments_v1`: Array com agendamentos particionados por `establishmentId`.
-  - `wl_instagram_v1`: Array com posts do Instagram particionados por `establishmentId`.
-  - `wl_audit_logs_v1`: Registro cronológico de ações administrativas privilegiadas.
-  - `wl_super_admin_config_v1`: Credenciais protegidas do Super Admin e configurações globais.
+## Fases de execução
 
----
+### Fase A — Fundação de dados e segurança
+- Criar/confirmar um projeto Supabase dedicado.
+- Aplicar a migration e verificar tabelas, índices, grants, RLS e advisors.
+- Configurar Supabase Auth, criar o primeiro administrador geral por procedimento seguro e validar os claims.
+- Criar testes de isolamento entre dois estabelecimentos e de negação para usuário não autenticado.
 
-## 5. Plano de Migração do Yeshua sem Perda de Dados
+### Fase B — Remover o modelo de marketplace
+- Retirar seleção global de tenant e dados de demonstração da navegação principal.
+- Remover PINs, sessões fictícias e autenticação baseada apenas no navegador.
+- Substituir a persistência local por repositórios Supabase com tipos.
+- Manter compatibilidade/migração não destrutiva dos dados locais do Yeshua quando necessário, sem importá-los automaticamente para um banco de produção sem revisão.
 
-- **Preservação Integral:**
-  - Criação automática do estabelecimento `est-yeshua` com slug `yeshua` como primeiro tenant da plataforma.
-  - Migração transparente dos dados legados (`yeshua_company_info_v4`, `yeshua_services_v1`, etc.) caso já existam no navegador do usuário, associando-os com `establishmentId: 'est-yeshua'`.
-  - Se não houver dados no localStorage, inicializa com `INITIAL_ESTABLISHMENT_YESHUA` e o catálogo completo da Barbearia Yeshua.
-  - Fallback padrão: se nenhuma rota ou query param indicar outro estabelecimento, a plataforma seleciona automaticamente o Yeshua.
+### Fase C — Prospecção e dados de origem
+- Criar captura manual/assistida inicial com fontes públicas permitidas.
+- Armazenar evidências e separar dados verificados, ausentes e inferidos.
+- Criar revisão e qualificação humana antes da geração do site.
+- Não disparar mensagens automaticamente.
 
----
+### Fase D — Catálogo e personalização de modelos
+- Criar catálogo administrativo de modelos ativos e pré-visualizações.
+- Criar seletor de modelo dentro do projeto/editor, não no site público.
+- Fixar a versão exata do modelo no projeto para evitar que atualizações futuras alterem sites já aprovados.
+- Aplicar os dados aprovados, permitindo revisar texto, imagens, contato, cores e seções.
 
-## 6. Fases de Implementação e Critérios Objetivos de Validação
+### Fase E — Aprovação e publicação
+- Fluxo de rascunho → revisão → aprovação humana → publicação.
+- Domínio/slug por site, status e auditoria.
+- Não publicar nem compartilhar proposta sem ação explícita de aprovação.
 
-- **Fase 1:** Diagnóstico e Documentação (concluído nesta etapa).
-- **Fase 2:** Estruturas de Tipos, Migração de Dados e Modelo White Label no `store.ts`.
-- **Fase 3:** Área do Administrador Geral da Plataforma (Super Admin Dashboard, Gerenciador de Estabelecimentos, Métricas Globais, Logs).
-- **Fase 4:** Área do Administrador do Estabelecimento (Isolamento local, personalização de branding, catálogo e agenda).
-- **Fase 5:** Camada de Segurança, Verificação de Permissões e Auditoria.
-- **Fase 6:** Testes Automatizados de Isolamento, Verificação de Tipos e Build de Produção.
+## Bloqueios antes de execução no banco
 
----
+1. Nenhum projeto Supabase acessível foi identificado como pertencente a este repositório. Os projetos existentes são de outros produtos; não reutilizar esses bancos.
+2. É necessário confirmar a organização e criar/selecionar um projeto Supabase dedicado. A criação pode gerar custos.
+3. A migration precisa ser aplicada e testada no banco real antes de dizer que o banco está pronto.
+4. A migration preparada não substitui testes reais de RLS, autenticação, build e fluxos do navegador.
 
-## 7. Riscos de Segurança e Mitigações
+## Critérios de aceite
 
-| Risco | Impacto | Mitigação |
-|---|---|---|
-| Vazamento de dados entre estabelecimentos | Alto | Filtro obrigatório por `establishmentId` no núcleo da camada de dados. Nenhuma consulta global sem papel explícito de `super_admin`. |
-| Auto-promoção de Admin Local para Super Admin | Crítico | Validação criptográfica/token de sessão independente com chave mestre armazenada em namespace restrito e verificação em cada ação. |
-| Inativação acidental do estabelecimento Yeshua | Médio | Flag de proteção `isDefault: true` impedindo a exclusão acidental do tenant raiz. |
-| Perda de dados durante atualização de versão | Alto | Script de migração reversível que lê chaves legadas e só as migra sem apagá-las. |
+- Nenhum nome ou ativo do Yeshua funciona como marca global/default de plataforma.
+- Não existe seletor global de marketplace.
+- Um prospect pode gerar um projeto de site em rascunho.
+- O operador pode escolher entre os modelos ativos e trocar o modelo antes da aprovação.
+- Cada projeto guarda uma versão imutável do modelo escolhido.
+- Dados de um estabelecimento não são acessíveis a outro.
+- O usuário não pode elevar privilégios editando o cliente ou a própria metadata.
+- Nenhum site é publicado nem contato enviado sem aprovação explícita.
