@@ -262,6 +262,10 @@ export const LeadsDashboard: React.FC = () => {
 
   const sharePreview = async (lead: Lead) => {
     if (!lead.project) return;
+    if (lead.verificationStatus !== 'verified') {
+      setCaptureError('Revise e marque os dados como verificados antes de gerar um link compartilhável.');
+      return;
+    }
     const url = createShareablePreviewUrl({
       version: 1,
       businessName: lead.businessName,
@@ -468,7 +472,7 @@ export const LeadsDashboard: React.FC = () => {
                     <div className={`mt-8 border-t pt-4 text-xs ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'border-neutral-300 text-neutral-600' : 'border-white/15 text-neutral-400'}`}>{selected.address || 'Endereço a confirmar'}{selected.phone ? ` · ${selected.phone}` : ''}</div>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-neutral-500">Prévia interativa para revisão. O link compartilhável abre a versão embutida no navegador de quem o recebe.</p><button onClick={() => void sharePreview(selected)} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950">Gerar link compartilhável</button></div>
+                <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-neutral-500">Prévia interativa para revisão. O link compartilhável abre a versão embutida no navegador de quem o recebe.</p><button onClick={() => void sharePreview(selected)} disabled={selected.verificationStatus !== 'verified'} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">Gerar link compartilhável</button></div>
                 <label className="block"><span className={labelClass}>Após a primeira versão, escolher outro modelo</span><select className={inputClass} value={selected.project.templateId} onChange={(e) => changeTemplate(selected, e.target.value)}><option value={INITIAL_TEMPLATE.id}>{INITIAL_TEMPLATE.name} (original)</option>{ALTERNATIVE_TEMPLATES.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
                 <div className="space-y-2 border-t border-neutral-800 pt-3"><p className="text-xs font-semibold text-neutral-400">Histórico de versões</p>{[...selected.project.versions].reverse().map((version) => <div key={`${version.templateId}-${version.version}`} className="flex items-center justify-between gap-3 text-xs"><span className="text-neutral-300">v{version.version} · {version.templateName}</span><span className="text-neutral-500">{new Date(version.createdAt).toLocaleString('pt-BR')}</span></div>)}</div>
               </div>}
