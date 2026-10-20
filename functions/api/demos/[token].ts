@@ -32,7 +32,7 @@ export async function onRequest({ request, env, params }: Context) {
   const link = links[0];
 
   if (request.method === "GET") {
-    const versionsResponse = await api(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(link.site_project_id)}&select=id,version,generated_content,design_overrides,template_version_id,selected_by_prospect&order=version.desc&limit=30`);
+    const versionsResponse = await api(env, `site_project_versions?site_project_id=eq.${encodeURIComponent(link.site_project_id)}&select=id,version,generated_content,design_overrides,template_version_id,selected_by_prospect,template:site_template_versions(id,config,template_id,site_templates(name,category,preview_image_url))&order=version.desc&limit=30`);
     if (!versionsResponse.ok) return json({ error: "demo_versions_unavailable" }, 503);
     const versions = await versionsResponse.json();
     return json({ status: link.status, expiresAt: link.expires_at, selectedVersionId: link.selected_version_id, versions });
