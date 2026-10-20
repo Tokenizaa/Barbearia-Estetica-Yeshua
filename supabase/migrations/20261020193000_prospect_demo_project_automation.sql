@@ -12,8 +12,7 @@ alter table public.site_demo_public_links
   add column if not exists publish_task_id bigint references public.prospecting_tasks(id) on delete set null;
 
 create unique index if not exists site_demo_public_links_publish_task_unique
-  on public.site_demo_public_links (publish_task_id)
-  where publish_task_id is not null;
+  on public.site_demo_public_links (publish_task_id);
 
 create or replace function public.ensure_prospect_site_project(p_prospect_id uuid, p_template_version_id uuid)
 returns jsonb
