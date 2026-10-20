@@ -94,14 +94,13 @@ function requiredEnv(env: Env): string | null {
 
 async function db(env: Env, path: string, init: RequestInit = {}): Promise<Response> {
   const base = env.SUPABASE_URL.replace(/\/$/, "");
+  const headers = new Headers(init.headers);
+  headers.set("apikey", env.SUPABASE_SERVICE_ROLE_KEY);
+  headers.set("authorization", `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`);
+  headers.set("content-type", "application/json");
   return fetch(`${base}/rest/v1/${path}`, {
     ...init,
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      "content-type": "application/json",
-      ...(init.headers ?? {}),
-    },
+    headers,
     signal: AbortSignal.timeout(12_000),
   });
 }
@@ -229,7 +228,11 @@ async function processBatch(env: Env) {
 }
 
 export default {
-  async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext) {
+  async scheduled(
+    _event: { cron: string; scheduledTime: number },
+    env: Env,
+    _ctx: { waitUntil(promise: Promise<unknown>): void },
+  ) {
     await processBatch(env);
   },
   async fetch(request: Request, env: Env) {
