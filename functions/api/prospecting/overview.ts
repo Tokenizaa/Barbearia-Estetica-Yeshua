@@ -42,7 +42,7 @@ export async function onRequestGet({ request, env }: Context) {
   if (!auth.ok) return json({ error: "invalid_session" }, 401);
   const user = await auth.json() as { id?: string };
   if (!user.id) return json({ error: "invalid_session" }, 401);
-  const adminCheck = await fetch(`${env.SUPABASE_URL.replace(/\\/$/, "")}/rest/v1/platform_admins?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`, {
+  const adminCheck = await fetch(`${env.SUPABASE_URL.replace(/\/$/, "")}/rest/v1/platform_admins?user_id=eq.${encodeURIComponent(user.id)}&select=user_id&limit=1`, {
     headers: {
       apikey: env.SUPABASE_SERVICE_ROLE_KEY!,
       authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY!}`,
