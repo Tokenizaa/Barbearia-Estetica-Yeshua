@@ -54,6 +54,6 @@ A execução deve ser assíncrona, idempotente e independente de navegador abert
 
 ## Estado de implementação (2026-10-20)
 
-As migrations `20261020180000_prospecting_automation_foundation.sql`, `20261020180100_prospecting_worker_rpc.sql` e `20261020180200_prospecting_service_role_grants.sql` foram aplicadas ao projeto Supabase `ifkqrtjhdnolkuucgbpb`. A existência das tabelas, RLS, privilégios da fila e a capacidade de executar a função de claim foram verificadas por consulta SQL. `src/lib/prospecting.ts` contém funções puras para normalização, deduplicação, score explicável e gate de elegibilidade para WhatsApp.
+As migrations `20261020185512_prospecting_automation_foundation.sql`, `20261020185517_prospecting_worker_rpc.sql` e `20261020185601_prospecting_service_role_grants.sql` foram aplicadas ao projeto Supabase `ifkqrtjhdnolkuucgbpb`. A existência das tabelas, RLS, privilégios da fila e a capacidade de executar a função de claim foram verificadas por consulta SQL. `src/lib/prospecting.ts` contém funções puras para normalização, deduplicação, score explicável e gate de elegibilidade para WhatsApp.
 
 **Ainda não comprovado:** execução real de workers, fornecedor de descoberta conectado, integração WhatsApp configurada, persistência do dashboard substituindo `localStorage`, landing page comercial completa e certificação E2E. A presença de esquema ou código não deve ser descrita como integração operacional.
