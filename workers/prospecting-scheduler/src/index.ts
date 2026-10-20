@@ -839,6 +839,10 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
   }
 
   const result = qualify(prospects[0]);
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const minimumScoreRaw = Number(payload.minimumScore ?? 50);
+  const minimumScore = Number.isFinite(minimumScoreRaw) ? Math.max(0, Math.min(100, Math.floor(minimumScoreRaw))) : 50;
+  const passedQualification = result.score >= minimumScore;
   const write = await db(env, `prospects?id=eq.${encodeURIComponent(task.prospect_id)}&select=id`, {
     method: "PATCH",
     headers: { prefer: "return=representation" },
@@ -859,19 +863,35 @@ async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
     body: JSON.stringify({
       prospect_id: task.prospect_id,
       campaign_id: task.campaign_id,
-      event_type: "qualified",
+      event_type: passedQualification ? "qualified" : "disqualified",
       source_provider: "prospecting-worker",
-      idempotency_key: `task:${task.id}:qualified`,
+      idempotency_key: `task:${task.id}:qualification:${passedQualification ? "qualified" : "disqualified"}`,
       evidence: { score: result.score, missing_fields: result.missingFields },
     }),
   });
   if (!event.ok) throw new Error(`prospect_event_http_${event.status}`);
 
-  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
-  const minimumScoreRaw = Number(payload.minimumScore ?? 50);
-  const minimumScore = Number.isFinite(minimumScoreRaw) ? Math.max(0, Math.min(100, Math.floor(minimumScoreRaw))) : 50;
+  const candidateId = typeof payload.candidateId === "string" ? payload.candidateId : "";
+  if (/^[0-9a-f-]{36}$/i.test(candidateId)) {
+    const candidateUpdate = await db(env, `prospecting_candidates?id=eq.${encodeURIComponent(candidateId)}&select=id`, {
+      method: "PATCH",
+      headers: { prefer: "return=representation" },
+      body: JSON.stringify({
+        status: passedQualification ? "qualified" : "disqualified",
+        qualification_score: result.score,
+        qualification_reasons: result.reasons,
+        missing_fields: result.missingFields,
+        prospect_id: task.prospect_id,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    if (!candidateUpdate.ok || !(await candidateUpdate.json() as unknown[]).length) {
+      throw new Error("candidate_qualification_persistence_failed");
+    }
+  }
+
   let demoPipeline: Record<string, unknown> = { status: "skipped", reason: "qualification_score_below_threshold", minimumScore };
-  if (result.score >= minimumScore) {
+  if (passedQualification) {
     const templateLookup = await db(env, "site_template_versions?is_published=eq.true&select=id&order=created_at.desc&limit=1");
     if (!templateLookup.ok) throw new Error(`qualified_template_lookup_http_${templateLookup.status}`);
     const templates = await templateLookup.json() as Array<{ id: string }>;
