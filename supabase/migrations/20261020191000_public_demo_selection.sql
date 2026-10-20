@@ -73,17 +73,7 @@ begin
       selected_at = now(), updated_at = now()
   where id = v_link.id;
 
-  insert into public.prospect_events (
-    prospect_id, site_project_id, event_type, source_provider,
-    idempotency_key, evidence
-  )
-  select sp.prospect_id, v_link.site_project_id, 'template_selected',
-         'public_demo_landing',
-         'public-demo:' || v_link.id::text || ':' || p_version_id::text,
-         jsonb_build_object('versionId', p_version_id, 'selectedAt', now())
-  from public.site_projects sp
-  where sp.id = v_link.site_project_id and sp.prospect_id is not null
-  on conflict (idempotency_key) do nothing;
+  -- Selection is durably recorded on the link and version rows; event projection can be added after schema verification.
 
   return jsonb_build_object(
     'status', 'selected',
