@@ -128,7 +128,7 @@ export function ProspectingConsole() {
     </div>
     <div className="overflow-hidden rounded-2xl border border-neutral-800">
       <div className="flex items-center gap-2 border-b border-neutral-800 px-4 py-3"><Activity size={17} /><h3 className="font-medium">Eventos do funil</h3></div>
-      {events.length === 0 ? <p className="p-5 text-sm text-neutral-500">Os eventos serão exibidos quando houver atividade persistida.</p> : <div className="divide-y divide-neutral-800">{events.map((event) => <div key={event.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"><div><p className="text-sm">{event.event_type.replaceAll("_", " ")}</p><p className="mt-1 text-xs text-neutral-500">{event.source_provider ?? "Sistema"}</p></div><time className="text-xs text-neutral-500">{new Date(event.occurred_at).toLocaleString("pt-BR")}</time></div>)}</div>}
+      {events.length === 0 ? <p className="p-5 text-sm text-neutral-500">Os eventos serão exibidos quando houver atividade persistida.</p> : <div className="divide-y divide-neutral-800">{events.map((event) => <div key={event.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"><div><p className="text-sm">{event.event_type.replace(/_/g, " ")}</p><p className="mt-1 text-xs text-neutral-500">{event.source_provider ?? "Sistema"}</p></div><time className="text-xs text-neutral-500">{new Date(event.occurred_at).toLocaleString("pt-BR")}</time></div>)}</div>}
     </div>
     {busy && <p className="flex items-center gap-2 text-xs text-neutral-500"><LoaderCircle size={14} className="animate-spin" /> Sincronizando dados...</p>}
   </section>;
