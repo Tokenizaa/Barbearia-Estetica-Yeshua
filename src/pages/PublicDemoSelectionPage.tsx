@@ -8,10 +8,18 @@ type DemoVersion = {
   design_overrides: Record<string, unknown> | null;
   template_version_id: string;
   selected_by_prospect: boolean;
+  template?: {
+    id: string;
+    config?: { layout?: string; sections?: string[]; theme?: { primary?: string; secondary?: string; surface?: string } };
+    site_templates?: { name?: string; category?: string; preview_image_url?: string | null } | null;
+  } | null;
 };
 type DemoData = { status: string; expiresAt: string; selectedVersionId: string | null; versions: DemoVersion[] };
 function text(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
+}
+function safeColor(value: unknown, fallback: string): string {
+  return typeof value === "string" && /^#[0-9a-f]{3}(?:[0-9a-f]{3})?$/i.test(value) ? value : fallback;
 }
 function contentText(version: DemoVersion, keys: string[]) {
   const content = version.generated_content ?? {};
@@ -102,18 +110,24 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
             const address = contentText(version, ["address", "formatted_address"]);
             const city = [contentText(version, ["city", "locality"]), contentText(version, ["region", "state", "province"])].filter(Boolean).join(" · ");
             const website = contentText(version, ["website", "website_url", "url"]);
+            const config = version.template?.config ?? {};
+            const sections = Array.isArray(config.sections) ? config.sections : ["hero", "about", "services", "contact"];
+            const primaryColor = safeColor(config.theme?.primary, "#2563eb");
+            const secondaryColor = safeColor(config.theme?.secondary, "#111827");
+            const surfaceColor = safeColor(config.theme?.surface, "#ffffff");
+            const templateName = version.template?.site_templates?.name || "Modelo personalizado";
             return <article key={version.id} className={`overflow-hidden rounded-2xl border bg-white text-neutral-900 shadow-sm ${isSelected ? "border-emerald-600 ring-1 ring-emerald-600" : "border-neutral-200"}`}>
-              <div className="border-b border-neutral-200 bg-neutral-50 p-4">
+              <div className="border-b border-neutral-200 p-4" style={{ backgroundColor: safeColor(surfaceColor, "#f9fafb") }}>
                 <div className="flex items-center justify-between gap-3"><span className="text-xs font-medium uppercase tracking-wider text-neutral-500">Prévia do site · versão {version.version}</span>{isSelected && <span className="flex items-center gap-1 text-xs font-medium text-emerald-700"><Check className="h-3 w-3" /> Selecionada</span>}</div>
                 <div className="mt-5 flex items-center gap-3">
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-neutral-900 text-white"><Palette className="h-5 w-5" /></div>
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white" style={{ backgroundColor: primaryColor }}><Palette className="h-5 w-5" /></div>
                   <div className="min-w-0"><p className="truncate text-lg font-semibold">{title}</p><p className="text-xs text-neutral-500">{contentText(version, ["category", "business_category", "segment"]) || "Negócio local"}</p></div>
                 </div>
                 <div className="pb-3 pt-8">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-emerald-700">Bem-vindo</p>
+                  {sections.includes("hero") && <p className="text-xs font-semibold uppercase tracking-widest" style={{ color: primaryColor }}>Bem-vindo</p>}
                   <h2 className="mt-2 text-2xl font-bold leading-tight">{headline || title}</h2>
                   <p className="mt-3 text-sm leading-6 text-neutral-600">{description || "Uma apresentação clara do negócio, dos serviços e das formas de contato."}</p>
-                  <div className="mt-5 inline-flex rounded-lg bg-neutral-900 px-4 py-2.5 text-xs font-semibold text-white">Conheça nossos serviços</div>
+                  <div className="mt-5 inline-flex rounded-lg px-4 py-2.5 text-xs font-semibold text-white" style={{ backgroundColor: secondaryColor }}>Conheça nossos serviços</div>
                 </div>
               </div>
               <div className="space-y-4 p-4">
@@ -133,7 +147,7 @@ export function PublicDemoSelectionPage({ token }: { token: string }) {
                 </div>}
                 <details className="border-t border-neutral-200 pt-3">
                   <summary className="cursor-pointer text-xs text-neutral-500">Detalhes técnicos da proposta</summary>
-                  <p className="mt-2 break-all text-[11px] text-neutral-500">Modelo: {version.template_version_id}</p>
+                  <p className="mt-2 text-[11px] text-neutral-500">Modelo: {templateName} · {config.layout || "layout comercial"}</p>
                 </details>
                 <button disabled={saving !== null || isSelected} onClick={() => chooseVersion(version.id)} className="flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50">
                   {saving === version.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : isSelected ? <Check className="h-4 w-4" /> : <ExternalLink className="h-4 w-4" />}
