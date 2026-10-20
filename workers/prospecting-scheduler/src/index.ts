@@ -218,7 +218,7 @@ async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: strin
   const templateName = typeof payload.templateName === "string" && payload.templateName.trim()
     ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME;
   const apiVersion = env.WHATSAPP_API_VERSION.trim();
-  if (!/^v\\d+\\.\\d+$/.test(apiVersion)) throw new Error("whatsapp_api_version_invalid");
+  if (!/^v\d+\.\d+$/.test(apiVersion)) throw new Error("whatsapp_api_version_invalid");
   const endpoint = `https://graph.facebook.com/${apiVersion}/${encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID)}/messages`;
   let response: Response;
   try {
@@ -342,7 +342,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   });
   if (!countResponse.ok) throw new Error(`candidate_daily_count_http_${countResponse.status}`);
   const range = countResponse.headers.get("content-range") ?? "";
-  const countMatch = range.match(/\\/(\\d+|\\*)$/);
+  const countMatch = range.match(/\/(\d+|\*)$/);
   const discoveredToday = countMatch && countMatch[1] !== "*" ? Number(countMatch[1]) : 0;
   const limit = Math.max(0, dailyLimit - discoveredToday);
   if (limit === 0) {
