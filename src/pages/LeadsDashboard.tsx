@@ -44,6 +44,7 @@ interface Lead {
   businessName: string;
   category: string;
   websiteUrl: string;
+  siteDescription?: string;
   phone: string;
   email: string;
   address: string;
@@ -139,8 +140,8 @@ export const LeadsDashboard: React.FC = () => {
   const [captureMessage, setCaptureMessage] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [form, setForm] = useState({
-    businessName: '', category: '', websiteUrl: '', phone: '', email: '',
-    address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' as Lead['priority'],
+    businessName: '', category: '', websiteUrl: '', siteDescription: '', phone: '', email: '',
+    address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal', siteDescription: '' as Lead['priority'],
   });
 
   useEffect(() => {
@@ -227,6 +228,7 @@ export const LeadsDashboard: React.FC = () => {
           businessName: captured.businessName || targetLead.businessName,
           category: captured.category || targetLead.category,
           websiteUrl: captured.finalUrl || targetLead.websiteUrl,
+          siteDescription: captured.description || targetLead.siteDescription,
           phone: captured.phone || targetLead.phone,
           email: captured.email || targetLead.email,
           address: captured.address || targetLead.address,
@@ -240,6 +242,7 @@ export const LeadsDashboard: React.FC = () => {
           businessName: current.businessName || captured.businessName,
           category: current.category || captured.category,
           websiteUrl: captured.finalUrl || normalizedUrl,
+          siteDescription: current.siteDescription || captured.description,
           phone: current.phone || captured.phone,
           email: current.email || captured.email,
           address: current.address || captured.address,
@@ -263,11 +266,11 @@ export const LeadsDashboard: React.FC = () => {
       version: 1,
       businessName: lead.businessName,
       category: lead.category,
-      description: lead.project.previewText.split('\n')[2] || ('Uma presença digital feita para apresentar os serviços de ' + lead.businessName + ' com clareza e facilitar o contato com novos clientes.'),
       phone: lead.phone,
       email: lead.email,
       address: lead.address,
       websiteUrl: lead.websiteUrl,
+      description: lead.siteDescription || lead.project.previewText.split('\n')[2] || ('Uma presença digital feita para apresentar os serviços de ' + lead.businessName + ' com clareza e facilitar o contato com novos clientes.'),
       templateId: lead.project.templateId,
       templateName: lead.project.templateName,
       projectVersion: lead.project.templateVersion,
