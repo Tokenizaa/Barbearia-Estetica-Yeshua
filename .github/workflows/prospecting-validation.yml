@@ -1,0 +1,39 @@
+name: Prospecting Phase 1 validation
+
+on:
+  push:
+    branches:
+      - feat/salon-onboarding-venopag
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prospecting-validation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+
+      - name: Install locked dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Run automated tests
+        run: bun run test
+
+      - name: Type-check
+        run: bun run lint
+
+      - name: Build
+        run: bun run build
