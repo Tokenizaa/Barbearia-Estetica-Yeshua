@@ -218,6 +218,9 @@ export const LeadsDashboard: React.FC = () => {
         headers: { 'content-type': 'application/json', accept: 'application/json' },
         body: JSON.stringify({ url: normalizedUrl }),
       });
+      if (!(response.headers.get('content-type') ?? '').includes('application/json')) {
+        throw new Error('A API de captura não está disponível neste ambiente. A Cloudflare Pages Function /api/capture precisa estar implantada.');
+      }
       const result = await response.json() as CaptureResponse | { error?: string };
       if (!response.ok || !('businessName' in result)) {
         throw new Error('error' in result && result.error ? result.error : 'Não foi possível capturar os metadados do site.');
