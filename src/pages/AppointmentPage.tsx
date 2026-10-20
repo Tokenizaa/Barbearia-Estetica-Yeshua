@@ -118,6 +118,8 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
   // Flow State
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [submittedWhatsAppUrl, setSubmittedWhatsAppUrl] = useState<string | null>(null);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
 
   // Filter services by category
   const categories = [
@@ -140,12 +142,51 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleConfirmAndOpenWhatsApp = (e: React.FormEvent) => {
+  const handleConfirmAndOpenWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedService || !clientName.trim() || !clientPhone.trim()) return;
+    if (!selectedService || !clientName.trim() || !clientPhone.trim() || isSubmittingBooking) return;
+    setBookingError(null);
+    setIsSubmittingBooking(true);
 
-    // 1. Salvar no histórico local do app para a área administrativa
-    const appt = store.addAppointment({
+    const waUrl = store.buildScheduledAppointmentWhatsAppUrl({
+      clientName: clientName.trim(),
+      clientPhone: clientPhone.trim(),
+      serviceName: selectedService.name,
+      date: selectedDate,
+      time: selectedTime,
+      notes: clientNotes.trim() || undefined,
+    });
+    // Open synchronously from the click gesture so browsers do not block the WhatsApp tab.
+    const whatsappWindow = window.open('about:blank', '_blank');
+
+    try {
+      const response = await fetch('/api/appointments/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          establishmentSlug: company.slug,
+          clientName: clientName.trim(),
+          clientPhone: clientPhone.trim(),
+          serviceId: selectedService.id,
+          serviceName: selectedService.name,
+          servicePrice: selectedService.price ?? null,
+          serviceDurationMinutes: selectedService.durationMinutes ?? null,
+          date: selectedDate,
+          time: selectedTime,
+          notes: clientNotes.trim() || null,
+        }),
+      });
+      const result = await response.json().catch(() => ({})) as { error?: string };
+      if (!response.ok) throw new Error(result.error || 'Não foi possível confirmar o agendamento.');
+    } catch (error) {
+      whatsappWindow?.close();
+      setBookingError(error instanceof Error ? error.message : 'Falha ao salvar o agendamento.');
+      setIsSubmittingBooking(false);
+      return;
+    }
+
+    // Compatibility bridge for the legacy admin panel on this browser only.
+    store.addAppointment({
       clientName: clientName.trim(),
       clientPhone: clientPhone.trim(),
       serviceId: selectedService.id,
@@ -156,23 +197,12 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
       time: selectedTime,
       notes: clientNotes.trim() || undefined,
       status: 'pendente',
-    });
-
-    // 2. Gerar URL do WhatsApp com a mensagem pronta
-    const waUrl = store.buildScheduledAppointmentWhatsAppUrl({
-      clientName: clientName.trim(),
-      clientPhone: clientPhone.trim(),
-      serviceName: selectedService.name,
-      date: selectedDate,
-      time: selectedTime,
-      notes: clientNotes.trim() || undefined,
-    });
+    }, company.id);
 
     setSubmittedWhatsAppUrl(waUrl);
     setStep(3);
-
-    // 3. Abrir WhatsApp em nova aba
-    window.open(waUrl, '_blank');
+    if (whatsappWindow) whatsappWindow.location.href = waUrl;
+    setIsSubmittingBooking(false);
   };
 
   return (
@@ -604,6 +634,7 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
           onSubmit={handleConfirmAndOpenWhatsApp}
           className="space-y-6 bg-neutral-900/80 border border-neutral-800 rounded-3xl p-6 sm:p-8 animate-in fade-in duration-200"
         >
+          {bookingError && <div role="alert" className="rounded-xl border border-rose-800 bg-rose-950/40 p-3 text-sm text-rose-300">{bookingError}</div>}
           <div className="flex items-center justify-between border-b border-neutral-800 pb-4">
             <div>
               <h3 className="text-lg font-bold font-display text-neutral-100">
@@ -717,6 +748,7 @@ export const AppointmentPage: React.FC<AppointmentPageProps> = ({
 
             <button
               type="submit"
+              disabled={isSubmittingBooking}
               className="flex-1 inline-flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-sm shadow-xl hover:shadow-emerald-600/30 transition-all cursor-pointer"
             >
               <MessageCircle className="w-5 h-5 fill-white" />
