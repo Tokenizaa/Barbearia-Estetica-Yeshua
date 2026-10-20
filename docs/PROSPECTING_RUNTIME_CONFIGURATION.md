@@ -28,7 +28,7 @@ Não usar uma chave de Google Maps/Places como padrão para montar lista de pros
 
 ## Diagnóstico de prontidão
 
-Endpoint implementado: `GET /api/prospecting/readiness`.
+Endpoints implementados: `GET /api/prospecting/readiness`, `GET /api/prospecting/overview` e `GET /api/prospecting/demo-links` (este último lista links ativos das tarefas de publicação concluídas e exige membership em `platform_admins`).
 
 - Exige sessão Supabase válida e membership administrativo na tabela canônica `platform_admins`.
 - Verifica se as tabelas de campanha, fila, eventos, mensagens e versões existem e podem ser consultadas pelo servidor.
@@ -51,7 +51,7 @@ Endpoint implementado: `GET /api/prospecting/readiness`.
 - Webhook: `POST /api/webhooks/whatsapp`; valida `X-Hub-Signature-256` por HMAC-SHA256 com `WHATSAPP_APP_SECRET`. O `GET` implementa o desafio de verificação com `WHATSAPP_WEBHOOK_VERIFY_TOKEN`. Recibos atualizam o estado persistido; mensagens com palavras de opt-out (`SAIR`, `PARAR`, `CANCELAR`, `STOP`, `UNSUBSCRIBE`, `NÃO QUERO`) bloqueiam novos envios para o telefone identificado.
 - Após a qualificação, prospects com pontuação mínima de 50 passam pelo RPC idempotente `ensure_prospect_site_project`, que associa o prospect a um único projeto em `site_projects`. A tarefa `generate_demo` usa o projeto e resolve a versão de modelo mais recente em `site_template_versions` quando `templateVersionId` não foi informado. Depois de persistir a versão em `site_project_versions`, o worker enfileira automaticamente `publish_demo`; o link expira em 14 dias por padrão. A migration `20261020193000_prospect_demo_project_automation.sql` adiciona o vínculo e o RPC de criação.
 - `publish_demo` cria link público temporário com token aleatório de alta entropia; apenas o hash é persistido na tabela de links. O token retornado fica no resultado privado da tarefa, acessível somente ao servidor. `sync_delivery` permanece desnecessário para o fluxo de recibos atual e continua bloqueado; os webhooks atualizam diretamente as mensagens.
-- A landing pública `/demo/:token` apresenta uma prévia comercial estruturada a partir dos dados persistidos (identidade, chamada principal, descrição, serviços e contato quando disponíveis) e permite selecionar uma versão. A página ainda não renderiza o template de produção como um site navegável completo; essa integração depende do contrato real do renderer de templates. O token aleatório tem validade limitada, somente seu hash é armazenado e a seleção usa RPC server-side.
+- A landing pública `/demo/:token` apresenta uma prévia comercial baseada na configuração publicada do modelo (layout, seções e paleta) e nos dados persistidos do negócio, e permite selecionar uma versão. Ainda é uma prévia própria da landing, não a execução do renderer de produção como um site navegável completo. O token aleatório tem validade limitada; o hash fica na tabela de links e o token em texto aparece somente no resultado privado da tarefa de publicação para que o console administrativo autorizado consiga recuperar o link. A seleção usa RPC server-side.
 - Para configurar os secrets no ambiente Cloudflare do worker, execute os comandos abaixo a partir da raiz do repositório e informe os valores de forma interativa:
 
   ```sh
