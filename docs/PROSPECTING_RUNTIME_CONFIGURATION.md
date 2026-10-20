@@ -20,7 +20,7 @@ Documentar os secrets e as verificações necessárias antes de habilitar campan
 | `WHATSAPP_PHONE_NUMBER_ID` | Identificador do número de envio no provedor | Pendente de configuração |
 | `WHATSAPP_TEMPLATE_NAME` | Modelo de mensagem aprovado pelo provedor | Pendente de configuração |
 | `WHATSAPP_TEMPLATE_LANGUAGE` | Código de idioma do modelo | Opcional; padrão `pt_BR` |
-| `WHATSAPP_API_VERSION` | Versão da Graph API | Opcional; padrão `v23.0` |
+| `WHATSAPP_API_VERSION` | Versão suportada da Graph API usada pela conta Meta | Obrigatória; configurar explicitamente |
 | `WHATSAPP_APP_SECRET` | Validar assinatura HMAC de webhooks | Pendente de configuração |
 | `WHATSAPP_WEBHOOK_VERIFY_TOKEN` | Validar desafio inicial do webhook | Pendente de configuração |
 
