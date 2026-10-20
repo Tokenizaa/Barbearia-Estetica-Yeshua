@@ -48,9 +48,8 @@ export async function onRequestPost({ request, env }: Context) {
   if (!payment) return json({ error: 'Cobrança não encontrada.' }, 404);
 
   const amount = typeof event.amount === 'number' ? event.amount : Number(event.amount);
-  if (Number.isFinite(amount) && Math.round(amount * 100) !== payment.amount_brl_cents) return json({ error: 'Valor confirmado não corresponde à cobrança.' }, 409);
-
   const paid = ['confirmed', 'paid', 'completed'].includes(status);
+  if (paid && (!Number.isFinite(amount) || Math.round(amount * 100) !== payment.amount_brl_cents)) return json({ error: 'Valor confirmado ausente ou divergente da cobrança.' }, 409);
   const terminalStatus = paid ? 'paid' : ['expired', 'canceled', 'cancelled'].includes(status) ? (status === 'expired' ? 'expired' : 'canceled') : 'pending';
   if (payment.status !== 'paid') {
     const update = await fetch(`${env.SUPABASE_URL}/rest/v1/billing_payments?id=eq.${payment.id}`, {
