@@ -99,6 +99,7 @@ export const ContactPage: React.FC = () => {
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>
+        )}
 
         {company.address && company.cityState && (
         <div className="bg-neutral-900/80 border border-neutral-800 rounded-2xl p-6 sm:p-8 flex flex-col justify-between space-y-6 hover:border-amber-500/40 transition-colors">
