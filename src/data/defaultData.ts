@@ -10,7 +10,7 @@ import {
 } from '../types';
 
 export const INITIAL_PLATFORM_CONFIG: PlatformConfig = {
-  platformName: 'Plataforma de Sites Personalizados',
+  platformName: 'Plataforma para Salões',
   masterPin: '9988',
   supportEmail: 'contato@tokenizaa.com',
   supportWhatsapp: '',
