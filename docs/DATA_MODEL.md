@@ -1,52 +1,59 @@
-# Modelo de dados — prospecção e geração de sites
+# Modelo de dados — prospecção automatizada e sites white-label
 
 ## Entidades
 
 | Tabela | Responsabilidade |
 |---|---|
-| platform_admins | Registro de contas que podem administrar a plataforma. A autorização efetiva exige claim app_metadata.platform_role=platform_admin emitida por backend confiável. |
-| establishments | Clientes/estabelecimentos que possuem site e configuração de marca própria. Yeshua é apenas um registro inicial. |
-| establishment_memberships | Associação entre usuário autenticado e estabelecimento, com papel owner/admin/editor/viewer. |
-| prospects | Negócios identificados na prospecção antes de se tornarem clientes; guarda fonte e dados capturados. |
-| site_templates | Catálogo de modelos disponíveis para seleção no editor. |
-| site_template_versions | Configuração versionada de layout, seções e tokens visuais; cada projeto fixa uma versão. |
-| site_projects | Rascunho/proposta de site vinculado a prospect ou estabelecimento, com conteúdo separado do modelo. |
-| audit_events | Registro de ações relevantes de segurança, aprovação e publicação. |
+| `platform_admins` | Identidade administrativa; a autorização efetiva exige claim confiável emitida pelo backend. |
+| `establishments` | Clientes com site e configuração de marca. Yeshua é apenas um registro inicial. |
+| `establishment_memberships` | Vínculo entre usuário e estabelecimento, com papel. |
+| `prospects` | Negócios descobertos antes de virarem clientes, com dados originais, fonte, campos normalizados, chave de deduplicação e qualificação. |
+| `prospecting_campaigns` | Segmento/região, fonte configurada, regras, agenda, limites e estado operacional de cada campanha. |
+| `prospecting_tasks` | Fila durável de descoberta, captura, qualificação, geração de demonstração e envio, com idempotência, tentativas, locks e erros. |
+| `prospect_events` | Histórico append-only de eventos do funil e evidências do provedor. |
+| `prospect_outbound_messages` | Tentativas de contato e estados confirmados pelo provedor, incluindo falha e opt-out. |
+| `site_templates` / `site_template_versions` | Catálogo de modelos e versões imutáveis de configuração. |
+| `site_projects` | Projeto vinculado a um prospect ou a um estabelecimento convertido. |
+| `site_project_versions` | Histórico imutável de versões da demonstração e seleção de modelo. |
+| `audit_events` | Registro de ações relevantes de segurança, administração e publicação. |
 
 ## Fluxo de dados
 
 ```text
-Fonte pública permitida
-        ↓
-     prospects
-        ↓ revisão humana
- site_projects (prospect_id)
-        ↓ escolha de site_template_version
- geração de conteúdo + design_overrides
-        ↓ revisão e aprovação explícita
- conversão do prospect em estabelecimento
-        ↓ site_projects passa a usar establishment_id
-       publicação
+Campanha configurada
+  -> tarefa de descoberta
+  -> prospect + fonte/data/evidências
+  -> normalização + deduplicação persistente
+  -> qualificação determinística e explicável
+  -> projeto de demonstração + versão do modelo
+  -> landing page pública individual
+  -> seleção pública de modelo + nova versão
+  -> verificação de elegibilidade/base legal para contato
+  -> tarefa de WhatsApp + status confirmado pelo provedor
+  -> resposta/interesse/opt-out
+  -> fase posterior: cadastro -> estabelecimento -> pagamento -> ativação
 ```
 
-## Princípios importantes
+A execução deve ser assíncrona, idempotente e independente de navegador aberto. Revisão humana pode existir para exceções, mas não é um gate obrigatório do fluxo normal.
 
-- captured_data contém dados coletados; qualification guarda avaliação separada. Não confundir hipótese com fato.
-- public_source_urls mantém a origem dos dados e facilita revisão/correção.
-- generated_content armazena conteúdo do site (textos, serviços, galeria e contatos aprovados).
-- design_overrides guarda customizações do projeto que não alteram o template original.
-- template_version_id aponta para uma versão publicada e estável.
-- site_projects exige exatamente um contexto: prospect ainda não convertido OU estabelecimento convertido.
-- RLS restringe prospects à administração da plataforma; os membros locais acessam apenas projetos do próprio estabelecimento.
-- Não armazenar PINs ou senhas de administradores nas tabelas de negócio.
-- A service-role key só pode ser usada em servidor confiável e nunca no browser.
-- Não expor tabelas a anon por padrão; a publicação pública deve ocorrer por camada de entrega própria e apenas para sites aprovados.
+## Regras de integridade
 
-## Modelo inicial
+- `captured_data` mantém o dado original; `qualification` guarda score, critérios e razões. Não confundir hipótese com fato.
+- `public_source_urls`, `source_name` e `source_captured_at` preservam a procedência. Evidências devem ser suficientes para auditar cada etapa.
+- `dedupe_key` é uma chave determinística criada a partir de identidade normalizada e protegida por índice único. Não criar uma chave a partir de informação insuficiente.
+- O score de qualificação nunca equivale a consentimento ou autorização para enviar mensagens.
+- O contato por WhatsApp deve falhar fechado: exige elegibilidade explícita, registro de opt-in aplicável e ausência de opt-out. Um telefone encontrado publicamente não comprova consentimento.
+- `prospecting_tasks.idempotency_key` impede que retentativas criem efeitos duplicados. Workers reivindicam tarefas com bloqueio atômico; locks antigos podem ser recuperados respeitando o limite de tentativas.
+- `prospect_events` mantém o histórico do funil. Eventos repetidos do provedor são deduplicados por identificador quando disponível.
+- `prospect_outbound_messages` diferencia enfileirado, tentativa, enviado, entregue/lido (quando informado), falha, resposta e opt-out. Enfileirar ou copiar uma mensagem não significa que ela foi enviada.
+- `site_projects` exige exatamente um contexto: prospect não convertido ou estabelecimento convertido. Cada versão aponta para uma versão imutável do modelo.
+- A demonstração pública deve usar uma camada de leitura restrita; não conceder leitura anônima ampla das tabelas operacionais.
+- RLS e autorização devem ser testadas no banco real. Não considerar migration aplicada apenas porque está no Git.
+- A chave service-role só pode ser usada em servidor confiável, nunca no browser. Tabelas de fila e escrita operacional não devem ser expostas aos papéis anon/authenticated.
+- A conversão preserva prospect, histórico, projeto e modelo escolhido; não duplica o lead.
 
-A migration insere um único modelo neutro, modelo-inicial, versão 1, com seções hero, sobre, serviços, galeria e contato. Não é um modelo exclusivo de barbearia e não contém marca, telefone ou endereço do Yeshua.
+## Estado de implementação (2026-10-20)
 
-## Limites do primeiro esquema
+As migrations `20261020180000_prospecting_automation_foundation.sql` e `20261020180100_prospecting_worker_rpc.sql` adicionam o modelo inicial de campanhas, fila, eventos, mensagens, versões e reivindicação atômica de tarefas. `src/lib/prospecting.ts` contém funções puras para normalização, deduplicação, score explicável e gate de elegibilidade para WhatsApp.
 
-- Ainda não há filas/tarefas de raspagem, integração com provedores de IA, armazenamento de arquivos nem domínios customizados. Essas integrações devem ser adicionadas quando o fluxo real estiver definido, sem criar tabelas especulativas.
-- A migration não foi aplicada a um projeto Supabase nesta etapa; os testes reais de RLS e advisors ainda precisam ser executados.
+**Ainda não comprovado:** aplicação das migrations no projeto Supabase, execução real de workers, fornecedor de descoberta conectado, integração WhatsApp configurada, persistência do dashboard substituindo `localStorage`, landing page comercial completa e certificação E2E. A presença de esquema ou código não deve ser descrita como integração operacional.
