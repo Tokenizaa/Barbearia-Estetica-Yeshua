@@ -3,6 +3,11 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
+  WHATSAPP_ACCESS_TOKEN?: string;
+  WHATSAPP_PHONE_NUMBER_ID?: string;
+  WHATSAPP_TEMPLATE_NAME?: string;
+  WHATSAPP_TEMPLATE_LANGUAGE?: string;
+  WHATSAPP_API_VERSION?: string;
 }
 
 interface ProspectingTask {
@@ -116,7 +121,175 @@ async function updateTask(env: Env, task: ProspectingTask, workerId: string, pat
   if (!rows.length) throw new Error("task_lease_lost");
 }
 
+async function sendWhatsAppTask(env: Env, task: ProspectingTask, workerId: string) {
+  if (!task.prospect_id) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "prospect_id_required",
+      last_error: "A tarefa de WhatsApp não contém prospect_id.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  if (!env.WHATSAPP_ACCESS_TOKEN || !env.WHATSAPP_PHONE_NUMBER_ID || !env.WHATSAPP_TEMPLATE_NAME) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "whatsapp_provider_not_configured",
+      last_error: "Credenciais e modelo aprovado do WhatsApp Business Platform não estão configurados.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "provider_not_configured" },
+    });
+    return "blocked";
+  }
+
+  const read = await db(env, `prospects?id=eq.${encodeURIComponent(task.prospect_id)}&select=*&limit=1`);
+  if (!read.ok) throw new Error(`prospect_read_http_${read.status}`);
+  const rows = await read.json() as Prospect[];
+  if (!rows.length) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "prospect_not_found",
+      last_error: "O prospect associado à tarefa não existe.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked" },
+    });
+    return "blocked";
+  }
+  const prospect = rows[0];
+  const optInAt = first(prospect, ["whatsapp_opt_in_at"]);
+  const evidenceUrl = first(prospect, ["whatsapp_opt_in_evidence_url"]);
+  const optedOutAt = first(prospect, ["whatsapp_opted_out_at"]);
+  const eligibility = first(prospect, ["outreach_eligibility"]);
+  const phone = normalizePhone(first(prospect, ["normalized_phone", "phone", "phone_number", "whatsapp", "mobile"]), "BR");
+  if (optedOutAt || eligibility !== "eligible" || !optInAt || !normalizeWebsite(evidenceUrl) || !phone) {
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: optedOutAt ? "prospect_opted_out" : "whatsapp_consent_or_phone_missing",
+      last_error: "Envio bloqueado: exige elegibilidade explícita, opt-in com evidência pública válida, telefone válido e ausência de opt-out.",
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "consent_gate" },
+    });
+    return "blocked";
+  }
+
+  const messageKey = `task:${task.id}:whatsapp`;
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(phone));
+  const destinationHash = Array.from(new Uint8Array(hash), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const existingResponse = await db(env, `prospect_outbound_messages?idempotency_key=eq.${encodeURIComponent(messageKey)}&select=id,status,provider_message_id&limit=1`);
+  if (!existingResponse.ok) throw new Error(`whatsapp_message_lookup_http_${existingResponse.status}`);
+  const existing = (await existingResponse.json()) as Array<{ id: string; status: string; provider_message_id: string | null }>;
+  if (existing.length) {
+    const row = existing[0];
+    if (["sent", "delivered", "read"].includes(row.status) && row.provider_message_id) {
+      await updateTask(env, task, workerId, {
+        status: "succeeded", completed_at: new Date().toISOString(),
+        result: { outcome: "already_sent", providerMessageId: row.provider_message_id },
+      });
+      return "succeeded";
+    }
+    // Provider acceptance may have happened before a network/process failure. Never blindly resend.
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "whatsapp_delivery_reconciliation_required",
+      last_error: "Existe tentativa anterior sem confirmação final; reconciliar com o provedor antes de novo envio para evitar duplicidade.",
+      completed_at: new Date().toISOString(),
+      result: { outcome: "blocked", reason: "delivery_reconciliation_required", messageId: row.id },
+    });
+    return "blocked";
+  }
+
+  const queued = await db(env, "prospect_outbound_messages?on_conflict=idempotency_key", {
+    method: "POST",
+    headers: { prefer: "resolution=ignore-duplicates,return=representation" },
+    body: JSON.stringify({
+      prospect_id: task.prospect_id,
+      campaign_id: task.campaign_id,
+      channel: "whatsapp",
+      provider: "whatsapp_business_platform",
+      destination_hash: destinationHash,
+      template_name: env.WHATSAPP_TEMPLATE_NAME,
+      template_variables: {},
+      status: "attempting",
+      idempotency_key: messageKey,
+      attempts: 1,
+    }),
+  });
+  if (!queued.ok) throw new Error(`whatsapp_message_create_http_${queued.status}`);
+  const created = await queued.json() as Array<{ id: string }>;
+  if (!created.length) throw new Error("whatsapp_message_idempotency_conflict");
+
+  const payload = task.payload && typeof task.payload === "object" ? task.payload : {};
+  const components = Array.isArray(payload.templateComponents) ? payload.templateComponents : [];
+  const templateName = typeof payload.templateName === "string" && payload.templateName.trim()
+    ? payload.templateName.trim() : env.WHATSAPP_TEMPLATE_NAME;
+  const apiVersion = (env.WHATSAPP_API_VERSION || "v23.0").replace(/[^v0-9.]/g, "");
+  const endpoint = `https://graph.facebook.com/${apiVersion}/${encodeURIComponent(env.WHATSAPP_PHONE_NUMBER_ID)}/messages`;
+  let response: Response;
+  try {
+    response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${env.WHATSAPP_ACCESS_TOKEN}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to: phone,
+        type: "template",
+        template: {
+          name: templateName,
+          language: { code: typeof payload.templateLanguage === "string" ? payload.templateLanguage : (env.WHATSAPP_TEMPLATE_LANGUAGE || "pt_BR") },
+          ...(components.length ? { components } : {}),
+        },
+      }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    // We cannot prove whether the provider accepted the request. Preserve the attempting row and block retries.
+    throw new Error("whatsapp_provider_result_unknown_reconcile_before_retry");
+  }
+  const responseBody = await response.json().catch(() => ({})) as {
+    messages?: Array<{ id?: string; message_status?: string }>;
+    error?: { code?: number; message?: string };
+  };
+  const providerId = responseBody.messages?.[0]?.id;
+  if (!response.ok || !providerId) {
+    const message = String(responseBody.error?.message ?? `HTTP ${response.status}`).slice(0, 400);
+    const failed = await db(env, `prospect_outbound_messages?id=eq.${encodeURIComponent(created[0].id)}&select=id`, {
+      method: "PATCH",
+      headers: { prefer: "return=minimal" },
+      body: JSON.stringify({ status: "failed", last_error_code: String(responseBody.error?.code ?? response.status), last_error: message, updated_at: new Date().toISOString() }),
+    });
+    if (!failed.ok) throw new Error("whatsapp_provider_rejected_and_failure_persist_failed");
+    throw new Error(`whatsapp_provider_rejected_${response.status}`);
+  }
+
+  const now = new Date().toISOString();
+  const sent = await db(env, `prospect_outbound_messages?id=eq.${encodeURIComponent(created[0].id)}&select=id`, {
+    method: "PATCH",
+    headers: { prefer: "return=representation" },
+    body: JSON.stringify({
+      status: "sent", provider_message_id: providerId, sent_at: now,
+      provider_evidence: { message_status: responseBody.messages?.[0]?.message_status ?? "accepted_by_provider" },
+      updated_at: now,
+    }),
+  });
+  if (!sent.ok || !(await sent.json() as unknown[]).length) throw new Error("whatsapp_provider_accepted_but_persistence_failed");
+
+  const event = await db(env, "prospect_events?on_conflict=idempotency_key", {
+    method: "POST",
+    headers: { prefer: "resolution=ignore-duplicates,return=minimal" },
+    body: JSON.stringify({
+      prospect_id: task.prospect_id, campaign_id: task.campaign_id,
+      event_type: "message_sent", source_provider: "whatsapp_business_platform",
+      provider_event_id: providerId, idempotency_key: `task:${task.id}:message-sent`,
+      evidence: { providerMessageId: providerId, destinationHash },
+    }),
+  });
+  if (!event.ok) throw new Error("whatsapp_sent_event_persistence_failed");
+
+  await updateTask(env, task, workerId, {
+    status: "succeeded", last_error_code: null, last_error: null,
+    completed_at: now, result: { outcome: "sent", providerMessageId: providerId },
+  });
+  return "succeeded";
+}
+
 async function executeTask(env: Env, task: ProspectingTask, workerId: string) {
+  if (task.task_type === "send_whatsapp") return sendWhatsAppTask(env, task, workerId);
   if (task.task_type !== "qualify") {
     await updateTask(env, task, workerId, {
       status: "blocked",
