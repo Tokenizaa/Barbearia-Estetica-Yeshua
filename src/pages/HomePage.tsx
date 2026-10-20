@@ -731,8 +731,8 @@ export const HomePage: React.FC<HomePageProps> = ({
       />
       */}
 
-      {company.address && company.cityState && (
       {/* 7. LOCALIZAÇÃO SECTION */}
+      {company.address && company.cityState && (
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center bg-neutral-900/60 border border-neutral-800 rounded-3xl p-6 sm:p-10">
           <div className="space-y-6">
