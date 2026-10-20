@@ -125,7 +125,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
               <div className="relative shrink-0 w-20 h-20 sm:w-24 sm:h-24 rounded-full p-[3px] bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shadow-lg group">
                 <div className="w-full h-full rounded-full bg-neutral-950 p-[2px] overflow-hidden">
                   <img
-                    src="/logo.jpg"
+                    src={company.logoUrl || "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=300&q=80"}
                     alt={company.name}
                     className="w-full h-full object-cover rounded-full group-hover:scale-105 transition-transform"
                     referrerPolicy="no-referrer"
@@ -410,14 +410,14 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-6 h-6 rounded-full p-[1.5px] bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 shrink-0">
                           <img
-                            src="/logo.jpg"
+                            src={company.logoUrl || "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=300&q=80"}
                             alt="avatar"
                             className="w-full h-full object-cover rounded-full"
                             referrerPolicy="no-referrer"
                           />
                         </div>
                         <span className="font-semibold text-neutral-200 truncate text-[11px]">
-                          barbearia_estetica_yeshua
+                          instagram_do_estabelecimento
                         </span>
                       </div>
 
@@ -500,7 +500,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                       {/* Legenda resumida */}
                       <p className="text-xs text-neutral-300 line-clamp-2 leading-relaxed">
                         <strong className="text-neutral-100 mr-1.5">
-                          barbearia_estetica_yeshua
+                          instagram_do_estabelecimento
                         </strong>
                         {item.caption || item.title}
                       </p>
@@ -617,7 +617,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                   <div className="flex items-center gap-2.5">
                     <div className="w-9 h-9 rounded-full p-[2px] bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600">
                       <img
-                        src="/logo.jpg"
+                        src={company.logoUrl || "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=300&q=80"}
                         alt="avatar"
                         className="w-full h-full object-cover rounded-full"
                         referrerPolicy="no-referrer"
