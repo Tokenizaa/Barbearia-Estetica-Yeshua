@@ -417,7 +417,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                           />
                         </div>
                         <span className="font-semibold text-neutral-200 truncate text-[11px]">
-                          instagram_do_estabelecimento
+                          seu_perfil
                         </span>
                       </div>
 
@@ -500,7 +500,7 @@ export const InstagramSection: React.FC<InstagramSectionProps> = ({
                       {/* Legenda resumida */}
                       <p className="text-xs text-neutral-300 line-clamp-2 leading-relaxed">
                         <strong className="text-neutral-100 mr-1.5">
-                          instagram_do_estabelecimento
+                          seu_perfil
                         </strong>
                         {item.caption || item.title}
                       </p>
