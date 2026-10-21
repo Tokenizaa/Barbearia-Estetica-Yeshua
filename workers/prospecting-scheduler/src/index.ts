@@ -318,10 +318,11 @@ async function createDedupeKey(candidate: Record<string, unknown>) {
   const name = normalizeName(String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? ""));
   const city = normalizeName(String(first(candidate, ["city", "locality"]) ?? ""));
   const region = normalizeName(String(first(candidate, ["region", "state", "province"]) ?? ""));
+  const country = String(first(candidate, ["countryCode", "country_code"]) ?? "BR").toUpperCase();
   let identity = "";
   if (website) identity = `website:${website}`;
   else if (phone) identity = `phone:${phone}`;
-  else if (name && city && region) identity = `name-location:${name}|city:${city}|region:${region}`;
+  else if (name && city && region) identity = `name-location:${name}|city:${city}|region:${region}|country:${country}`;
   else return null;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(identity));
   return `sha256:${Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
@@ -1079,4 +1080,4 @@ export default {
   },
 };
 
-export { normalizeName, normalizeWebsite, normalizePhone, qualify, scheduleDueCampaigns, processBatch };
+export { normalizeName, normalizeWebsite, normalizePhone, qualify, createDedupeKey, scheduleDueCampaigns, processBatch };

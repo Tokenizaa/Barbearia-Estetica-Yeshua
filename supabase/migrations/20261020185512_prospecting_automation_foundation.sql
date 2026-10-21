@@ -184,9 +184,11 @@ revoke all on table
 from anon, authenticated;
 
 grant select, insert, update, delete on table public.prospecting_campaigns to authenticated;
+drop policy if exists prospecting_campaigns_platform_admin_read on public.prospecting_campaigns;
 create policy prospecting_campaigns_platform_admin_read
   on public.prospecting_campaigns for select to authenticated
   using ((select private.is_platform_admin()));
+drop policy if exists prospecting_campaigns_platform_admin_write on public.prospecting_campaigns;
 create policy prospecting_campaigns_platform_admin_write
   on public.prospecting_campaigns for all to authenticated
   using ((select private.is_platform_admin()))
@@ -198,12 +200,15 @@ grant select on table
   public.site_project_versions
 to authenticated;
 
+drop policy if exists prospect_events_platform_admin_read on public.prospect_events;
 create policy prospect_events_platform_admin_read
   on public.prospect_events for select to authenticated
   using ((select private.is_platform_admin()));
+drop policy if exists prospect_outbound_messages_platform_admin_read on public.prospect_outbound_messages;
 create policy prospect_outbound_messages_platform_admin_read
   on public.prospect_outbound_messages for select to authenticated
   using ((select private.is_platform_admin()));
+drop policy if exists site_project_versions_platform_admin_read on public.site_project_versions;
 create policy site_project_versions_platform_admin_read
   on public.site_project_versions for select to authenticated
   using ((select private.is_platform_admin()));

@@ -44,6 +44,7 @@ create index if not exists prospecting_candidates_phone_idx
 alter table public.prospecting_candidates enable row level security;
 revoke all on public.prospecting_candidates from anon, authenticated;
 grant select on public.prospecting_candidates to authenticated;
+drop policy if exists prospecting_candidates_platform_admin_read on public.prospecting_candidates;
 create policy prospecting_candidates_platform_admin_read
   on public.prospecting_candidates for select to authenticated
   using ((select private.is_platform_admin()));

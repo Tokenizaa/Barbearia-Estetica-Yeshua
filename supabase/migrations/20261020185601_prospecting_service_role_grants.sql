@@ -16,6 +16,7 @@ grant usage, select on sequence
 to service_role;
 
 -- The queue is inaccessible to browser roles and writable only by trusted workers.
+drop policy if exists prospecting_tasks_service_role_only on public.prospecting_tasks;
 create policy prospecting_tasks_service_role_only
   on public.prospecting_tasks
   for all

@@ -172,15 +172,18 @@ alter table public.site_template_versions enable row level security;
 alter table public.site_projects enable row level security;
 alter table public.audit_events enable row level security;
 
+drop policy if exists platform_admins_read_self_or_platform_admin on public.platform_admins;
 create policy platform_admins_read_self_or_platform_admin
 on public.platform_admins for select to authenticated
 using (user_id = (select auth.uid()) or (select private.is_platform_admin()));
 
+drop policy if exists platform_admins_manage_platform_admin on public.platform_admins;
 create policy platform_admins_manage_platform_admin
 on public.platform_admins for all to authenticated
 using ((select private.is_platform_admin()))
 with check ((select private.is_platform_admin()));
 
+drop policy if exists establishments_read_authorized on public.establishments;
 create policy establishments_read_authorized
 on public.establishments for select to authenticated
 using (
@@ -188,10 +191,12 @@ using (
   or (select private.has_establishment_role(id, null))
 );
 
+drop policy if exists establishments_insert_platform_admin on public.establishments;
 create policy establishments_insert_platform_admin
 on public.establishments for insert to authenticated
 with check ((select private.is_platform_admin()));
 
+drop policy if exists establishments_update_authorized on public.establishments;
 create policy establishments_update_authorized
 on public.establishments for update to authenticated
 using (
@@ -203,10 +208,12 @@ with check (
   or (select private.has_establishment_role(id, array['owner','admin']::text[]))
 );
 
+drop policy if exists establishments_delete_platform_admin on public.establishments;
 create policy establishments_delete_platform_admin
 on public.establishments for delete to authenticated
 using ((select private.is_platform_admin()));
 
+drop policy if exists memberships_read_self_or_managers on public.establishment_memberships;
 create policy memberships_read_self_or_managers
 on public.establishment_memberships for select to authenticated
 using (
@@ -215,6 +222,7 @@ using (
   or (select private.has_establishment_role(establishment_id, array['owner','admin']::text[]))
 );
 
+drop policy if exists memberships_insert_managers on public.establishment_memberships;
 create policy memberships_insert_managers
 on public.establishment_memberships for insert to authenticated
 with check (
@@ -225,6 +233,7 @@ with check (
   )
 );
 
+drop policy if exists memberships_update_managers on public.establishment_memberships;
 create policy memberships_update_managers
 on public.establishment_memberships for update to authenticated
 using (
@@ -236,6 +245,7 @@ with check (
   or (select private.has_establishment_role(establishment_id, array['owner']::text[]))
 );
 
+drop policy if exists memberships_delete_managers on public.establishment_memberships;
 create policy memberships_delete_managers
 on public.establishment_memberships for delete to authenticated
 using (
@@ -243,11 +253,13 @@ using (
   or (user_id <> (select auth.uid()) and (select private.has_establishment_role(establishment_id, array['owner']::text[])))
 );
 
+drop policy if exists prospects_platform_admin_all on public.prospects;
 create policy prospects_platform_admin_all
 on public.prospects for all to authenticated
 using ((select private.is_platform_admin()))
 with check ((select private.is_platform_admin()));
 
+drop policy if exists prospects_establishment_members_read on public.prospects;
 create policy prospects_establishment_members_read
 on public.prospects for select to authenticated
 using (
@@ -255,24 +267,29 @@ using (
   and (select private.has_establishment_role(converted_establishment_id, null))
 );
 
+drop policy if exists templates_read_authenticated on public.site_templates;
 create policy templates_read_authenticated
 on public.site_templates for select to authenticated
 using (is_active or (select private.is_platform_admin()));
 
+drop policy if exists templates_manage_platform_admin on public.site_templates;
 create policy templates_manage_platform_admin
 on public.site_templates for all to authenticated
 using ((select private.is_platform_admin()))
 with check ((select private.is_platform_admin()));
 
+drop policy if exists template_versions_read_authenticated on public.site_template_versions;
 create policy template_versions_read_authenticated
 on public.site_template_versions for select to authenticated
 using (is_published or (select private.is_platform_admin()));
 
+drop policy if exists template_versions_manage_platform_admin on public.site_template_versions;
 create policy template_versions_manage_platform_admin
 on public.site_template_versions for all to authenticated
 using ((select private.is_platform_admin()))
 with check ((select private.is_platform_admin()));
 
+drop policy if exists site_projects_read_authorized on public.site_projects;
 create policy site_projects_read_authorized
 on public.site_projects for select to authenticated
 using (
@@ -283,6 +300,7 @@ using (
   )
 );
 
+drop policy if exists site_projects_insert_authorized on public.site_projects;
 create policy site_projects_insert_authorized
 on public.site_projects for insert to authenticated
 with check (
@@ -293,6 +311,7 @@ with check (
   )
 );
 
+drop policy if exists site_projects_update_authorized on public.site_projects;
 create policy site_projects_update_authorized
 on public.site_projects for update to authenticated
 using (
@@ -310,6 +329,7 @@ with check (
   )
 );
 
+drop policy if exists site_projects_delete_authorized on public.site_projects;
 create policy site_projects_delete_authorized
 on public.site_projects for delete to authenticated
 using (
@@ -320,10 +340,12 @@ using (
   )
 );
 
+drop policy if exists audit_events_read_platform_admin on public.audit_events;
 create policy audit_events_read_platform_admin
 on public.audit_events for select to authenticated
 using ((select private.is_platform_admin()));
 
+drop policy if exists audit_events_insert_authorized on public.audit_events;
 create policy audit_events_insert_authorized
 on public.audit_events for insert to authenticated
 with check (

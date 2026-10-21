@@ -51,17 +51,18 @@ export function PlatformAccessPage() {
   const [payment, setPayment] = useState<Payment | null>(null);
 
   useEffect(() => {
-    if (!supabase) return;
+    const client = supabase;
+    if (!client) return;
     const refreshAdmin = async (userId: string) => {
-      const { data: adminRow } = await supabase.from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
+      const { data: adminRow } = await client.from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
       setIsPlatformAdmin(Boolean(adminRow));
     };
-    supabase.auth.getSession().then(({ data }) => {
+    client.auth.getSession().then(({ data }) => {
       setSessionEmail(data.session?.user.email ?? null);
       if (data.session) void refreshAdmin(data.session.user.id);
       else setIsPlatformAdmin(false);
     });
-    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
       setSessionEmail(session?.user.email ?? null);
       if (session) void refreshAdmin(session.user.id);
       else setIsPlatformAdmin(false);

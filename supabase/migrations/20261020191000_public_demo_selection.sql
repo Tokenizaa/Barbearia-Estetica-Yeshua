@@ -23,9 +23,11 @@ create index if not exists site_demo_public_links_expiry_idx
 alter table public.site_demo_public_links enable row level security;
 revoke all on public.site_demo_public_links from anon, authenticated;
 grant select, insert, update on public.site_demo_public_links to authenticated;
+drop policy if exists site_demo_public_links_admin_read on public.site_demo_public_links;
 create policy site_demo_public_links_admin_read
   on public.site_demo_public_links for select to authenticated
   using ((select private.is_platform_admin()));
+drop policy if exists site_demo_public_links_admin_write on public.site_demo_public_links;
 create policy site_demo_public_links_admin_write
   on public.site_demo_public_links for all to authenticated
   using ((select private.is_platform_admin()))

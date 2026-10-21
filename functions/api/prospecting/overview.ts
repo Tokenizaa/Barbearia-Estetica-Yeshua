@@ -70,7 +70,7 @@ export async function onRequestGet({ request, env }: Context) {
       ["sentMessages", "prospect_outbound_messages", { status: "eq.sent" }],
       ["deliveredMessages", "prospect_outbound_messages", { status: "eq.delivered" }],
       ["optedOutMessages", "prospect_outbound_messages", { status: "eq.opted_out" }],
-    ] as Array<[string, string, Record<string, string>]>;
+    ] as Array<[string, string, Record<string, string>]>);
     const counts = Object.fromEntries(await Promise.all(entries.map(async ([key, table, filters]) => [key, await countRows(env, table, filters)] as const)));
     return json({ status: "ok", checkedAt: new Date().toISOString(), counts });
   } catch (error) {

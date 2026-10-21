@@ -44,8 +44,8 @@ assert(
   `Obtido: ${defaultTenant.id}`
 );
 assert(
-  defaultTenant.name.includes('Yeshua'),
-  'Nome do estabelecimento padrão contém "Yeshua"',
+  defaultTenant.name.trim().length > 0,
+  'Nome do estabelecimento padrão definido (seed neutro white-label)',
   `Obtido: ${defaultTenant.name}`
 );
 assert(
