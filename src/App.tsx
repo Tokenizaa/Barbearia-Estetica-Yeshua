@@ -17,6 +17,7 @@ import { SuperAdminPage } from './pages/SuperAdminPage';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
 import { PlatformAccessPage } from './pages/PlatformAccessPage';
 import { PlatformAdminDashboard } from './pages/PlatformAdminDashboard';
+import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
 import { AlertTriangle, Building2, Check } from 'lucide-react';
 
 export default function App() {
@@ -24,6 +25,7 @@ export default function App() {
   const [selectedServiceIdForBooking, setSelectedServiceIdForBooking] = useState<string | null>(null);
   const { establishment, store } = useStore();
   const sharedPreview = readShareablePreview(window.location.search);
+  const publicDemoMatch = window.location.pathname.match(/^\/demo\/([A-Za-z0-9_-]{40,100})\/?$/);
 
   const handleBookService = (serviceId?: string) => {
     setSelectedServiceIdForBooking(serviceId || null);
@@ -33,6 +35,10 @@ export default function App() {
 
   if (window.location.pathname === '/plataforma/admin') {
     return <PlatformAdminDashboard />;
+  }
+
+  if (publicDemoMatch) {
+    return <PublicDemoSelectionPage token={publicDemoMatch[1]} />;
   }
 
   if (window.location.pathname === '/plataforma/cadastro' || window.location.pathname === '/plataforma/login') {

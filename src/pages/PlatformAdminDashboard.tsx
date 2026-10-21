@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Building2, Globe, LogOut, RefreshCw, ShieldCheck, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { ProspectingConsole } from './ProspectingConsole';
 
 type Salon = { id: string; name: string; slug: string; status: string; billing_status: string; created_at: string };
 
@@ -51,6 +52,9 @@ export function PlatformAdminDashboard() {
       <article className="rounded-xl border border-neutral-800 p-5"><div className="flex items-center gap-2 text-sm text-neutral-400"><Users className="h-4 w-4" /> Prospecções</div><p className="mt-3 text-3xl font-semibold">{loading ? '—' : prospects}</p></article>
     </section>
     <section className="mt-8"><div className="mb-4"><h2 className="text-lg font-semibold">Salões e estabelecimentos</h2><p className="mt-1 text-sm text-neutral-400">Contas cadastradas, situação do site e situação da cobrança.</p></div><div className="overflow-x-auto rounded-xl border border-neutral-800"><table className="w-full min-w-[640px] text-left text-sm"><thead className="bg-neutral-900 text-xs uppercase tracking-wide text-neutral-500"><tr><th className="px-4 py-3 font-medium">Salão</th><th className="px-4 py-3 font-medium">Identificador do site</th><th className="px-4 py-3 font-medium">Site</th><th className="px-4 py-3 font-medium">Cobrança</th></tr></thead><tbody className="divide-y divide-neutral-800">{loading ? <tr><td colSpan={4} className="px-4 py-8 text-center text-neutral-500">Carregando salões...</td></tr> : salons.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-neutral-500">Nenhum salão cadastrado.</td></tr> : salons.map(s => <tr key={s.id} className="text-neutral-300"><td className="px-4 py-3 font-medium text-neutral-100">{s.name}</td><td className="px-4 py-3 text-neutral-400">/{s.slug}</td><td className="px-4 py-3">{s.status}</td><td className="px-4 py-3">{s.billing_status || 'pendente'}</td></tr>)}</tbody></table></div><p className="mt-3 text-xs text-neutral-500">Visão geral da plataforma. A edição e a publicação dos sites serão feitas na área de gestão de cada salão.</p></section>
+    <section className="mt-10 border-t border-neutral-800 pt-8">
+      <ProspectingConsole />
+    </section>
     <footer className="mt-8 border-t border-neutral-800 pt-5"><a href="/" className="text-sm text-neutral-400 hover:text-white">Voltar ao site público</a></footer>
   </div></main>;
 }

@@ -28,7 +28,7 @@ function devCapturePlugin() {
               },
               body: bodyText,
             });
-            const { onRequestPost } = await import('./functions/api/capture');
+            const { onRequestPost } = await import('./functions/api/capture.ts');
             const response = await onRequestPost({ request: fetchReq });
             res.statusCode = response.status;
             response.headers.forEach((val, key) => res.setHeader(key, val));

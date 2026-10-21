@@ -115,7 +115,7 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
 export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null }> = ({ preview }) => {
   if (!preview) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-neutral-950 px-5 text-neutral-100">
+      <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-5 text-neutral-100">
         <div className="max-w-lg rounded-2xl border border-neutral-800 bg-neutral-900 p-8 text-center shadow-xl">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
             ⚠️
@@ -131,7 +131,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
             Voltar ao início
           </a>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -153,7 +153,7 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
   const safeWebsiteUrl = /^https?:\/\//i.test(preview.websiteUrl) ? preview.websiteUrl : '';
 
   return (
-    <main className="min-h-screen bg-neutral-100 text-neutral-900">
+    <div className="min-h-screen bg-neutral-100 text-neutral-900">
       {/* Top Banner differentiating snapshot from published site */}
       <header className="sticky top-0 z-30 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-900 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
@@ -322,6 +322,6 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
           )}
         </footer>
       </div>
-    </main>
+    </div>
   );
 };

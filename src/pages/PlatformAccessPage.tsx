@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Building2, CircleAlert, CreditCard, LogIn, LogOut, UserPlus } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { ProspectingConsole } from './ProspectingConsole';
 
 type Plan = {
   id: string;
@@ -30,6 +31,11 @@ function formatPrice(cents: number) {
 }
 
 export function PlatformAccessPage() {
+  const queryParams = new URLSearchParams(window.location.search);
+  const initialDemoToken = queryParams.get('demoToken') || '';
+  const initialVersionId = queryParams.get('versionId') || '';
+  const initialSalonName = queryParams.get('name') || '';
+
   const [mode, setMode] = useState<'signup' | 'login'>(
     window.location.pathname.endsWith('/login') ? 'login' : 'signup'
   );
@@ -37,9 +43,9 @@ export function PlatformAccessPage() {
   const [bootstrapCode, setBootstrapCode] = useState('');
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [ownerName, setOwnerName] = useState('');
-  const [salonName, setSalonName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugEdited, setSlugEdited] = useState(false);
+  const [salonName, setSalonName] = useState(initialSalonName);
+  const [slug, setSlug] = useState(slugify(initialSalonName));
+  const [slugEdited, setSlugEdited] = useState(Boolean(initialSalonName));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -51,8 +57,9 @@ export function PlatformAccessPage() {
 
   useEffect(() => {
     if (!supabase) return;
+    const client = supabase;
     const refreshAdmin = async (userId: string) => {
-      const { data: adminRow } = await supabase.from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
+      const { data: adminRow } = await client.from('platform_admins').select('user_id').eq('user_id', userId).maybeSingle();
       setIsPlatformAdmin(Boolean(adminRow));
     };
     supabase.auth.getSession().then(({ data }) => {
@@ -109,6 +116,8 @@ export function PlatformAccessPage() {
               owner_name: ownerName.trim(),
               establishment_name: salonName.trim(),
               establishment_slug: slugify(slug || salonName),
+              demo_token: initialDemoToken || undefined,
+              selected_version_id: initialVersionId || undefined,
             },
           },
         });
@@ -191,7 +200,7 @@ export function PlatformAccessPage() {
           {sessionEmail ? (
             <div className="space-y-5">
               <p className="text-sm text-neutral-300">Sessão: <strong>{sessionEmail}</strong></p>
-              {isPlatformAdmin ? <div className="rounded-xl border border-emerald-800 p-4"><p className="font-medium">Administrador geral ativo</p><p className="mt-1 text-sm text-neutral-400">Esta conta tem permissão administrativa geral da plataforma.</p></div> : <><div className="rounded-xl border border-neutral-800 p-4"><p className="font-medium">Contratação e ativação</p><p className="mt-1 text-sm text-neutral-400">Escolha um plano ativo para gerar uma cobrança PIX. Seu salão permanece como rascunho até a confirmação do pagamento.</p></div>
+              {isPlatformAdmin ? <><div className="rounded-xl border border-emerald-800 p-4"><p className="font-medium">Administrador geral ativo</p><p className="mt-1 text-sm text-neutral-400">Esta conta tem permissão administrativa geral da plataforma.</p></div><ProspectingConsole /></> : <><div className="rounded-xl border border-neutral-800 p-4"><p className="font-medium">Contratação e ativação</p><p className="mt-1 text-sm text-neutral-400">Escolha um plano ativo para gerar uma cobrança PIX. Seu salão permanece como rascunho até a confirmação do pagamento.</p></div>
               {plans.length === 0 ? <p className="text-sm text-neutral-400">Nenhum plano está publicado para contratação no momento.</p> : plans.map((plan) => (
                 <div key={plan.id} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-800 p-4">
                   <div><p className="font-medium">{plan.name}</p><p className="mt-1 text-sm text-neutral-400">{plan.description || `${plan.access_days} dias de acesso`}</p><p className="mt-1 text-xs text-neutral-500">Agenda até {plan.max_booking_horizon_days} dias à frente</p><p className="mt-2 font-semibold">{formatPrice(plan.price_brl_cents)} <span className="text-xs font-normal text-neutral-500">/ {plan.billing_period === 'one_time' ? 'pagamento único' : plan.billing_period === 'monthly' ? 'mês (renovação não automática)' : 'ano (renovação não automática)'}</span></p></div>
@@ -204,6 +213,11 @@ export function PlatformAccessPage() {
             </div>
           ) : (
             <form onSubmit={submit} className="space-y-4">
+              {initialDemoToken && (
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300">
+                  Demonstração vinculada: os dados e o modelo escolhido serão associados à sua nova conta.
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-2 rounded-xl border border-neutral-800 p-1"><button type="button" onClick={() => setAccountKind('salon_owner')} className={`rounded-lg px-3 py-2 text-sm ${accountKind === 'salon_owner' ? 'bg-amber-400 text-neutral-950 font-semibold' : 'text-neutral-400'}`}>{mode === 'signup' ? 'Cadastrar salão' : 'Salão'}</button><button type="button" onClick={() => setAccountKind('platform_admin')} className={`rounded-lg px-3 py-2 text-sm ${accountKind === 'platform_admin' ? 'bg-amber-400 text-neutral-950 font-semibold' : 'text-neutral-400'}`}>{mode === 'signup' ? 'Administrador geral' : 'Admin geral'}</button></div>
               {mode === 'signup' && accountKind === 'salon_owner' && <><label className="block text-sm">Seu nome<input required autoComplete="name" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Nome do salão<input required maxLength={120} value={salonName} onChange={e => { setSalonName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Endereço do site (identificador)<input required maxLength={45} value={slug} onChange={e => { setSlug(slugify(e.target.value)); setSlugEdited(true); }} placeholder="meu-salao" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /><span className="mt-1 block text-xs text-neutral-500">Pode ser ajustado posteriormente, se estiver disponível.</span></label></>}
               {mode === 'signup' && accountKind === 'platform_admin' && <label className="block text-sm">Código de ativação do administrador geral<input required autoComplete="off" value={bootstrapCode} onChange={e => setBootstrapCode(e.target.value.toUpperCase().trim())} placeholder="PLATAFORMA-ADMIN-XXXXX-XXXXX-XXXXX" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3 font-mono tracking-wide" /><span className="mt-1 block text-xs text-neutral-500">Código único, com prazo de validade. Só o primeiro cadastro válido poderá usá-lo.</span></label>}

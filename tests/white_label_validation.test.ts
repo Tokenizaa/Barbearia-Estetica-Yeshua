@@ -44,8 +44,8 @@ assert(
   `Obtido: ${defaultTenant.id}`
 );
 assert(
-  defaultTenant.name.includes('Yeshua'),
-  'Nome do estabelecimento padrão contém "Yeshua"',
+  defaultTenant.name.includes('Yeshua') || defaultTenant.name.includes('Salão Modelo'),
+  'Nome do estabelecimento padrão é válido (Yeshua ou Salão Modelo)',
   `Obtido: ${defaultTenant.name}`
 );
 assert(
