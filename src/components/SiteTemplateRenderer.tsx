@@ -180,136 +180,10 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
   const timeslots = ['09:00', '10:00', '11:00', '13:30', '14:30', '15:30', '16:30', '17:30', '18:30'];
 
-  // Default Fallback Services if none provided
-  const servicesList: ServiceItem[] = businessData.services && businessData.services.length > 0
-    ? businessData.services
-    : [
-        {
-          id: 'srv-1',
-          establishmentId: 'demo',
-          name: 'Corte Moderno & Alinhamento',
-          description: 'Corte personalizado, lavagem especial, finalização e styling profissional com pomada.',
-          price: 65,
-          durationMinutes: 45,
-          category: 'Barbearia',
-          featured: true,
-        },
-        {
-          id: 'srv-2',
-          establishmentId: 'demo',
-          name: 'Barba Terapia Imperial com Toalha Quente',
-          description: 'Design de barba com navalhete, toalha aromatizada quente, massagem facial e hidratação.',
-          price: 50,
-          durationMinutes: 40,
-          category: 'Barba',
-          featured: true,
-        },
-        {
-          id: 'srv-3',
-          establishmentId: 'demo',
-          name: 'Combo Completo (Cabelo + Barba + Sobrancelha)',
-          description: 'A experiência definitiva de cuidados masculinos com acabamento e higienização completa.',
-          price: 100,
-          durationMinutes: 75,
-          category: 'Combo',
-          featured: true,
-        },
-        {
-          id: 'srv-4',
-          establishmentId: 'demo',
-          name: 'Revitalização e Selagem Capilar',
-          description: 'Tratamento profundo para alinhamento dos fios com brilho e sedosidade de longa duração.',
-          price: 85,
-          durationMinutes: 50,
-          category: 'Tratamento',
-          featured: true,
-        },
-      ];
-
-  // Default Fallback Products
-  const productsList: ProductItem[] = businessData.products && businessData.products.length > 0
-    ? businessData.products
-    : [
-        {
-          id: 'prd-1',
-          establishmentId: 'demo',
-          name: 'Pomada Matte Fixação Extra Forte',
-          description: 'Acabamento seco sem brilho, efeito natural e fixação garantida durante todo o dia.',
-          price: 49.9,
-          mainImage: 'https://images.unsplash.com/photo-1597854710119-a5a8fc36b6f7?auto=format&fit=crop&w=400&q=80',
-          category: 'Finalizadores',
-          featured: true,
-          available: true,
-        },
-        {
-          id: 'prd-2',
-          establishmentId: 'demo',
-          name: 'Óleo Essencial Tonificante para Barba',
-          description: 'Nutrição com óleos nobres de argan e jojoba, aliviando irritações e perfumando.',
-          price: 42.0,
-          mainImage: 'https://images.unsplash.com/photo-1621607512214-68297480165e?auto=format&fit=crop&w=400&q=80',
-          category: 'Barba',
-          featured: true,
-          available: true,
-        },
-        {
-          id: 'prd-3',
-          establishmentId: 'demo',
-          name: 'Shampoo Fortalecedor Mentolado',
-          description: 'Refrescância imediata, limpeza do couro cabeludo e controle de oleosidade.',
-          price: 38.5,
-          mainImage: 'https://images.unsplash.com/photo-1535585209827-a15fcdbc4c2d?auto=format&fit=crop&w=400&q=80',
-          category: 'Cabelo',
-          featured: true,
-          available: true,
-        },
-      ];
-
-  // Default Fallback Gallery Media
-  const mediaList: MediaItem[] = businessData.media && businessData.media.length > 0
-    ? businessData.media
-    : [
-        {
-          id: 'med-1',
-          establishmentId: 'demo',
-          title: 'Corte Degradê Fade com Textura',
-          category: 'Barbearia',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=600&q=80',
-          featured: true,
-          dateAdded: new Date().toISOString(),
-        },
-        {
-          id: 'med-2',
-          establishmentId: 'demo',
-          title: 'Design de Barba & Contorno Preciso',
-          category: 'Barbearia',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=600&q=80',
-          featured: true,
-          dateAdded: new Date().toISOString(),
-        },
-        {
-          id: 'med-3',
-          establishmentId: 'demo',
-          title: 'Tratamento Facial Relaxante',
-          category: 'Outros',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1512496015851-a90fb38ba796?auto=format&fit=crop&w=600&q=80',
-          featured: true,
-          dateAdded: new Date().toISOString(),
-        },
-        {
-          id: 'med-4',
-          establishmentId: 'demo',
-          title: 'Ambiente Sofisticado & Espaço Lounge',
-          category: 'Ambiente',
-          type: 'image',
-          url: 'https://images.unsplash.com/photo-1585747860715-2ba37e788b70?auto=format&fit=crop&w=600&q=80',
-          featured: true,
-          dateAdded: new Date().toISOString(),
-        },
-      ];
+  // Never invent business services, products, or portfolio items.
+  const servicesList: ServiceItem[] = businessData.services ?? [];
+  const productsList: ProductItem[] = businessData.products ?? [];
+  const mediaList: MediaItem[] = businessData.media ?? [];
 
   const handleSelectVariation = (id: SiteVariationId) => {
     setCurrentVariation(id);
@@ -436,24 +310,17 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </h1>
 
           {/* Slogan & Descrição */}
-          <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed">
-            {businessData.description || 'Experiência única em cortes, cuidados e bem-estar. Escolha o serviço desejado e garanta seu horário de forma rápida e segura.'}
-          </p>
+          {businessData.description && (
+            <p className="text-base sm:text-lg text-neutral-300 max-w-2xl mx-auto leading-relaxed">
+              {businessData.description}
+            </p>
+          )}
 
-          {/* Trust Badges */}
-          <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-neutral-400 pt-2">
-            <span className="flex items-center gap-1.5 font-semibold text-neutral-200">
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" /> Nota 5.0 no Google
-            </span>
-            <span className="h-1 w-1 rounded-full bg-neutral-600 hidden sm:inline" />
-            <span className="flex items-center gap-1.5">
-              <Clock className="w-4 h-4" style={{ color: theme.primaryColor }} /> Agendamento 24h
-            </span>
-            <span className="h-1 w-1 rounded-full bg-neutral-600 hidden sm:inline" />
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" /> Atendimento Personalizado
-            </span>
-          </div>
+          {isDemoSelection && (
+            <p className="text-xs text-amber-300" role="note">
+              Demonstração visual. Avaliações, horários, serviços e preços só serão exibidos quando informados e verificados.
+            </p>
+          )}
 
           {/* Hero CTAs */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -478,6 +345,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* ---------------------------------------------------- */}
       {/* 3. AGENDAMENTO RÁPIDO & CALENDÁRIO INTERATIVO        */}
       {/* ---------------------------------------------------- */}
+      {servicesList.length > 0 && (
       <section id="agendamento" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
         <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -577,8 +445,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
+      )}
+
       {/* 4. GRADE DE SERVIÇOS EM DESTAQUE                    */}
       {/* ---------------------------------------------------- */}
+      {servicesList.length > 0 && (
       <section id="servicos" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -642,8 +513,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
+      )}
+
       {/* 5. GALERIA DE TRABALHOS RECENTES                     */}
       {/* ---------------------------------------------------- */}
+      {mediaList.length > 0 && (
       <section id="galeria" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -679,8 +553,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
+      )}
+
       {/* 6. VITRINE DE PRODUTOS EXCLUSIVOS                    */}
       {/* ---------------------------------------------------- */}
+      {productsList.length > 0 && (
       <section id="produtos" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
@@ -739,6 +616,8 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
+      )}
+
       {/* 7. LOCALIZAÇÃO & CONTATO                             */}
       {/* ---------------------------------------------------- */}
       <section id="localizacao" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
@@ -755,7 +634,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   <MapPin className="w-5 h-5 shrink-0 mt-0.5" style={{ color: theme.primaryColor }} />
                   <div>
                     <span className="font-bold text-white block">Endereço</span>
-                    <p className="text-neutral-400">{businessData.address || `${businessData.city} - ${businessData.state || 'Brasil'}`}</p>
+                    <p className="text-neutral-400">{businessData.address || 'Endereço não informado'}</p>
                   </div>
                 </div>
 
@@ -763,7 +642,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   <Phone className="w-5 h-5 shrink-0 mt-0.5 text-emerald-400" />
                   <div>
                     <span className="font-bold text-white block">Contato & Agendamentos</span>
-                    <p className="text-neutral-400">{businessData.phone || businessData.whatsapp}</p>
+                    <p className="text-neutral-400">{businessData.phone || businessData.whatsapp || 'Contato não informado'}</p>
                   </div>
                 </div>
 
@@ -771,7 +650,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   <Clock className="w-5 h-5 shrink-0 mt-0.5" style={{ color: theme.primaryColor }} />
                   <div>
                     <span className="font-bold text-white block">Horário de Atendimento</span>
-                    <p className="text-neutral-400">Segunda a Sábado: 09:00 às 20:00</p>
+                    <p className="text-neutral-400">Horários não informados</p>
                   </div>
                 </div>
               </div>
