@@ -97,10 +97,11 @@ No painel do Cloudflare: **Workers & Pages** → Projeto **barbearia-yeshua** (o
 
 ---
 
-## Passo 3: Configuração de Secrets no Cloudflare Worker (prospecting-scheduler)
+## Passo 3: Configuração de Secrets e Bindings no Cloudflare Worker (prospecting-scheduler)
 
-O worker de agendamento e processamento assíncrono consome tarefas em segundo plano sem interface gráfica. As chaves devem ser injetadas via Wrangler CLI:
+O worker de agendamento e processamento assíncrono consome tarefas em segundo plano sem interface gráfica. As chaves devem ser injetadas via Wrangler CLI e o binding Browser Run configurado no Dashboard.
 
+### 3.1. Secrets (via Wrangler CLI)
 ```bash
 # 1. Credenciais de acesso ao banco (Service Role)
 npx wrangler secret put SUPABASE_URL --config wrangler.prospecting-scheduler.toml
@@ -109,14 +110,30 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config wrangler.prospecting-
 # 2. Segredo de autenticação para chamadas diretas ao worker
 npx wrangler secret put PROSPECTING_WORKER_SECRET --config wrangler.prospecting-scheduler.toml
 
-# 3. Credenciais da WhatsApp Business Platform / Meta Cloud API
-npx wrangler secret put WHATSAPP_ACCESS_TOKEN --config wrangler.prospecting-scheduler.toml
-npx wrangler secret put WHATSAPP_PHONE_NUMBER_ID --config wrangler.prospecting-scheduler.toml
-npx wrangler secret put WHATSAPP_TEMPLATE_NAME --config wrangler.prospecting-scheduler.toml
-npx wrangler secret put WHATSAPP_API_VERSION --config wrangler.prospecting-scheduler.toml
+# 3. WhatsApp — Evolution API (futuro) — configurar quando disponível
+# npx wrangler secret put WHATSAPP_EVOLUTION_URL --config wrangler.prospecting-scheduler.toml
+# npx wrangler secret put WHATSAPP_EVOLUTION_API_KEY --config wrangler.prospecting-scheduler.toml
+# npx wrangler secret put WHATSAPP_EVOLUTION_INSTANCE --config wrangler.prospecting-scheduler.toml
+
+# 4. Legacy Meta Cloud API (mantido para compatibilidade futura — opcional por enquanto)
+# npx wrangler secret put WHATSAPP_ACCESS_TOKEN --config wrangler.prospecting-scheduler.toml
+# npx wrangler secret put WHATSAPP_PHONE_NUMBER_ID --config wrangler.prospecting-scheduler.toml
+# npx wrangler secret put WHATSAPP_TEMPLATE_NAME --config wrangler.prospecting-scheduler.toml
+# npx wrangler secret put WHATSAPP_API_VERSION --config wrangler.prospecting-scheduler.toml
 ```
 
-### Deploy do Worker:
+### 3.2. Binding Browser Run (via Cloudflare Dashboard)
+No painel do Cloudflare: **Workers & Pages** → **barbearia-yeshua-prospecting-scheduler** → **Settings** → **Bindings** → **Add** → **Browser**:
+- **Variable name**: `BROWSER`
+- **Browser binding**: selecione ou crie o namespace Browser Run
+
+### 3.3. Variáveis de ambiente (wrangler.toml)
+O arquivo `wrangler.prospecting-scheduler.toml` já define:
+- `PROSPECTING_BATCH_SIZE = "10"` (var)
+- `nodejs_compat = true` (necessário para playwright-core)
+- Cron: `*/5 * * * *` (a cada 5 minutos)
+
+### 3.4. Deploy do Worker:
 ```bash
 npx wrangler deploy --config wrangler.prospecting-scheduler.toml
 ```

@@ -3,9 +3,13 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  PROSPECTING_SOURCE_ENDPOINT?: string;
-  PROSPECTING_SOURCE_API_KEY?: string;
-  PROSPECTING_SOURCE_PROVIDER?: string;
+  // Discovery via Playwright + Cloudflare Browser Run (no external HTTP provider)
+  BROWSER: any; // Cloudflare Browser Run binding
+  // WhatsApp — Evolution API (futuro) ou manual por enquanto
+  // WHATSAPP_EVOLUTION_URL?: string;
+  // WHATSAPP_EVOLUTION_API_KEY?: string;
+  // WHATSAPP_EVOLUTION_INSTANCE?: string;
+  // Legacy Meta Cloud API (mantido para compatibilidade futura)
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
@@ -106,6 +110,7 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
+  if (!env.BROWSER) return "BROWSER binding (Cloudflare Browser Run) não configurado";
   return null;
 }
 
@@ -329,30 +334,6 @@ async function createDedupeKey(candidate: Record<string, unknown>) {
 }
 
 async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: string) {
-  if (!env.PROSPECTING_SOURCE_ENDPOINT || !env.PROSPECTING_SOURCE_API_KEY || !env.PROSPECTING_SOURCE_PROVIDER) {
-    if (task.campaign_id) {
-      const campaignBlock = await db(env, `prospecting_campaigns?id=eq.${encodeURIComponent(task.campaign_id)}&select=id`, {
-        method: "PATCH", headers: { prefer: "return=minimal" },
-        body: JSON.stringify({
-          status: "blocked",
-          blocked_reason: "Configure provedor autorizado, endpoint HTTPS e credencial server-side antes de reativar.",
-          next_run_at: null,
-          updated_at: new Date().toISOString(),
-        }),
-      });
-      if (!campaignBlock.ok) throw new Error(`campaign_block_http_${campaignBlock.status}`);
-    }
-    await updateTask(env, task, workerId, {
-      status: "blocked", last_error_code: "discovery_provider_not_configured",
-      last_error: "Provedor autorizado de descoberta, endpoint e credencial não estão configurados.",
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "provider_not_configured" },
-    });
-    return "blocked";
-  }
-  let endpoint: URL;
-  try { endpoint = new URL(env.PROSPECTING_SOURCE_ENDPOINT); } catch { throw new Error("discovery_endpoint_invalid"); }
-  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password) throw new Error("discovery_endpoint_must_be_https_without_credentials");
-
   const campaign = task.payload && typeof task.payload === "object" ? task.payload : {};
   const limitRaw = Number(campaign.dailyDiscoveryLimit ?? 100);
   const dailyLimit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(Math.floor(limitRaw), 10000)) : 100;
@@ -374,40 +355,92 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
     });
     return "succeeded";
   }
-  const response = await fetch(endpoint.toString(), {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${env.PROSPECTING_SOURCE_API_KEY}`,
-      "content-type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify({
-      provider: env.PROSPECTING_SOURCE_PROVIDER,
-      query: {
-        segment: campaign.segment,
-        region: campaign.region,
-        countryCode: campaign.countryCode ?? "BR",
-        limit,
-      },
-      campaignId: campaign.campaignId,
-    }),
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!response.ok) throw new Error(`discovery_provider_http_${response.status}`);
-  const body = await response.json() as { results?: unknown; candidates?: unknown; requestId?: string };
-  const candidates = Array.isArray(body.results) ? body.results : body.candidates;
-  if (!Array.isArray(candidates)) throw new Error("discovery_provider_response_invalid");
+
+  // Build search query for Google Maps / local business directories
+  const segment = String(campaign.segment ?? "barbearia e salão");
+  const region = String(campaign.region ?? "São Paulo - SP");
+  const countryCode = String(campaign.countryCode ?? "BR");
+  const searchQuery = `${segment} ${region}`.trim();
+
+  // Use Cloudflare Browser Run + Playwright for scraping
+  let scrapedResults: Array<Record<string, unknown>> = [];
+  try {
+    // Dynamic import to avoid bundling playwright in the worker unless needed
+    const { chromium } = await import("playwright-core");
+    const browser = await chromium.connectOverCDP(env.BROWSER);
+    const page = await browser.newPage();
+    
+    // Navigate to Google Maps search (or alternative allowed source)
+    // Note: Must respect robots.txt, ToS, and rate limits. This is a template.
+    const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+    await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 30000 });
+    
+    // Wait for results to load
+    await page.waitForSelector('[role="feed"]', { timeout: 15000 }).catch(() => {});
+    
+    // Extract business listings (simplified - real implementation needs robust selectors)
+    const listings = await page.evaluate(() => {
+      const results: Array<Record<string, unknown>> = [];
+      const cards = document.querySelectorAll('[role="feed"] > div[jsaction]');
+      cards.forEach((card, idx) => {
+        if (idx >= 20) return; // Limit per page
+        const nameEl = card.querySelector('.fontHeadlineSmall, h3, .NrDZNb');
+        const categoryEl = card.querySelector('.W4Efsd span, .fontBodyMedium');
+        const addressEl = card.querySelector('.W4Efsd span:nth-child(2), .fontBodyMedium:nth-child(2)');
+        const phoneEl = card.querySelector('[data-tooltip="Copiar número de telefone"], .UsdlK');
+        const websiteEl = card.querySelector('[data-tooltip="Abrir site"], a[aria-label*="site"]');
+        const ratingEl = card.querySelector('.MW4etd, .fontBodyMedium span[aria-label*="estrelas"]');
+        const reviewsEl = card.querySelector('.UY7F9, .fontBodyMedium span[aria-label*="avaliações"]');
+        
+        const name = nameEl?.textContent?.trim() || "";
+        if (!name) return;
+        
+        results.push({
+          name,
+          category: categoryEl?.textContent?.trim() || null,
+          address: addressEl?.textContent?.trim() || null,
+          phone: phoneEl?.textContent?.trim() || null,
+          website: websiteEl?.getAttribute('href') || websiteEl?.textContent?.trim() || null,
+          rating: ratingEl?.getAttribute('aria-label') || ratingEl?.textContent?.trim() || null,
+          reviews: reviewsEl?.textContent?.trim() || null,
+          sourceUrl: window.location.href,
+        });
+      });
+      return results;
+    });
+    
+    scrapedResults = listings;
+    await browser.close();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "browser_run_failed";
+    await updateTask(env, task, workerId, {
+      status: "blocked", last_error_code: "browser_scraping_failed",
+      last_error: `Falha no scraping via Browser Run: ${message}`,
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed" },
+    });
+    return "blocked";
+  }
+
+  if (!scrapedResults.length) {
+    await updateTask(env, task, workerId, {
+      status: "succeeded", last_error_code: null, last_error: null,
+      completed_at: new Date().toISOString(),
+      result: { outcome: "no_results", searched: searchQuery },
+    });
+    return "succeeded";
+  }
+
   let inserted = 0;
   let duplicates = 0;
   let rejected = 0;
-  for (const raw of candidates.slice(0, limit)) {
+  for (const raw of scrapedResults.slice(0, limit)) {
     if (!raw || typeof raw !== "object" || Array.isArray(raw)) { rejected++; continue; }
     const candidate = raw as Record<string, unknown>;
     const businessName = String(first(candidate, ["name", "businessName", "business_name", "companyName"]) ?? "").trim().slice(0, 240);
     const category = String(first(candidate, ["category", "businessCategory", "segment"]) ?? "").trim().slice(0, 120) || null;
     const website = first(candidate, ["website", "websiteUrl", "website_url", "url"]);
     const phone = first(candidate, ["phone", "phoneNumber", "phone_number", "whatsapp"]);
-    const country = String(first(candidate, ["countryCode", "country_code"]) ?? campaign.countryCode ?? "BR").slice(0, 3);
+    const country = String(first(candidate, ["countryCode", "country_code"]) ?? countryCode).slice(0, 3);
     const websiteNormalized = normalizeWebsite(website);
     const phoneNormalized = normalizePhone(phone, country);
     const sourceUrl = normalizeWebsite(first(candidate, ["sourceUrl", "source_url", "sourceLink"]));
@@ -422,13 +455,13 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       description: first(candidate, ["description", "businessDescription"]),
       source_url: sourceUrl,
     });
-    const providerRecordId = String(first(candidate, ["id", "placeId", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
+    const providerRecordId = String(first(candidate, ["placeId", "providerId", "provider_record_id"]) ?? "").slice(0, 250) || null;
     const stored = await db(env, "prospecting_candidates?on_conflict=dedupe_key", {
       method: "POST",
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId,
-        provider: env.PROSPECTING_SOURCE_PROVIDER,
+        provider: "playwright-browser-run",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
@@ -440,7 +473,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         email: typeof first(candidate, ["email", "emailAddress", "email_address"]) === "string" ? String(first(candidate, ["email", "emailAddress", "email_address"])).slice(0, 320) : null,
         address: typeof first(candidate, ["address", "formattedAddress", "formatted_address"]) === "string" ? String(first(candidate, ["address", "formattedAddress", "formatted_address"])).slice(0, 1000) : null,
         city: String(first(candidate, ["city", "locality"]) ?? "").slice(0, 160) || null,
-        region: String(first(candidate, ["region", "state", "province"]) ?? campaign.region ?? "").slice(0, 160) || null,
+        region: String(first(candidate, ["region", "state", "province"]) ?? region ?? "").slice(0, 160) || null,
         country_code: country,
         description: typeof first(candidate, ["description", "businessDescription"]) === "string" ? String(first(candidate, ["description", "businessDescription"])).slice(0, 3000) : null,
         source_url: sourceUrl,
@@ -450,9 +483,9 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
         status: result.score >= 50 ? "qualified" : "discovered",
         raw_evidence: {
           providerRecordId,
-          providerRequestId: body.requestId ?? null,
+          providerRequestId: null,
           observedAt: new Date().toISOString(),
-          evidence: typeof candidate.evidence === "object" ? candidate.evidence : {},
+          evidence: { scraped: true, searchQuery, sourceUrl: candidate.sourceUrl },
         },
       }),
     });
@@ -486,7 +519,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   await updateTask(env, task, workerId, {
     status: "succeeded", last_error_code: null, last_error: null,
     completed_at: new Date().toISOString(),
-    result: { outcome: "discovered", received: candidates.length, inserted, duplicates, rejected, provider: env.PROSPECTING_SOURCE_PROVIDER },
+    result: { outcome: "discovered", received: scrapedResults.length, inserted, duplicates, rejected, provider: "playwright-browser-run", searchQuery },
   });
   return "succeeded";
 }

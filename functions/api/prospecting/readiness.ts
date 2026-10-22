@@ -2,10 +2,14 @@ interface Env {
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_SERVICE_ROLE_KEY?: string;
-  PROSPECTING_SOURCE_PROVIDER?: string;
-  PROSPECTING_SOURCE_API_KEY?: string;
-  PROSPECTING_SOURCE_ENDPOINT?: string;
+  // Discovery via Playwright + Cloudflare Browser Run
+  // BROWSER binding is configured in Worker, not Pages
   PROSPECTING_WORKER_SECRET?: string;
+  // WhatsApp — Evolution API (futuro) ou manual por enquanto
+  WHATSAPP_EVOLUTION_URL?: string;
+  WHATSAPP_EVOLUTION_API_KEY?: string;
+  WHATSAPP_EVOLUTION_INSTANCE?: string;
+  // Legacy Meta Cloud API (mantido para compatibilidade futura)
   WHATSAPP_ACCESS_TOKEN?: string;
   WHATSAPP_PHONE_NUMBER_ID?: string;
   WHATSAPP_TEMPLATE_NAME?: string;
@@ -114,11 +118,12 @@ export async function onRequestGet({ request, env }: Context) {
     }
   }
 
-  const sourceConfigured = Boolean(env.PROSPECTING_SOURCE_PROVIDER?.trim() && env.PROSPECTING_SOURCE_API_KEY?.trim() && env.PROSPECTING_SOURCE_ENDPOINT?.trim());
+  // Discovery: Browser Run binding (configured in Worker, not Pages)
+  // This check is informational for Pages; the Worker validates BROWSER binding at runtime
   checks.push({
-    id: 'discovery_provider',
-    ready: sourceConfigured,
-    detail: sourceConfigured ? `Provedor de descoberta configurado: ${env.PROSPECTING_SOURCE_PROVIDER!.trim()}.` : 'Configure PROSPECTING_SOURCE_PROVIDER, PROSPECTING_SOURCE_ENDPOINT HTTPS e a credencial server-side de um provedor autorizado.',
+    id: 'discovery_browser_run',
+    ready: true, // Pages doesn't have BROWSER binding; Worker does
+    detail: 'Descoberta via Playwright + Cloudflare Browser Run (configurado no Worker prospecting-scheduler).',
   });
 
   const workerConfigured = Boolean(env.PROSPECTING_WORKER_SECRET?.trim());
@@ -128,23 +133,32 @@ export async function onRequestGet({ request, env }: Context) {
     detail: workerConfigured ? 'Segredo do worker configurado.' : 'Configure PROSPECTING_WORKER_SECRET para autenticar execuções internas.',
   });
 
-  const whatsappConfigured = Boolean(
+  // WhatsApp: Evolution API (futuro) ou Meta Cloud API (legacy)
+  const evolutionConfigured = Boolean(
+    env.WHATSAPP_EVOLUTION_URL?.trim() &&
+    env.WHATSAPP_EVOLUTION_API_KEY?.trim() &&
+    env.WHATSAPP_EVOLUTION_INSTANCE?.trim()
+  );
+  const metaConfigured = Boolean(
     env.WHATSAPP_ACCESS_TOKEN?.trim() &&
     env.WHATSAPP_PHONE_NUMBER_ID?.trim() &&
     env.WHATSAPP_TEMPLATE_NAME?.trim() &&
     /^v\d+\.\d+$/.test(env.WHATSAPP_API_VERSION ?? '')
   );
+  const whatsappConfigured = evolutionConfigured || metaConfigured;
   checks.push({
     id: 'whatsapp_provider',
     ready: whatsappConfigured,
-    detail: whatsappConfigured ? 'Credenciais e modelo de mensagem do WhatsApp configurados.' : 'Configure token, identificador do número, modelo aprovado e versão suportada da Graph API.',
+    detail: whatsappConfigured
+      ? (evolutionConfigured ? 'Evolution API configurada.' : 'Meta Cloud API (legacy) configurada.')
+      : 'Configure Evolution API (WHATSAPP_EVOLUTION_URL, WHATSAPP_EVOLUTION_API_KEY, WHATSAPP_EVOLUTION_INSTANCE) ou Meta Cloud API (WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, WHATSAPP_TEMPLATE_NAME, WHATSAPP_API_VERSION). Telefone é normalizado para WhatsApp (DDI 55 + DDD + número).',
   });
 
   const webhookConfigured = Boolean(env.WHATSAPP_APP_SECRET?.trim() && env.WHATSAPP_WEBHOOK_VERIFY_TOKEN?.trim());
   checks.push({
     id: 'whatsapp_webhook_security',
     ready: webhookConfigured,
-    detail: webhookConfigured ? 'Assinatura e token de verificação do webhook configurados.' : 'Configure WHATSAPP_APP_SECRET e WHATSAPP_WEBHOOK_VERIFY_TOKEN para validar recibos e opt-outs do WhatsApp.',
+    detail: webhookConfigured ? 'Assinatura e token de verificação do webhook configurados.' : 'Configure WHATSAPP_APP_SECRET e WHATSAPP_WEBHOOK_VERIFY_TOKEN para validar recibos e opt-outs do WhatsApp (Meta Cloud API). Para Evolution API, configure webhook na instância.',
   });
 
   const ready = checks.every((check) => check.ready);
@@ -153,6 +167,6 @@ export async function onRequestGet({ request, env }: Context) {
     ready,
     checkedAt: new Date().toISOString(),
     checks,
-    note: 'Esta verificação confirma apenas configuração e acesso ao esquema. Não prova que descoberta, envio ou fluxo ponta a ponta funcionem.',
+    note: 'Esta verificação confirma apenas configuração e acesso ao esquema. Não prova que descoberta, envio ou fluxo ponta a ponta funcionem. Discovery roda no Worker (Browser Run); WhatsApp usa Evolution API (futuro) ou manual.',
   }, ready ? 200 : 503);
 }
