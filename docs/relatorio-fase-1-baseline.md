@@ -95,3 +95,14 @@ As seguintes alterações foram gravadas diretamente na `main`, sem criar branch
 6. **Certificação completa:** lint, suítes automatizadas, isolamento de tenants, fluxo real de scraping e smoke tests em produção ainda precisam ser executados.
 
 **Estado atualizado:** correções preventivas para evitar leads e conteúdo comercial fictícios estão implantadas; o build/deploy está READY. A prontidão para produção continua **não aprovada** até que os seis bloqueios acima sejam resolvidos e evidenciados.
+
+
+## 7. Correção de segurança do RPC de agendamento — 22/10/2026
+
+- O Supabase confirmado para esta aplicação é `ifkqrtjhdnolkuucgbpb` (`MeuSalao`).
+- A função `public.create_public_establishment_appointment` era `SECURITY DEFINER` e permitia execução por `anon` e `authenticated`. Como os parâmetros incluíam preço, duração e nome do serviço enviados pelo cliente, isso não é aceitável como API pública de agendamento.
+- Aplicada a migration `20261022174513_lock_down_public_appointment_rpc`: removida a permissão de execução de `PUBLIC`, `anon` e `authenticated`. A função permanece disponível apenas a `service_role` confiável, sem expor essa chave ao navegador. O agendamento público permanece desabilitado até haver catálogo de serviços autoritativo e validação server-side completa.
+- Validação SQL pós-migration: `anon_can_execute=false`, `authenticated_can_execute=false`, `service_role_can_execute=true`. A função de claim de tarefas do worker também permanece inacessível a `anon` e executável por `service_role`.
+- O Security Advisor deixou de listar os alertas 0028/0029 relativos a essa função. Permanece um alerta: proteção contra senhas comprometidas desativada no Supabase Auth; essa configuração não é alterável pelas ferramentas disponíveis nesta execução e precisa ser habilitada no painel Auth.
+- A migration foi versionada diretamente em `main`; não foi criada branch. O arquivo de migration no repositório corresponde à versão registrada no banco.
+- Essa correção fecha a exposição do RPC, mas não certifica todo o pipeline de prospecção, o provedor externo, o isolamento ponta a ponta nem os testes de aplicação.
