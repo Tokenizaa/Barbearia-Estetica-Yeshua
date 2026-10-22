@@ -67,3 +67,31 @@ A sequência técnica recomendada é:
 5. Só então avançar para coleta real via provedor autorizado e validar amostras rastreáveis, persistência e deduplicação.
 
 **Critério de saída:** este relatório fecha o levantamento estático da Fase 1, mas o projeto continua **não aprovado para produção** até que os itens operacionais pendentes sejam executados e documentados.
+
+## 5. Correções aplicadas após o baseline
+
+As seguintes alterações foram gravadas diretamente na `main`, sem criar branches:
+
+- `src/pages/LeadsDashboard.tsx`: removidos os leads de exemplo que eram carregados por padrão; removida a geração artificial de empresas, endereços, telefones, sites, avaliações e perfis sociais; removida a persistência local que apresentava o navegador como fonte de dados do CRM; a busca agora informa explicitamente que a integração real não está conectada e não cria leads falsos.
+- CRM: incluído aviso visível de que o estado ainda é temporário e não deve receber dados operacionais, pois alterações não são persistidas no banco.
+- `src/components/SiteTemplateRenderer.tsx`: removidos serviços, preços, produtos, portfólio e alegações de reputação/horários predefinidos; seções comerciais sem dados ficam ocultas; contato por WhatsApp só aparece quando há número; o fluxo de agendamento informa que é uma simulação e não reserva nem envia horário.
+- `src/pages/SharedSitePreview.tsx`: removidos telefone, endereço, cidade, categoria e logo predefinidos que poderiam ser atribuídos incorretamente à empresa prospectada.
+- `src/pages/LeadsDashboard.tsx`: removida a alegação não verificada de que a empresa tem perfil de excelência no Google na mensagem de abordagem.
+
+### Validação após as correções
+
+- Deploy de produção Vercel associado ao commit `6bddcd613892672383dc04b0a0ac3fcde89ed994`: estado **READY**.
+- O build de um commit intermediário falhou por sintaxe JSX nas condições de exibição; a sintaxe foi corrigida no commit `04c880ea8310c7523ddcacc8c7f8aa4a864dea95`, cujo deploy foi **READY**. O commit mais recente também chegou a **READY**.
+- Foi feita verificação estática dos arquivos na `main`: os nomes de empresas fictícias, geração `lead-dyn-`, chave `alvanto_leads_crm_v2`, telefone de exemplo e afirmação “Nota 5.0 no Google” não aparecem mais nos arquivos corrigidos.
+- **Não foram executados** `npm test`, `npm run lint` nem testes ponta a ponta nesta sessão. Estado READY do deploy confirma build/deploy, não certifica os testes de negócio.
+
+## 6. Bloqueios ainda abertos — não considerar a plataforma pronta
+
+1. **Persistência real do CRM:** permanece pendente. A tela está explicitamente em modo temporário para evitar perda silenciosa de dados. Não foi identificado, nas conexões de Supabase disponíveis para esta execução, um projeto confirmado como pertencente a esta aplicação; não foi criado banco nem aplicada migration por suposição.
+2. **Fonte real de prospecção:** a interface não está conectada ao pipeline de descoberta do Worker. A busca foi bloqueada de modo seguro em vez de simular resultados. A integração só pode ser habilitada após confirmar provedor, endpoint, credenciais e permissões.
+3. **RLS e autorização server-side:** continuam sem certificação operacional. Não se deve concluir que há isolamento adequado apenas porque as páginas administrativas verificam sessão no cliente.
+4. **Demonstrações públicas:** o parâmetro `site-preview` continua contendo dados codificados no URL; Base64URL não é criptografia nem assinatura. Não colocar segredos ou dados privados nesse payload. A migração para link/token persistido deve ser concluída e testada antes de tratar os links como mecanismo de controle de acesso.
+5. **Pagamentos, migrations e bindings:** a validação estática do webhook VenoPag não prova que a função de banco, as migrations e os secrets correspondentes estejam aplicados e corretos em produção.
+6. **Certificação completa:** lint, suítes automatizadas, isolamento de tenants, fluxo real de scraping e smoke tests em produção ainda precisam ser executados.
+
+**Estado atualizado:** correções preventivas para evitar leads e conteúdo comercial fictícios estão implantadas; o build/deploy está READY. A prontidão para produção continua **não aprovada** até que os seis bloqueios acima sejam resolvidos e evidenciados.
