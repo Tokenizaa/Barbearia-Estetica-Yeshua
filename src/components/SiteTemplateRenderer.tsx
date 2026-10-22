@@ -260,23 +260,24 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
           </div>
           <div>
             <h1 className="text-base font-extrabold tracking-tight text-white line-clamp-1">{businessData.name}</h1>
-            <p className="text-[11px] text-neutral-400">{businessData.category || 'Atendimento Premium'}</p>
+            <p className="text-[11px] text-neutral-400">{businessData.category || 'Categoria não informada'}</p>
           </div>
         </div>
 
         <div className="hidden md:flex items-center gap-6 text-xs font-medium text-neutral-300">
-          <a href="#servicos" className="hover:text-white transition">Serviços</a>
-          <a href="#agendamento" className="hover:text-white transition">Agendamento</a>
-          <a href="#galeria" className="hover:text-white transition">Galeria</a>
-          <a href="#produtos" className="hover:text-white transition">Produtos</a>
+          <a hidden={servicesList.length === 0} href="#servicos" className="hover:text-white transition">Serviços</a>
+          <a hidden={servicesList.length === 0} href="#agendamento" className="hover:text-white transition">Agendamento</a>
+          <a hidden={mediaList.length === 0} href="#galeria" className="hover:text-white transition">Galeria</a>
+          <a hidden={productsList.length === 0} href="#produtos" className="hover:text-white transition">Produtos</a>
           <a href="#localizacao" className="hover:text-white transition">Localização</a>
         </div>
 
         <a
+          hidden={servicesList.length === 0}
           href="#agendamento"
           className={`px-4 py-2 rounded-xl text-xs font-bold shadow-md transition ${theme.buttonPrimary}`}
         >
-          Agendar Horário
+          Ver demonstração
         </a>
       </nav>
 
@@ -288,7 +289,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
         <div className="absolute inset-0 z-0 opacity-30">
           <img
             src={businessData.coverUrl || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80'}
-            alt={businessData.name}
+            alt="Imagem ilustrativa de barbearia"
             className="w-full h-full object-cover filter contrast-125 scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/80 to-neutral-950/90" />
@@ -299,9 +300,9 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
         <div className="relative z-10 max-w-4xl mx-auto text-center space-y-6">
           {/* Badge de Categoria */}
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md mx-auto" style={{ borderColor: theme.primaryColor, color: theme.primaryColor, backgroundColor: `${theme.primaryColor}15` }}>
+          <div hidden={!businessData.tagline && !businessData.category} className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold border backdrop-blur-md mx-auto" style={{ borderColor: theme.primaryColor, color: theme.primaryColor, backgroundColor: `${theme.primaryColor}15` }}>
             <Sparkles className="w-3.5 h-3.5" />
-            <span>{businessData.tagline || `${businessData.category} • Atendimento de Excelência`}</span>
+            <span>{businessData.tagline || businessData.category}</span>
           </div>
 
           {/* Nome Comercial */}
