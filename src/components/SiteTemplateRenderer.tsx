@@ -349,8 +349,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       {/* ---------------------------------------------------- */}
       {/* 3. AGENDAMENTO RÁPIDO & CALENDÁRIO INTERATIVO        */}
       {/* ---------------------------------------------------- */}
-      {servicesList.length > 0 && (
-      <section id="agendamento" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
+      <section id="agendamento" hidden={servicesList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20">
         <div className="text-center max-w-xl mx-auto mb-10 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
             Agendamento Online
@@ -449,12 +448,10 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
-      )}
 
       {/* 4. GRADE DE SERVIÇOS EM DESTAQUE                    */}
       {/* ---------------------------------------------------- */}
-      {servicesList.length > 0 && (
-      <section id="servicos" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
+      <section id="servicos" hidden={servicesList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
             Menu de Atendimentos
@@ -517,12 +514,10 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
-      )}
 
       {/* 5. GALERIA DE TRABALHOS RECENTES                     */}
       {/* ---------------------------------------------------- */}
-      {mediaList.length > 0 && (
-      <section id="galeria" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
+      <section id="galeria" hidden={mediaList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
             Portfólio & Transformações
@@ -557,12 +552,10 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
-      )}
 
       {/* 6. VITRINE DE PRODUTOS EXCLUSIVOS                    */}
       {/* ---------------------------------------------------- */}
-      {productsList.length > 0 && (
-      <section id="produtos" className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
+      <section id="produtos" hidden={productsList.length === 0} className="max-w-6xl mx-auto px-4 sm:px-8 py-16 scroll-mt-20 border-t border-neutral-800/60">
         <div className="text-center max-w-xl mx-auto mb-12 space-y-2">
           <span className={`text-xs font-bold uppercase tracking-widest ${theme.badgeStyle} px-3 py-1 rounded-full border`}>
             Linha Profissional
@@ -620,7 +613,6 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
       </section>
 
       {/* ---------------------------------------------------- */}
-      )}
 
       {/* 7. LOCALIZAÇÃO & CONTATO                             */}
       {/* ---------------------------------------------------- */}
