@@ -324,20 +324,24 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
 
           {/* Hero CTAs */}
           <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="#agendamento"
-              className={`w-full sm:w-auto px-8 py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-xl transition transform active:scale-95 ${theme.buttonPrimary}`}
-            >
-              <Calendar className="w-4 h-4" /> Agendar Horário Online
-            </a>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={`w-full sm:w-auto px-6 py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition ${theme.buttonSecondary}`}
-            >
-              <MessageCircle className="w-4 h-4 text-emerald-400" /> WhatsApp Direto
-            </a>
+            {servicesList.length > 0 && (
+              <a
+                href="#agendamento"
+                className={`w-full sm:w-auto px-8 py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-xl transition transform active:scale-95 ${theme.buttonPrimary}`}
+              >
+                <Calendar className="w-4 h-4" /> Ver demonstração de agendamento
+              </a>
+            )}
+            {whatsappClean && (
+              <a
+                href={whatsappUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`w-full sm:w-auto px-6 py-4 rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition ${theme.buttonSecondary}`}
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-400" /> WhatsApp
+              </a>
+            )}
           </div>
         </div>
       </section>
@@ -365,15 +369,15 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               <div className="h-16 w-16 mx-auto rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
                 <CheckCircle2 className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold text-white">Horário Solicitado com Sucesso!</h3>
+              <h3 className="text-xl font-bold text-amber-300">Simulação de agendamento</h3>
               <p className="text-sm text-neutral-300 max-w-md mx-auto">
-                Agendamento para <strong>{bookingDate}</strong> às <strong>{bookingTime}</strong> registrado para {businessData.name}. Entraremos em contato via WhatsApp para confirmar.
+                Esta é apenas uma demonstração visual. Nenhum horário foi reservado ou enviado para {businessData.name}.
               </p>
               <button
                 onClick={() => setBookingConfirmed(false)}
                 className={`mt-4 px-6 py-2.5 rounded-xl text-xs font-bold ${theme.buttonPrimary}`}
               >
-                Fazer Outro Agendamento
+                Voltar à demonstração
               </button>
             </div>
           ) : (
@@ -656,14 +660,16 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               </div>
 
               <div className="pt-2 flex flex-wrap gap-3">
-                <a
-                  href={whatsappUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className={`px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition ${theme.buttonPrimary}`}
-                >
-                  <MessageCircle className="w-4 h-4" /> Conversar no WhatsApp
-                </a>
+                {whatsappClean && (
+                  <a
+                    href={whatsappUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`px-6 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition ${theme.buttonPrimary}`}
+                  >
+                    <MessageCircle className="w-4 h-4" /> Conversar no WhatsApp
+                  </a>
+                )}
                 <a
                   href={`https://maps.google.com/?q=${encodeURIComponent(`${businessData.name} ${businessData.address} ${businessData.city}`)}`}
                   target="_blank"
