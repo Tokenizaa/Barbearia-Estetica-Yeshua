@@ -12,7 +12,10 @@ import { AppointmentPage } from './pages/AppointmentPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { ContactPage } from './pages/ContactPage';
-import { UnifiedAdminDashboard } from './pages/UnifiedAdminDashboard';
+import { AdminPage } from './pages/AdminPage';
+import { SuperAdminPage } from './pages/SuperAdminPage';
+import { PlatformAccessPage } from './pages/PlatformAccessPage';
+import { LeadsDashboard } from './pages/LeadsDashboard';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
 import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
 import { AlertTriangle } from 'lucide-react';
@@ -38,14 +41,22 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Route: Platform Network / Super Admin
-  if (['/plataforma/admin', '/admin', '/plataforma/login', '/plataforma/cadastro'].includes(window.location.pathname)) {
-    return <UnifiedAdminDashboard initialSection="rede-saloes" onBackToApp={handleBackToPublicSite} />;
+  // Autenticação/cadastro usam Supabase Auth e o fluxo de contratação VenoPag.
+  if (['/plataforma/login', '/plataforma/cadastro'].includes(window.location.pathname)) {
+    return <PlatformAccessPage />;
   }
 
-  // Route: Leads Discovery & CRM Scraping Dashboard
+  // Administração geral e gestão do salão são rotas independentes.
+  if (window.location.pathname === '/plataforma/admin') {
+    return <SuperAdminPage onBackToApp={handleBackToPublicSite} />;
+  }
+  if (window.location.pathname === '/admin') {
+    return <AdminPage onBackToApp={handleBackToPublicSite} onNavigateToSuperAdmin={() => window.location.assign('/plataforma/login')} />;
+  }
+
+  // CRM e raspagem ficam no painel da plataforma, nunca no painel do salão.
   if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao'].includes(window.location.pathname)) {
-    return <UnifiedAdminDashboard initialSection="prospeccao-hoje" onBackToApp={handleBackToPublicSite} />;
+    return <LeadsDashboard />;
   }
 
   if (publicDemoMatch) {
@@ -56,13 +67,15 @@ export default function App() {
     return <SharedSitePreview preview={sharedPreview} />;
   }
 
-  // If in admin mode, display Unified Admin full-screen
+  // A navegação interna não pode unificar os dois contextos administrativos.
   if (currentPage === 'admin') {
-    return <UnifiedAdminDashboard initialSection="salao-dashboard" onBackToApp={handleBackToPublicSite} />;
+    window.location.replace('/admin');
+    return null;
   }
 
   if (currentPage === 'super-admin') {
-    return <UnifiedAdminDashboard initialSection="rede-saloes" onBackToApp={handleBackToPublicSite} />;
+    window.location.replace('/plataforma/login');
+    return null;
   }
 
   const isPublicPage = true;
