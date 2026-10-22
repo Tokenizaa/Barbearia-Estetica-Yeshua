@@ -13,7 +13,7 @@ import { ProductsPage } from './pages/ProductsPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { ContactPage } from './pages/ContactPage';
 import { AdminPage } from './pages/AdminPage';
-import { SuperAdminPage } from './pages/SuperAdminPage';
+import { PlatformAdminDashboard } from './pages/PlatformAdminDashboard';
 import { PlatformAccessPage } from './pages/PlatformAccessPage';
 import { LeadsDashboard } from './pages/LeadsDashboard';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
@@ -48,7 +48,7 @@ export default function App() {
 
   // Administração geral e gestão do salão são rotas independentes.
   if (window.location.pathname === '/plataforma/admin') {
-    return <SuperAdminPage onBackToApp={handleBackToPublicSite} />;
+    return <PlatformAdminDashboard />;
   }
   if (window.location.pathname === '/admin') {
     return <AdminPage onBackToApp={handleBackToPublicSite} onNavigateToSuperAdmin={() => window.location.assign('/plataforma/login')} />;
