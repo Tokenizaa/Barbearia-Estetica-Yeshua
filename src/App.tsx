@@ -18,6 +18,7 @@ import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePrevi
 import { PlatformAccessPage } from './pages/PlatformAccessPage';
 import { PlatformAdminDashboard } from './pages/PlatformAdminDashboard';
 import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
+import { LeadsDashboard } from './pages/LeadsDashboard';
 import { AlertTriangle, Building2, Check } from 'lucide-react';
 
 export default function App() {
@@ -33,12 +34,16 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-if (publicDemoMatch) {
+  if (window.location.pathname === '/plataforma/admin') {
+    return <PlatformAdminDashboard />;
+  }
+
+  if (publicDemoMatch) {
     return <PublicDemoSelectionPage token={publicDemoMatch[1]} />;
   }
 
-  if (window.location.pathname === '/plataforma/admin') {
-    return <PlatformAdminDashboard />;
+  if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao'].includes(window.location.pathname)) {
+    return <LeadsDashboard />;
   }
 
   if (window.location.pathname === '/plataforma/cadastro' || window.location.pathname === '/plataforma/login') {

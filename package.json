@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
-    "test": "tsx tests/white_label_validation.test.ts && tsx tests/prospecting_automation.test.ts && tsx tests/prospecting_worker.test.ts",
+    "test": "tsx tests/white_label_validation.test.ts && tsx tests/prospecting_automation.test.ts && tsx tests/prospecting_worker.test.ts && tsx tests/billing_and_onboarding.test.ts && tsx tests/end_to_end_pipeline_certification.test.ts",
     "pages:deploy": "npm run build && wrangler pages deploy dist --project-name=barbearia-yeshua",
     "pages:preview": "npm run build && wrangler pages dev dist",
     "deploy": "npm run build && wrangler pages deploy dist --project-name=barbearia-yeshua"

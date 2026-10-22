@@ -193,6 +193,7 @@ export type SuperAdminTab =
   | 'leads'
   | 'establishments'
   | 'new-establishment'
+  | 'clients'
   | 'administrators'
   | 'audit-logs'
   | 'settings';

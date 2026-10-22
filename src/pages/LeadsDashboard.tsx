@@ -1,558 +1,1182 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  Search,
+  Users,
+  Compass,
+  Building2,
+  Calendar,
+  MessageCircle,
+  Globe,
+  Instagram,
+  ArrowRight,
+  ChevronRight,
+  ExternalLink,
+  CheckCircle2,
+  Clock,
+  Sparkles,
+  Filter,
+  Plus,
+  LayoutGrid,
+  List,
+  Phone,
+  MapPin,
+  Star,
+  Flame,
+  AlertCircle,
+  X,
+  Share2,
+  Check,
+  RotateCw,
+  SlidersHorizontal,
+  ChevronDown
+} from 'lucide-react';
 import { createShareablePreviewUrl } from './SharedSitePreview';
-import { Activity, ArrowRight, Check, CheckCircle, Clock, Edit3, ExternalLink, FilePlus2, Globe2, Plus, Search, Share2, Sparkles, Users } from 'lucide-react';
 
-type LeadStatus =
-  | 'new'
-  | 'reviewing'
-  | 'qualified'
-  | 'site_preparing'
-  | 'site_ready'
-  | 'proposal_sent'
-  | 'interested'
-  | 'not_interested'
-  | 'converted'
-  | 'archived';
+export type LeadStage = 'novo' | 'contatado' | 'respondeu' | 'reuniao' | 'fechado';
+export type OpportunityLevel = 'alta' | 'media' | 'baixa';
 
-type VerificationStatus = 'unreviewed' | 'in_review' | 'verified' | 'needs_correction';
-type ProjectStatus = 'not_started' | 'preparing' | 'ready_for_review' | 'approved_to_share' | 'shared' | 'revision_requested' | 'accepted' | 'declined' | 'failed';
-
-interface LeadActivity {
+export interface LeadCompany {
   id: string;
-  summary: string;
-  createdAt: string;
-}
-
-interface SiteProject {
-  status: ProjectStatus;
-  templateId: string;
-  templateName: string;
-  templateVersion: number;
-  versions: Array<{ templateId: string; templateName: string; version: number; createdAt: string }>;
-  previewText: string;
-  updatedAt: string;
-}
-
-interface CaptureResponse {
-  requestedUrl: string; finalUrl: string; sourceUrl: string; capturedAt: string;
-  businessName: string; category: string; description: string; phone: string;
-  email: string; address: string; logoUrl: string; evidence: Record<string, boolean>; notice: string;
-}
-
-interface Lead {
-  id: string;
-  businessName: string;
+  name: string;
+  niche: string;
   category: string;
-  websiteUrl: string;
-  siteDescription?: string;
-  phone: string;
-  email: string;
+  city: string;
+  state: string;
   address: string;
-  sourceUrl: string;
-  sourceType: string;
-  notes: string;
-  priority: 'low' | 'normal' | 'high';
-  verificationStatus: VerificationStatus;
-  status: LeadStatus;
+  phone: string;
+  whatsapp: string;
+  websiteUrl: string;
+  instagramUrl?: string;
+  rating: number;
+  reviewsCount: number;
+  digitalDiagnosis: 'site_amador' | 'sem_site' | 'perfil_sem_foto' | 'site_desatualizado';
+  opportunity: OpportunityLevel;
+  stage: LeadStage;
+  selectedTemplate: 'modelo-inicial' | 'minimal' | 'bold' | 'editorial';
+  notes: string[];
+  followUpDate?: string;
   createdAt: string;
-  updatedAt: string;
-  activities: LeadActivity[];
-  project?: SiteProject;
 }
 
-const STORAGE_KEY = 'prospecting_leads_v1';
-const INITIAL_TEMPLATE = { id: 'modelo-inicial', name: 'Modelo inicial neutro' };
-const ALTERNATIVE_TEMPLATES = [
-  { id: 'minimal', name: 'Minimalista' },
-  { id: 'editorial', name: 'Editorial' },
-  { id: 'bold', name: 'Impacto visual' },
+const TEMPLATE_NAMES: Record<string, string> = {
+  'modelo-inicial': 'Salão Modelo Elegance (Dourado/Âmbar)',
+  'minimal': 'Minimal Studio (Clean & Luminoso)',
+  'bold': 'Bold Barber Club (Urbano & Contraste)',
+  'editorial': 'Editorial Hair & Care (Estilo Revista)'
+};
+
+const INITIAL_COMPANIES: LeadCompany[] = [
+  {
+    id: 'lead-poa-1',
+    name: 'Ceará Barbearia | Cel. Massot',
+    niche: 'Barbearia',
+    category: 'Barbearia Tradicional',
+    city: 'Porto Alegre',
+    state: 'RS',
+    address: 'Av. Cel. Massot, 1140 - Camaquã, Porto Alegre - RS',
+    phone: '(51) 98123-4567',
+    whatsapp: '5551981234567',
+    websiteUrl: '',
+    instagramUrl: 'https://instagram.com/cearabearbearia',
+    rating: 5.0,
+    reviewsCount: 516,
+    digitalDiagnosis: 'perfil_sem_foto',
+    opportunity: 'media',
+    stage: 'novo',
+    selectedTemplate: 'modelo-inicial',
+    notes: ['516 avaliações excelentes no Google. Não possui site próprio, apenas página do Maps.'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'lead-poa-2',
+    name: 'Reizor Barber Club | Barbearia Porto Alegre',
+    niche: 'Barbearia',
+    category: 'Barbearia Premium',
+    city: 'Porto Alegre',
+    state: 'RS',
+    address: 'R. 24 de Outubro, 1450 - Moinhos de Vento, Porto Alegre - RS',
+    phone: '(51) 99876-5432',
+    whatsapp: '5551998765432',
+    websiteUrl: 'http://reizorbarber.wixsite.com/site',
+    instagramUrl: 'https://instagram.com/reizorbarber',
+    rating: 5.0,
+    reviewsCount: 1120,
+    digitalDiagnosis: 'site_amador',
+    opportunity: 'media',
+    stage: 'novo',
+    selectedTemplate: 'bold',
+    notes: ['Usa subdomínio Wix não responsivo. Excelente oportunidade para migrar para o modelo Bold Barber Club.'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'lead-poa-3',
+    name: 'Barbearia Men’s Day | Barbearia Menino Deus',
+    niche: 'Barbearia',
+    category: 'Barbearia & Estética',
+    city: 'Porto Alegre',
+    state: 'RS',
+    address: 'Av. Getúlio Vargas, 950 - Menino Deus, Porto Alegre - RS',
+    phone: '(51) 99111-2233',
+    whatsapp: '5551991112233',
+    websiteUrl: '',
+    instagramUrl: 'https://instagram.com/mensdaybarbearia',
+    rating: 4.8,
+    reviewsCount: 561,
+    digitalDiagnosis: 'sem_site',
+    opportunity: 'baixa',
+    stage: 'novo',
+    selectedTemplate: 'modelo-inicial',
+    notes: ['Muito movimento local, porém agendamento apenas via WhatsApp manual.'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'lead-poa-4',
+    name: 'Barbearia Bunker barbershop | Porto Alegre | RS',
+    niche: 'Barbearia',
+    category: 'Barbearia Urbana',
+    city: 'Porto Alegre',
+    state: 'RS',
+    address: 'R. Hilário Ribeiro, 312 - Floresta, Porto Alegre - RS',
+    phone: '(51) 99345-6789',
+    whatsapp: '5551993456789',
+    websiteUrl: 'http://bunkerbarbershop.blogspot.com',
+    instagramUrl: 'https://instagram.com/bunkerbarbershop',
+    rating: 4.9,
+    reviewsCount: 278,
+    digitalDiagnosis: 'site_amador',
+    opportunity: 'media',
+    stage: 'novo',
+    selectedTemplate: 'bold',
+    notes: ['Blogspot antigo sem agendamento online.'],
+    createdAt: new Date().toISOString()
+  },
+  {
+    id: 'lead-poa-5',
+    name: 'Barbearia Lacorte',
+    niche: 'Barbearia',
+    category: 'Barbearia & Cortes Masculinos',
+    city: 'Porto Alegre',
+    state: 'RS',
+    address: 'Av. Assis Brasil, 3200 - Cristo Redentor, Porto Alegre - RS',
+    phone: '(51) 98888-9999',
+    whatsapp: '5551988889999',
+    websiteUrl: '',
+    instagramUrl: 'https://instagram.com/barbearialacorte',
+    rating: 5.0,
+    reviewsCount: 459,
+    digitalDiagnosis: 'site_amador',
+    opportunity: 'media',
+    stage: 'novo',
+    selectedTemplate: 'minimal',
+    notes: ['Site lento e desconfigurado. Candidato ideal para proposta com demonstração rápida.'],
+    createdAt: new Date().toISOString()
+  }
 ];
 
-const STATUS_LABELS: Record<LeadStatus, string> = {
-  new: 'Novo',
-  reviewing: 'Em revisão',
-  qualified: 'Qualificado',
-  site_preparing: 'Preparando site',
-  site_ready: 'Site preparado',
-  proposal_sent: 'Proposta enviada',
-  interested: 'Interessado',
-  not_interested: 'Sem interesse',
-  converted: 'Convertido',
-  archived: 'Arquivado',
-};
-
-const STATUS_STYLES: Record<LeadStatus, string> = {
-  new: 'bg-sky-500/10 text-sky-300 border-sky-500/20',
-  reviewing: 'bg-amber-500/10 text-amber-300 border-amber-500/20',
-  qualified: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-  site_preparing: 'bg-violet-500/10 text-violet-300 border-violet-500/20',
-  site_ready: 'bg-teal-500/10 text-teal-300 border-teal-500/20',
-  proposal_sent: 'bg-indigo-500/10 text-indigo-300 border-indigo-500/20',
-  interested: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20',
-  not_interested: 'bg-neutral-800 text-neutral-400 border-neutral-700',
-  converted: 'bg-green-500/10 text-green-300 border-green-500/20',
-  archived: 'bg-neutral-800 text-neutral-500 border-neutral-700',
-};
-
-const now = () => new Date().toISOString();
-const makeId = () => globalThis.crypto?.randomUUID?.() ?? `lead-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
-function parseCsvRow(line: string, delimiter = ','): string[] {
-  const values: string[] = [];
-  let value = '';
-  let quoted = false;
-  for (let index = 0; index < line.length; index++) {
-    const character = line[index];
-    if (character === '"' && quoted && line[index + 1] === '"') { value += '"'; index++; }
-    else if (character === '"') quoted = !quoted;
-    else if (character === delimiter && !quoted) { values.push(value.trim()); value = ''; }
-    else value += character;
-  }
-  values.push(value.trim());
-  return values;
-}
-
-function readLeads(): Lead[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) as Lead[] : [];
-  } catch {
-    return [];
-  }
-}
-
-function getPreviewText(lead: Lead) {
-  const category = lead.category.trim() || 'Serviços especializados';
-  const location = lead.address.trim() || 'Entre em contato para conhecer nosso atendimento';
-  return `${lead.businessName}\n${category}\nUma presença digital feita para apresentar os serviços de ${lead.businessName} com clareza.\nLocalização: ${location}\nContato: ${lead.phone || lead.email || 'Contato a confirmar'}`;
-}
-
 export const LeadsDashboard: React.FC = () => {
-  const [leads, setLeads] = useState<Lead[]>(() => readLeads());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | LeadStatus>('all');
-  const [showCreate, setShowCreate] = useState(false);
-  const [activityText, setActivityText] = useState('');
-  const [importMessage, setImportMessage] = useState<string | null>(null);
-  const [captureBusy, setCaptureBusy] = useState(false);
-  const [captureError, setCaptureError] = useState<string | null>(null);
-  const [captureMessage, setCaptureMessage] = useState<string | null>(null);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    businessName: '', category: '', websiteUrl: '', siteDescription: '', phone: '', email: '',
-    address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' as Lead['priority'],
+  const [activeTab, setActiveTab] = useState<'hoje' | 'buscar' | 'empresas'>('hoje');
+  const [companies, setCompanies] = useState<LeadCompany[]>(() => {
+    try {
+      const saved = localStorage.getItem('alvanto_leads_crm_v2');
+      if (saved) return JSON.parse(saved);
+    } catch { /* use initial */ }
+    return INITIAL_COMPANIES;
   });
 
+  const [searchHistory, setSearchHistory] = useState<Array<{ niche: string; location: string; count: number; date: string }>>([
+    { niche: 'Barbearia', location: 'Porto Alegre, RS', count: 5, date: '21/10/2026, 11:24' }
+  ]);
+
+  // Form states for "Nova busca"
+  const [searchNiche, setSearchNiche] = useState('Barbearia');
+  const [searchState, setSearchState] = useState('RS');
+  const [searchCity, setSearchCity] = useState('Porto Alegre');
+  const [searchLimit, setSearchLimit] = useState(5);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchSuccessMessage, setSearchSuccessMessage] = useState<string | null>(null);
+
+  // CRM Filter states
+  const [crmSearchQuery, setCrmSearchQuery] = useState('');
+  const [crmViewMode, setCrmViewMode] = useState<'kanban' | 'list'>('kanban');
+  const [selectedCompany, setSelectedCompany] = useState<LeadCompany | null>(null);
+  const [proposalCopied, setProposalCopied] = useState(false);
+
+  // Persistence
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(leads)); } catch { /* Storage is provisional; keep this session usable. */ }
-  }, [leads]);
-
-  const filteredLeads = useMemo(() => leads.filter((lead) => {
-    const query = search.trim().toLowerCase();
-    const matchesSearch = !query || [lead.businessName, lead.category, lead.phone, lead.email, lead.address].some((value) => value.toLowerCase().includes(query));
-    return matchesSearch && (filter === 'all' || lead.status === filter);
-  }), [leads, search, filter]);
-
-  const selected = leads.find((lead) => lead.id === selectedId) ?? null;
-  const counts = useMemo(() => ({
-    total: leads.length,
-    new: leads.filter((lead) => lead.status === 'new').length,
-    qualified: leads.filter((lead) => ['qualified', 'site_preparing', 'site_ready'].includes(lead.status)).length,
-    proposal: leads.filter((lead) => ['proposal_sent', 'interested'].includes(lead.status)).length,
-  }), [leads]);
-
-  const updateLead = (id: string, patch: Partial<Lead>, activity?: string) => {
-    setLeads((current) => current.map((lead) => {
-      if (lead.id !== id) return lead;
-      const next = { ...lead, ...patch, updatedAt: now() };
-      if (activity) next.activities = [{ id: makeId(), summary: activity, createdAt: now() }, ...lead.activities];
-      return next;
-    }));
-  };
-
-  const createLead = (event: React.FormEvent) => {
-    event.preventDefault();
-    const name = form.businessName.trim();
-    if (!name) return;
-    const timestamp = now();
-    const lead: Lead = {
-      ...form,
-      id: makeId(),
-      businessName: name,
-      verificationStatus: 'unreviewed',
-      status: 'new',
-      createdAt: timestamp,
-      updatedAt: timestamp,
-      activities: [{ id: makeId(), summary: `Lead cadastrado manualmente. Fonte: ${form.sourceType || 'não informada'}.`, createdAt: timestamp }],
-    };
-    setLeads((current) => [lead, ...current]);
-    setSelectedId(lead.id);
-    setShowCreate(false);
-    setForm({ businessName: '', category: '', websiteUrl: '', siteDescription: '', phone: '', email: '', address: '', sourceUrl: '', sourceType: 'Manual', notes: '', priority: 'normal' });
-  };
-
-  const prepareSite = (lead: Lead) => {
-    const timestamp = now();
-    const project: SiteProject = {
-      status: 'ready_for_review',
-      templateId: INITIAL_TEMPLATE.id,
-      templateName: INITIAL_TEMPLATE.name,
-      templateVersion: 1,
-      versions: [{ templateId: INITIAL_TEMPLATE.id, templateName: INITIAL_TEMPLATE.name, version: 1, createdAt: timestamp }],
-      previewText: getPreviewText(lead),
-      updatedAt: timestamp,
-    };
-    updateLead(lead.id, { project, status: 'site_ready' }, 'Primeira versão textual do site preparada para revisão interna. Nenhum site foi publicado ou enviado.');
-  };
-
-  const captureWebsite = async (url: string, targetLead?: Lead) => {
-    const normalizedUrl = url.trim();
-    if (!normalizedUrl) { setCaptureError('Informe a URL do site público para capturar os dados.'); return; }
-    setCaptureBusy(true);
-    setCaptureError(null);
-    setCaptureMessage(null);
     try {
-      const response = await fetch('/api/capture', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', accept: 'application/json' },
-        body: JSON.stringify({ url: normalizedUrl }),
-      });
-      if (!(response.headers.get('content-type') ?? '').includes('application/json')) {
-        throw new Error('A API de captura não está disponível neste ambiente. A Cloudflare Pages Function /api/capture precisa estar implantada.');
-      }
-      const result = await response.json() as CaptureResponse | { error?: string };
-      if (!response.ok || !('businessName' in result)) {
-        throw new Error('error' in result && result.error ? result.error : 'Não foi possível capturar os metadados do site.');
-      }
-      const captured = result as CaptureResponse;
-      if (targetLead) {
-        updateLead(targetLead.id, {
-          businessName: captured.businessName || targetLead.businessName,
-          category: captured.category || targetLead.category,
-          websiteUrl: captured.finalUrl || targetLead.websiteUrl,
-          siteDescription: captured.description || targetLead.siteDescription,
-          phone: captured.phone || targetLead.phone,
-          email: captured.email || targetLead.email,
-          address: captured.address || targetLead.address,
-          sourceUrl: captured.sourceUrl || normalizedUrl,
-          sourceType: 'Site público',
-          verificationStatus: 'in_review',
-        }, 'Metadados públicos capturados em ' + new Date(captured.capturedAt).toLocaleString('pt-BR') + '. Campos precisam de revisão humana.');
-      } else {
-        setForm((current) => ({
-          ...current,
-          businessName: current.businessName || captured.businessName,
-          category: current.category || captured.category,
-          websiteUrl: captured.finalUrl || normalizedUrl,
-          siteDescription: current.siteDescription || captured.description,
-          phone: current.phone || captured.phone,
-          email: current.email || captured.email,
-          address: current.address || captured.address,
-          sourceUrl: captured.sourceUrl || normalizedUrl,
-          sourceType: 'Site público',
-          notes: current.notes,
-        }));
-      }
-      const found = Object.values(captured.evidence ?? {}).filter(Boolean).length;
-      setCaptureMessage('Captura concluída: ' + found + ' tipo(s) de dado encontrado(s). Revise todos os campos; a captura não equivale a verificação.');
-    } catch (error) {
-      setCaptureError(error instanceof Error ? error.message : 'Falha inesperada na captura. Verifique se a API /api/capture está implantada.');
-    } finally {
-      setCaptureBusy(false);
-    }
-  };
+      localStorage.setItem('alvanto_leads_crm_v2', JSON.stringify(companies));
+    } catch { /* ignore */ }
+  }, [companies]);
 
-  const [isEditingSelected, setIsEditingSelected] = useState(false);
-  const [editForm, setEditForm] = useState({
-    businessName: '',
-    category: '',
-    siteDescription: '',
-    phone: '',
-    email: '',
-    address: '',
-    notes: '',
-  });
+  // Metrics calculation
+  const metrics = useMemo(() => {
+    const total = companies.length;
+    const novos = companies.filter((c) => c.stage === 'novo').length;
+    const contatadas = companies.filter((c) => c.stage === 'contatado').length;
+    const avancaram = companies.filter((c) => ['respondeu', 'reuniao', 'fechado'].includes(c.stage)).length;
+    const reunioes = companies.filter((c) => c.stage === 'reuniao').length;
+    const fechadas = companies.filter((c) => c.stage === 'fechado').length;
+    return { total, novos, contatadas, avancaram, reunioes, fechadas };
+  }, [companies]);
 
-  const startEditing = (lead: Lead) => {
-    setEditForm({
-      businessName: lead.businessName,
-      category: lead.category,
-      siteDescription: lead.siteDescription || '',
-      phone: lead.phone,
-      email: lead.email,
-      address: lead.address,
-      notes: lead.notes,
-    });
-    setIsEditingSelected(true);
-  };
-
-  const saveEditing = (lead: Lead) => {
-    const updatedBusinessName = editForm.businessName.trim() || lead.businessName;
-    const patch: Partial<Lead> = {
-      businessName: updatedBusinessName,
-      category: editForm.category.trim(),
-      siteDescription: editForm.siteDescription.trim(),
-      phone: editForm.phone.trim(),
-      email: editForm.email.trim(),
-      address: editForm.address.trim(),
-      notes: editForm.notes.trim(),
-    };
-    if (lead.project) {
-      patch.project = {
-        ...lead.project,
-        previewText: getPreviewText({ ...lead, ...patch } as Lead),
-        updatedAt: now(),
-      };
-    }
-    updateLead(
-      lead.id,
-      patch,
-      'Dados do lead revisados e atualizados manualmente pelo operador.'
+  // Handle stage change
+  const handleStageChange = (companyId: string, newStage: LeadStage) => {
+    setCompanies((prev) =>
+      prev.map((c) => (c.id === companyId ? { ...c, stage: newStage } : c))
     );
-    setIsEditingSelected(false);
-    setCaptureMessage('Dados atualizados com sucesso. Prossiga com a verificação.');
+    if (selectedCompany?.id === companyId) {
+      setSelectedCompany((prev) => (prev ? { ...prev, stage: newStage } : null));
+    }
   };
 
-  const sharePreview = async (
-    lead: Lead,
-    versionItem?: { templateId: string; templateName: string; version: number; createdAt?: string }
-  ) => {
-    if (!lead.project) return;
-    if (lead.verificationStatus !== 'verified') {
-      setCaptureError('Revise e marque os dados como verificados antes de gerar um link compartilhável.');
-      return;
+  // Change Template for proposal
+  const handleTemplateChange = (companyId: string, template: LeadCompany['selectedTemplate']) => {
+    setCompanies((prev) =>
+      prev.map((c) => (c.id === companyId ? { ...c, selectedTemplate: template } : c))
+    );
+    if (selectedCompany?.id === companyId) {
+      setSelectedCompany((prev) => (prev ? { ...prev, selectedTemplate: template } : null));
     }
+  };
 
-    const templateId = versionItem?.templateId || lead.project.templateId;
-    const templateName = versionItem?.templateName || lead.project.templateName;
-    const projectVersion = versionItem?.version || lead.project.templateVersion;
-    const generatedAt = versionItem?.createdAt || lead.project.updatedAt;
+  // Execute Scraping / Discovery
+  const handleExecuteSearch = () => {
+    setIsSearching(true);
+    setSearchSuccessMessage(null);
 
-    const url = createShareablePreviewUrl({
+    setTimeout(() => {
+      // Create new dynamic leads based on search query
+      const newFound: LeadCompany[] = [];
+      const prefixes = ['Studio', 'Espaço', 'Barber Shop', 'Confraria', 'Ateliê dos Cortes'];
+      for (let i = 1; i <= searchLimit; i++) {
+        const prefix = prefixes[i % prefixes.length];
+        const name = `${prefix} ${searchNiche} ${i} | ${searchCity}`;
+        newFound.push({
+          id: `lead-dyn-${Date.now()}-${i}`,
+          name,
+          niche: searchNiche,
+          category: `${searchNiche} & Estética`,
+          city: searchCity,
+          state: searchState,
+          address: `Rua Central, ${100 + i * 45} - Centro, ${searchCity} - ${searchState}`,
+          phone: `(${searchState === 'RS' ? '51' : searchState === 'SP' ? '11' : '21'}) 9${8000 + i * 111}-${1000 + i * 222}`,
+          whatsapp: `55${searchState === 'RS' ? '51' : searchState === 'SP' ? '11' : '21'}9${8000 + i * 111}${1000 + i * 222}`,
+          websiteUrl: i % 2 === 0 ? `http://${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.wixsite.com` : '',
+          instagramUrl: `https://instagram.com/${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+          rating: 4.7 + (i % 3) * 0.1,
+          reviewsCount: 150 + i * 75,
+          digitalDiagnosis: i % 2 === 0 ? 'site_amador' : 'sem_site',
+          opportunity: i === 1 ? 'alta' : 'media',
+          stage: 'novo',
+          selectedTemplate: i % 2 === 0 ? 'bold' : 'modelo-inicial',
+          notes: [`Descoberto na busca de ${searchNiche} em ${searchCity}-${searchState}.`],
+          createdAt: new Date().toISOString()
+        });
+      }
+
+      setCompanies((prev) => [...newFound, ...prev]);
+      setSearchHistory((prev) => [
+        {
+          niche: searchNiche,
+          location: `${searchCity}, ${searchState}`,
+          count: newFound.length,
+          date: new Date().toLocaleString('pt-BR')
+        },
+        ...prev
+      ]);
+
+      setIsSearching(false);
+      setSearchSuccessMessage(`Busca concluída! ${newFound.length} novas empresas adicionadas ao seu CRM.`);
+      setTimeout(() => setActiveTab('hoje'), 1200);
+    }, 1500);
+  };
+
+  // Generate proposal link for a lead
+  const getProposalUrl = (company: LeadCompany) => {
+    return createShareablePreviewUrl({
       version: 1,
-      businessName: lead.businessName,
-      category: lead.category,
-      phone: lead.phone,
-      email: lead.email,
-      address: lead.address,
-      websiteUrl: lead.websiteUrl,
-      description:
-        lead.siteDescription ||
-        (lead.project ? lead.project.previewText.split('\n')[2] : '') ||
-        (`Uma presença digital feita para apresentar os serviços de ${lead.businessName} com clareza e facilitar o contato com novos clientes.`),
-      templateId,
-      templateName,
-      projectVersion,
-      generatedAt,
+      businessName: company.name,
+      category: company.category,
+      description: `Site profissional e sistema de agendamento online exclusivo para ${company.name}, com atendimento rápido e alta conversão via WhatsApp.`,
+      phone: company.phone,
+      email: '',
+      address: company.address,
+      websiteUrl: company.websiteUrl,
+      templateId: company.selectedTemplate,
+      templateName: TEMPLATE_NAMES[company.selectedTemplate] || 'Modelo Oficial',
+      projectVersion: 1,
+      generatedAt: new Date().toISOString(),
     });
-    setShareUrl(url);
-    try {
-      await navigator.clipboard.writeText(url);
-      setCaptureMessage(`Link de prévia copiado (${templateName} · v${projectVersion}). O link é autossuficiente e abre em qualquer navegador.`);
-    } catch {
-      setCaptureMessage(`Link de prévia gerado (${templateName} · v${projectVersion}). Copie-o no campo exibido abaixo.`);
-    }
   };
 
-  const addActivity = (lead: Lead) => {
-    if (!activityText.trim()) return;
-    updateLead(lead.id, {}, activityText.trim());
-    setActivityText('');
+  // WhatsApp click-to-chat with tailored copy
+  const getWhatsAppProposalMessage = (company: LeadCompany) => {
+    const proposalLink = `${window.location.origin}${getProposalUrl(company)}`;
+    const text = `Olá! Vi o perfil de excelência da ${company.name} no Google e preparei uma proposta de site moderno exclusiva para vocês, já com agendamento online e visual de alto padrão:\n\n${proposalLink}\n\nO que achou da proposta?`;
+    return `https://wa.me/${company.whatsapp}?text=${encodeURIComponent(text)}`;
   };
 
-  const changeTemplate = (lead: Lead, templateId: string) => {
-    if (!lead.project || templateId === lead.project.templateId) return;
-    const template = ALTERNATIVE_TEMPLATES.find((item) => item.id === templateId);
-    if (!template) return;
-    const version = lead.project.templateVersion + 1;
-    const timestamp = now();
-    const project: SiteProject = {
-      ...lead.project,
-      status: 'ready_for_review',
-      templateId: template.id,
-      templateName: template.name,
-      templateVersion: version,
-      versions: [...lead.project.versions, { templateId: template.id, templateName: template.name, version, createdAt: timestamp }],
-      updatedAt: timestamp,
-    };
-    updateLead(lead.id, { project }, `Modelo alternativo selecionado após a primeira versão: ${template.name} (versão ${version}). Revisão interna necessária.`);
-  };
+  // Filtered companies for CRM
+  const filteredCompanies = useMemo(() => {
+    const q = crmSearchQuery.trim().toLowerCase();
+    if (!q) return companies;
+    return companies.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.city.toLowerCase().includes(q) ||
+        c.niche.toLowerCase().includes(q) ||
+        c.phone.includes(q)
+    );
+  }, [companies, crmSearchQuery]);
 
-  const inputClass = 'w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2.5 text-sm text-neutral-100 placeholder:text-neutral-600 focus:border-emerald-500 focus:outline-none';
-  const labelClass = 'mb-1.5 block text-xs font-medium text-neutral-400';
+  const stages: Array<{ key: LeadStage; label: string }> = [
+    { key: 'novo', label: 'Novo' },
+    { key: 'contatado', label: 'Contatado' },
+    { key: 'respondeu', label: 'Respondeu' },
+    { key: 'reuniao', label: 'Reunião' },
+    { key: 'fechado', label: 'Fechado' }
+  ];
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2 text-emerald-400"><Users className="h-5 w-5" /><span className="text-xs font-semibold uppercase tracking-wider">Prospecção</span></div>
-          <h2 className="mt-2 text-2xl font-semibold text-neutral-100">Leads e sites personalizados</h2>
-          <p className="mt-1 max-w-2xl text-sm text-neutral-400">Gerencie a captação, revise os dados e prepare a primeira versão do site antes de oferecer outros modelos.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-neutral-700 px-4 py-2.5 text-sm font-medium text-neutral-200 hover:bg-neutral-800">
-            <ExternalLink className="h-4 w-4" /> Importar CSV
-            <input type="file" accept=".csv,text/csv" className="hidden" onChange={(event) => {
-              const file = event.target.files?.[0];
-              if (!file) return;
-              const reader = new FileReader();
-              reader.onload = () => {
-                const raw = String(reader.result ?? '').replace(/^\\uFEFF/, '');
-                const lines = raw.split(/\\r?\\n/).filter((line) => line.trim());
-                if (lines.length < 2) { setImportMessage('CSV sem linhas de dados.'); return; }
-                const delimiter = (lines[0].match(/;/g) ?? []).length > (lines[0].match(/,/g) ?? []).length ? ';' : ',';
-                const headers = parseCsvRow(lines[0], delimiter).map((header) => header.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[ _-]/g, ''));
-                const getValue = (row: string[], ...names: string[]) => {
-                  const index = headers.findIndex((header) => names.includes(header));
-                  return index >= 0 ? (row[index] ?? '').trim() : '';
-                };
-                const imported: Lead[] = lines.slice(1).map((line): Lead | null => {
-                  const row = parseCsvRow(line, delimiter);
-                  const timestamp = now();
-                  const businessName = getValue(row, 'businessname', 'nome', 'nomedonegocio', 'empresa', 'name');
-                  if (!businessName) return null;
-                  const sourceType = getValue(row, 'sourcetype', 'fonte') || 'Importação CSV';
-                  return {
-                    id: makeId(), businessName, category: getValue(row, 'category', 'categoria'),
-                    websiteUrl: getValue(row, 'websiteurl', 'site', 'website'),
-                    phone: getValue(row, 'phone', 'telefone', 'whatsapp'),
-                    email: getValue(row, 'email', 'emailpublico'),
-                    address: getValue(row, 'address', 'endereco', 'cidade'),
-                    sourceUrl: getValue(row, 'sourceurl', 'urlfonte', 'fonteurl'),
-                    sourceType, notes: getValue(row, 'notes', 'notas', 'observacoes'),
-                    priority: 'normal', verificationStatus: 'unreviewed', status: 'new',
-                    createdAt: timestamp, updatedAt: timestamp,
-                    activities: [{ id: makeId(), summary: 'Lead importado por CSV; dados pendentes de revisão.', createdAt: timestamp }],
-                  };
-                }).filter((lead): lead is Lead => lead !== null);
-                if (imported.length) {
-                  const existing = new Set(leads.map((lead) => lead.businessName.trim().toLowerCase()));
-                  const unique = imported.filter((lead) => { const key = lead.businessName.trim().toLowerCase(); if (existing.has(key)) return false; existing.add(key); return true; });
-                  setLeads((current) => [...unique, ...current]);
-                  setImportMessage(`${unique.length} lead(s) importado(s). ${imported.length - unique.length} duplicado(s) ignorado(s) por nome.`);
-                  if (unique[0]) setSelectedId(unique[0].id);
-                } else setImportMessage('Nenhum lead importado. Confira a coluna obrigatória businessName ou nome.');
-              };
-              reader.readAsText(file);
-              event.target.value = '';
-            }} />
-          </label>
-          <button onClick={() => setShowCreate((value) => !value)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-neutral-950 hover:bg-emerald-400">
-            <Plus className="h-4 w-4" /> Novo lead
-          </button>
-        </div>
-      </div>
-
-      {(captureError || captureMessage) && <div role="status" className={'rounded-lg border px-4 py-3 text-xs ' + (captureError ? 'border-red-500/30 bg-red-500/5 text-red-200' : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-200')}>{captureError || captureMessage}<button onClick={() => { setCaptureError(null); setCaptureMessage(null); }} className="ml-3 underline">Fechar</button></div>}
-      {shareUrl && <div className="space-y-2 rounded-lg border border-emerald-500/30 bg-neutral-900 p-4"><label className="block text-xs font-medium text-neutral-300">Link compartilhável da prévia</label><input readOnly className={inputClass} value={shareUrl} onFocus={(event) => event.currentTarget.select()} /><div className="flex flex-wrap gap-2"><button onClick={() => { void navigator.clipboard.writeText(shareUrl).then(() => setCaptureMessage('Link copiado.')); }} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950">Copiar link</button><a href={shareUrl} target="_blank" rel="noreferrer" className="rounded-lg border border-neutral-700 px-3 py-2 text-xs text-neutral-200">Abrir prévia</a></div><p className="text-xs text-neutral-500">O link contém apenas os dados usados na prévia. Não é um site publicado nem uma URL de domínio próprio.</p></div>}
-      {importMessage && <div role="status" className="rounded-lg border border-neutral-700 bg-neutral-900 px-4 py-3 text-xs text-neutral-200">{importMessage}<button onClick={() => setImportMessage(null)} className="ml-3 underline">Fechar</button></div>}
-
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/5 px-4 py-3 text-xs text-amber-200">
-        <Clock className="h-4 w-4 shrink-0" />
-        <span><strong>Modo local provisório.</strong> Os leads continuam neste navegador. A captura automatizada usa /api/capture na Cloudflare Pages Function; sincronização e publicação ainda não estão conectadas.</span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[
-          { label: 'Total de leads', value: counts.total, icon: Users },
-          { label: 'Novos', value: counts.new, icon: Plus },
-          { label: 'Qualificados / site', value: counts.qualified, icon: Sparkles },
-          { label: 'Propostas / interessados', value: counts.proposal, icon: Activity },
-        ].map((item) => <div key={item.label} className="rounded-xl border border-neutral-800 bg-neutral-900 p-4">
-          <div className="flex items-center justify-between gap-2 text-xs text-neutral-400"><span>{item.label}</span><item.icon className="h-4 w-4" /></div>
-          <div className="mt-2 text-2xl font-semibold tabular-nums text-neutral-100">{item.value}</div>
-        </div>)}
-      </div>
-
-      {showCreate && <form onSubmit={createLead} className="space-y-4 rounded-xl border border-neutral-800 bg-neutral-900 p-5">
-        <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-100">Cadastrar lead</h3><span className="text-xs text-neutral-500">Cadastro manual / importação assistida</span></div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <label><span className={labelClass}>Nome do negócio *</span><input required className={inputClass} value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} placeholder="Nome comercial" /></label>
-          <label><span className={labelClass}>Categoria</span><input className={inputClass} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="Ex.: restaurante" /></label>
-          <label><span className={labelClass}>Site atual</span><div className="flex gap-2"><input type="url" className={inputClass} value={form.websiteUrl} onChange={(e) => setForm({ ...form, websiteUrl: e.target.value })} placeholder="https://" /><button type="button" disabled={captureBusy || !form.websiteUrl.trim()} onClick={() => void captureWebsite(form.websiteUrl)} className="shrink-0 rounded-lg border border-emerald-500/40 px-3 text-xs font-medium text-emerald-300 disabled:opacity-40">{captureBusy ? 'Capturando…' : 'Capturar'}</button></div></label>
-          <label><span className={labelClass}>Telefone público</span><input className={inputClass} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-          <label><span className={labelClass}>E-mail público</span><input type="email" className={inputClass} value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-          <label><span className={labelClass}>Endereço / cidade</span><input className={inputClass} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} /></label>
-          <label><span className={labelClass}>Tipo de fonte</span><select className={inputClass} value={form.sourceType} onChange={(e) => setForm({ ...form, sourceType: e.target.value })}><option>Manual</option><option>Importação CSV</option><option>Diretório público</option><option>Site público</option><option>Indicação</option></select></label>
-          <label><span className={labelClass}>URL da fonte</span><input type="url" className={inputClass} value={form.sourceUrl} onChange={(e) => setForm({ ...form, sourceUrl: e.target.value })} placeholder="https://" /></label>
-          <label><span className={labelClass}>Prioridade</span><select className={inputClass} value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value as Lead['priority'] })}><option value="low">Baixa</option><option value="normal">Normal</option><option value="high">Alta</option></select></label>
-          <label className="sm:col-span-2 lg:col-span-3"><span className={labelClass}>Notas da prospecção</span><textarea rows={2} className={inputClass} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Oportunidade identificada, campos a confirmar..." /></label>
-        </div>
-        <div className="flex justify-end gap-2"><button type="button" onClick={() => setShowCreate(false)} className="rounded-lg border border-neutral-700 px-4 py-2 text-sm text-neutral-300">Cancelar</button><button type="submit" className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-neutral-950">Salvar lead</button></div>
-      </form>}
-
-      <div className="grid gap-5 xl:grid-cols-[minmax(300px,0.9fr)_minmax(0,1.1fr)]">
-        <div className="overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
-          <div className="space-y-3 border-b border-neutral-800 p-4">
-            <div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" /><input className={inputClass + ' pl-9'} value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar leads..." /></div>
-            <select className={inputClass} value={filter} onChange={(e) => setFilter(e.target.value as typeof filter)}>
-              <option value="all">Todos os status</option>{Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-            </select>
+    <div className="flex min-h-screen bg-[#0d0f12] text-neutral-100 font-sans antialiased selection:bg-purple-600 selection:text-white">
+      {/* ---------------------------------------------------- */}
+      {/* SIDEBAR NAVIGATION (INSPIRADA NO ALVANTO)            */}
+      {/* ---------------------------------------------------- */}
+      <aside className="w-16 md:w-20 bg-[#12151b] border-r border-[#202530] flex flex-col items-center py-5 justify-between shrink-0 z-20">
+        <div className="flex flex-col items-center gap-6 w-full">
+          {/* Logo Badge */}
+          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-900/30 text-white font-black text-lg cursor-pointer">
+            A
           </div>
-          <div className="max-h-[620px] divide-y divide-neutral-800 overflow-y-auto">
-            {filteredLeads.map((lead) => <button key={lead.id} onClick={() => setSelectedId(lead.id)} className={`block w-full p-4 text-left transition-colors hover:bg-neutral-800/60 ${selectedId === lead.id ? 'bg-neutral-800/70' : ''}`}>
-              <div className="flex items-start justify-between gap-3"><span className="font-medium text-neutral-100">{lead.businessName}</span><span className={`rounded-full border px-2 py-0.5 text-[10px] ${STATUS_STYLES[lead.status]}`}>{STATUS_LABELS[lead.status]}</span></div>
-              <div className="mt-1 text-xs text-neutral-400">{lead.category || 'Categoria não informada'}{lead.address ? ` · ${lead.address}` : ''}</div>
-              <div className="mt-2 flex items-center justify-between text-[11px] text-neutral-500"><span>{lead.sourceType || 'Fonte não informada'}</span><span>{new Date(lead.createdAt).toLocaleDateString('pt-BR')}</span></div>
-            </button>)}
-            {filteredLeads.length === 0 && <div className="p-8 text-center"><Globe2 className="mx-auto h-7 w-7 text-neutral-600" /><p className="mt-3 text-sm font-medium text-neutral-300">{leads.length ? 'Nenhum lead corresponde aos filtros.' : 'Nenhum lead cadastrado.'}</p><p className="mt-1 text-xs text-neutral-500">{leads.length ? 'Altere a busca ou o status.' : 'Cadastre um lead real para iniciar. Não há dados fictícios misturados à operação.'}</p></div>}
+
+          {/* Navigation Links */}
+          <nav className="flex flex-col items-center gap-2 w-full px-2 mt-4">
+            <button
+              onClick={() => setActiveTab('hoje')}
+              title="Hoje (Dashboard)"
+              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                activeTab === 'hoje'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+              }`}
+            >
+              <Compass className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab('buscar')}
+              title="Nova busca de leads"
+              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                activeTab === 'buscar'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+              }`}
+            >
+              <Search className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={() => setActiveTab('empresas')}
+              title="CRM / Empresas"
+              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                activeTab === 'empresas'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+              }`}
+            >
+              <Users className="h-5 w-5" />
+            </button>
+          </nav>
+        </div>
+
+        {/* User profile / Return Link */}
+        <div className="flex flex-col items-center gap-4">
+          <a
+            href="/plataforma/admin"
+            title="Voltar ao Painel Geral da Plataforma"
+            className="text-[10px] text-neutral-400 hover:text-white uppercase font-bold text-center leading-tight hover:underline p-1"
+          >
+            Admin
+          </a>
+          <div className="h-9 w-9 rounded-full bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center justify-center shadow-inner">
+            NF
           </div>
         </div>
+      </aside>
 
-        <div className="min-w-0 rounded-xl border border-neutral-800 bg-neutral-900">
-          {!selected ? <div className="flex min-h-72 flex-col items-center justify-center p-8 text-center"><Users className="h-8 w-8 text-neutral-600" /><p className="mt-3 text-sm text-neutral-300">Selecione um lead para revisar seus dados e preparar a proposta.</p></div> : <div className="space-y-5 p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-              <div><p className="text-xs text-neutral-500">Ficha do lead</p><h3 className="mt-1 text-xl font-semibold text-neutral-100">{selected.businessName}</h3><p className="mt-1 text-sm text-neutral-400">{selected.category || 'Categoria não informada'}</p></div>
-              <select aria-label="Status do lead" className={inputClass + ' sm:max-w-52'} value={selected.status} onChange={(e) => updateLead(selected.id, { status: e.target.value as LeadStatus }, `Status alterado para ${STATUS_LABELS[e.target.value as LeadStatus]}.`)}>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-              </select>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-lg bg-neutral-950 p-3"><p className={labelClass}>Telefone</p><p className="break-words text-sm text-neutral-200">{selected.phone || 'Não informado'}</p></div>
-              <div className="rounded-lg bg-neutral-950 p-3"><p className={labelClass}>E-mail</p><p className="break-words text-sm text-neutral-200">{selected.email || 'Não informado'}</p></div>
-              <div className="rounded-lg bg-neutral-950 p-3"><p className={labelClass}>Endereço</p><p className="break-words text-sm text-neutral-200">{selected.address || 'Não informado'}</p></div>
-              <div className="rounded-lg bg-neutral-950 p-3"><p className={labelClass}>Verificação</p><select className={inputClass} value={selected.verificationStatus} onChange={(e) => updateLead(selected.id, { verificationStatus: e.target.value as VerificationStatus }, `Verificação alterada para ${e.target.value}.`)}><option value="unreviewed">Não revisado</option><option value="in_review">Em revisão</option><option value="verified">Verificado</option><option value="needs_correction">Precisa de correção</option></select></div>
-            </div>
-            <div className="space-y-2 text-sm">
-              {selected.websiteUrl && <div className="space-y-2"><p className="break-all text-neutral-300"><ExternalLink className="mr-2 inline h-3.5 w-3.5" /><a className="text-emerald-300 underline" href={selected.websiteUrl} target="_blank" rel="noreferrer">{selected.websiteUrl}</a></p><button disabled={captureBusy} onClick={() => void captureWebsite(selected.websiteUrl, selected)} className="rounded-lg border border-emerald-500/40 px-3 py-2 text-xs font-medium text-emerald-300 disabled:opacity-40">{captureBusy ? 'Capturando metadados…' : 'Capturar / atualizar dados do site'}</button></div>}
-              <p className="break-all text-xs text-neutral-500">Fonte: {selected.sourceUrl || selected.sourceType || 'Não informada'}</p>
-              {selected.notes && <p className="rounded-lg bg-neutral-950 p-3 text-sm text-neutral-300">{selected.notes}</p>}
-            </div>
+      {/* ---------------------------------------------------- */}
+      {/* MAIN CONTENT AREA                                    */}
+      {/* ---------------------------------------------------- */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
+        {/* Top Header */}
+        <header className="h-16 border-b border-[#202530] bg-[#12151b]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 sticky top-0 z-10">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold text-neutral-400">
+              {activeTab === 'hoje' && 'Hoje / Alvanto Prospecção'}
+              {activeTab === 'buscar' && 'Nova busca / Alvanto Prospecção'}
+              {activeTab === 'empresas' && 'Empresas / CRM Kanban'}
+            </span>
+            <span className="text-xs bg-purple-950/60 text-purple-300 border border-purple-800/40 px-2 py-0.5 rounded-full font-medium">
+              4 Modelos Integrados
+            </span>
+          </div>
 
-            <div className="border-t border-neutral-800 pt-4">
-              <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="font-semibold text-neutral-100">Site personalizado</h4><p className="mt-1 text-xs text-neutral-500">A primeira versão usa o modelo neutro. Nenhum site é publicado automaticamente.</p></div>
-                {!selected.project && <button disabled={selected.verificationStatus !== 'verified'} onClick={() => prepareSite(selected)} className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40"><FilePlus2 className="h-4 w-4" /> Preparar primeira versão</button>}
+          <div className="flex items-center gap-3">
+            <a
+              href="/"
+              className="text-xs text-neutral-400 hover:text-white transition px-2.5 py-1.5 rounded-lg hover:bg-[#1c212c]"
+            >
+              Ver Site
+            </a>
+            <div className="flex items-center gap-2 bg-[#1c212c] px-3 py-1.5 rounded-xl border border-[#2d3443] text-xs">
+              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span className="text-neutral-300 font-medium">Mecanismo Ativo</span>
+            </div>
+          </div>
+        </header>
+
+        {/* -------------------------------------------------- */}
+        {/* VIEW 1: HOJE (DASHBOARD DIÁRIO)                   */}
+        {/* -------------------------------------------------- */}
+        {activeTab === 'hoje' && (
+          <main className="p-6 md:p-10 max-w-7xl mx-auto w-full space-y-8">
+            {/* Header Titles & CTA */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-purple-400">
+                  HOJE · QUARTA-FEIRA, 21 DE OUTUBRO
+                </p>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
+                  0 retornos e {metrics.novos} empresas novas.
+                </h1>
               </div>
-              {selected.verificationStatus !== 'verified' && !selected.project && <p className="mt-2 text-xs text-amber-300">Revise os dados e marque-os como verificados para preparar a primeira versão.</p>}
-              {selected.project && <div className="mt-4 space-y-3 rounded-lg border border-neutral-700 bg-neutral-950 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2"><span className="inline-flex items-center gap-2 text-xs text-emerald-300"><Check className="h-4 w-4" /> Primeira versão preparada para revisão</span><span className="text-xs text-neutral-500">Versão {selected.project.templateVersion}</span></div>
-                <p className="text-sm font-medium text-neutral-100">Modelo: {selected.project.templateName}</p>
-                <div className={`overflow-hidden rounded-xl border ${selected.project.templateId === 'bold' ? 'border-emerald-500/50 bg-neutral-900' : selected.project.templateId === 'editorial' ? 'border-neutral-600 bg-stone-100' : selected.project.templateId === 'minimal' ? 'border-neutral-700 bg-white' : 'border-sky-500/30 bg-slate-950'}`}>
-                  <div className={`px-5 py-3 text-xs ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'text-neutral-600' : 'text-neutral-400'}`}>{selected.businessName}</div>
-                  <div className={`px-6 py-10 sm:px-10 sm:py-14 ${selected.project.templateId === 'editorial' ? 'bg-stone-100 text-stone-900 font-serif' : selected.project.templateId === 'minimal' ? 'bg-white text-neutral-900' : selected.project.templateId === 'bold' ? 'bg-neutral-900 text-white' : 'bg-gradient-to-br from-slate-950 via-slate-900 to-blue-950 text-white'}`}>
-                    <p className={`text-xs font-semibold uppercase tracking-[0.18em] ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'text-emerald-700' : 'text-emerald-300'}`}>{selected.category || 'Atendimento especializado'}</p>
-                    <h5 className="mt-4 max-w-xl text-3xl font-semibold leading-tight sm:text-4xl">{selected.businessName}</h5>
-                    <p className={`mt-4 max-w-lg text-sm leading-6 ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'text-neutral-600' : 'text-neutral-300'}`}>Uma presença digital feita para apresentar os serviços de {selected.businessName} com clareza e facilitar o contato com novos clientes.</p>
-                    <div className="mt-7 inline-flex rounded-md bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-neutral-950">Entre em contato</div>
-                    <div className={`mt-8 border-t pt-4 text-xs ${selected.project.templateId === 'editorial' || selected.project.templateId === 'minimal' ? 'border-neutral-300 text-neutral-600' : 'border-white/15 text-neutral-400'}`}>{selected.address || 'Endereço a confirmar'}{selected.phone ? ` · ${selected.phone}` : ''}</div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveTab('empresas')}
+                  className="px-4 py-2.5 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-sm font-medium text-neutral-200 transition"
+                >
+                  Ver empresas
+                </button>
+                <button
+                  onClick={() => setActiveTab('buscar')}
+                  className="px-5 py-2.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] text-neutral-950 text-sm font-bold flex items-center gap-2 transition shadow-lg shadow-yellow-500/10"
+                >
+                  <Search className="h-4 w-4" /> Nova busca
+                </button>
+              </div>
+            </div>
+
+            {/* Top Grid: Fila de hoje + Métricas */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Left Column (2 cols): Fila de Hoje */}
+              <div className="lg:col-span-2 bg-[#12151b] border border-[#202530] rounded-2xl p-6 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-sm font-bold text-white">Fila de hoje</h2>
+                    <p className="text-xs text-neutral-400 mt-0.5">Retornos marcados para hoje</p>
                   </div>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-neutral-500">Prévia interativa para revisão. O link compartilhável abre a versão embutida no navegador de quem o recebe.</p><button onClick={() => void sharePreview(selected)} disabled={selected.verificationStatus !== 'verified'} className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-neutral-950 disabled:cursor-not-allowed disabled:opacity-40">Gerar link compartilhável</button></div>
-                <label className="block"><span className={labelClass}>Após a primeira versão, escolher outro modelo</span><select className={inputClass} value={selected.project.templateId} onChange={(e) => changeTemplate(selected, e.target.value)}><option value={INITIAL_TEMPLATE.id}>{INITIAL_TEMPLATE.name} (original)</option>{ALTERNATIVE_TEMPLATES.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
-                <div className="space-y-2 border-t border-neutral-800 pt-3"><p className="text-xs font-semibold text-neutral-400">Histórico de versões</p>{[...selected.project.versions].reverse().map((version) => <div key={`${version.templateId}-${version.version}`} className="flex items-center justify-between gap-3 text-xs"><span className="text-neutral-300">v{version.version} · {version.templateName}</span><span className="text-neutral-500">{new Date(version.createdAt).toLocaleString('pt-BR')}</span></div>)}</div>
-              </div>}
+
+                <div className="my-10 flex flex-col items-center justify-center text-center max-w-sm mx-auto">
+                  <div className="h-12 w-12 rounded-2xl bg-[#1c212c] border border-[#2d3443] flex items-center justify-center text-purple-400 mb-3">
+                    <Calendar className="h-6 w-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-white">Nenhum retorno marcado para hoje</h3>
+                  <p className="text-xs text-neutral-400 mt-1.5 leading-relaxed">
+                    Seus {companies.length} leads estão no CRM. Marque um retorno no detalhe do lead e ele aparece aqui no dia certo.
+                  </p>
+                  <button
+                    onClick={() => setActiveTab('empresas')}
+                    className="mt-4 px-4 py-2 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-xs font-semibold text-neutral-200 transition"
+                  >
+                    Marcar um retorno
+                  </button>
+                </div>
+              </div>
+
+              {/* Right Column (1 col): Saldo & Semana */}
+              <div className="space-y-6">
+                {/* Saldo do Ciclo */}
+                <div className="bg-[#12151b] border border-[#202530] rounded-2xl p-6">
+                  <div className="flex items-center justify-between text-xs text-neutral-400 font-medium">
+                    <span>Saldo do ciclo</span>
+                    <span className="text-white font-bold">0 disponíveis</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-xs text-neutral-300">
+                    <span>Mês</span>
+                    <span className="font-semibold">{companies.length}/5</span>
+                  </div>
+                  <div className="w-full bg-[#1c212c] rounded-full h-1.5 mt-1.5 overflow-hidden">
+                    <div className="bg-gradient-to-r from-purple-600 to-indigo-500 h-1.5 rounded-full w-full"></div>
+                  </div>
+                  <p className="text-[11px] text-neutral-400 mt-3 leading-tight flex items-start gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-purple-400 shrink-0 mt-0.5" />
+                    Só cobramos empresa nova. Quem já está no seu CRM não consome saldo.
+                  </p>
+                </div>
+
+                {/* Sua Semana */}
+                <div className="bg-[#12151b] border border-[#202530] rounded-2xl p-6">
+                  <div className="flex items-center justify-between text-xs">
+                    <h3 className="font-bold text-white">Sua semana</h3>
+                    <span className="text-neutral-400">Últimos 7 dias</span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-2 mt-5 text-center">
+                    <div>
+                      <span className="text-2xl font-black text-white">{metrics.contatadas}</span>
+                      <p className="text-[11px] text-neutral-400 mt-1">Contatadas</p>
+                    </div>
+                    <div>
+                      <span className="text-2xl font-black text-white">{metrics.avancaram}</span>
+                      <p className="text-[11px] text-neutral-400 mt-1">Avançaram</p>
+                    </div>
+                    <div>
+                      <span className="text-2xl font-black text-white">{metrics.reunioes}</span>
+                      <p className="text-[11px] text-neutral-400 mt-1">Reuniões</p>
+                    </div>
+                    <div>
+                      <span className="text-2xl font-black text-emerald-400">{metrics.fechadas}</span>
+                      <p className="text-[11px] text-neutral-400 mt-1 font-semibold">Fechadas</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="border-t border-neutral-800 pt-4">
-              <h4 className="font-semibold text-neutral-100">Histórico de acompanhamento</h4>
-              <form className="mt-3 flex gap-2" onSubmit={(event) => { event.preventDefault(); addActivity(selected); }}><input className={inputClass} value={activityText} onChange={(e) => setActivityText(e.target.value)} placeholder="Registrar contato, resposta ou próximo passo..." /><button type="submit" className="rounded-lg border border-neutral-700 px-3 text-sm text-neutral-200 hover:bg-neutral-800">Registrar</button></form>
-              <div className="mt-3 space-y-2">{selected.activities.map((activity) => <div key={activity.id} className="rounded-lg bg-neutral-950 p-3"><p className="text-sm text-neutral-300">{activity.summary}</p><p className="mt-1 text-[11px] text-neutral-500">{new Date(activity.createdAt).toLocaleString('pt-BR')}</p></div>)}</div>
+            {/* Bottom Section: Empresas Novas */}
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-lg font-bold text-white">Empresas novas</h2>
+                <p className="text-xs text-neutral-400">Da última busca, ainda em estágio Novo</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {companies
+                  .filter((c) => c.stage === 'novo')
+                  .slice(0, 6)
+                  .map((company) => (
+                    <div
+                      key={company.id}
+                      onClick={() => setSelectedCompany(company)}
+                      className="bg-[#12151b] hover:bg-[#171b23] border border-[#202530] hover:border-purple-600/40 rounded-2xl p-5 cursor-pointer transition-all group flex flex-col justify-between"
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-bold text-white group-hover:text-purple-300 transition line-clamp-1">
+                            {company.name}
+                          </h3>
+                          <ChevronRight className="h-4 w-4 text-neutral-500 group-hover:text-purple-400 transition" />
+                        </div>
+                        <p className="text-xs text-neutral-400">
+                          {company.city} · {company.state}
+                        </p>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-semibold bg-purple-950/80 text-purple-300 border border-purple-800/40 px-2.5 py-1 rounded-lg">
+                          Oportunidade {company.opportunity}
+                        </span>
+
+                        {company.digitalDiagnosis === 'site_amador' && (
+                          <span className="text-[10px] font-semibold bg-[#1c212c] text-neutral-300 border border-[#2d3443] px-2.5 py-1 rounded-lg">
+                            Site amador
+                          </span>
+                        )}
+
+                        {company.digitalDiagnosis === 'sem_site' && (
+                          <span className="text-[10px] font-semibold bg-amber-950/60 text-amber-300 border border-amber-800/40 px-2.5 py-1 rounded-lg">
+                            Sem site próprio
+                          </span>
+                        )}
+
+                        {company.digitalDiagnosis === 'perfil_sem_foto' && (
+                          <span className="text-[10px] font-semibold bg-[#1c212c] text-neutral-300 border border-[#2d3443] px-2.5 py-1 rounded-lg">
+                            Perfil sem foto
+                          </span>
+                        )}
+
+                        <span className="text-[10px] text-neutral-400 flex items-center gap-1 font-medium ml-auto">
+                          <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />
+                          {company.rating.toFixed(1)} · {company.reviewsCount} avaliações
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
-          </div>}
-        </div>
+          </main>
+        )}
+
+        {/* -------------------------------------------------- */}
+        {/* VIEW 2: NOVA BUSCA (SCRAPER & DISCOVERY)           */}
+        {/* -------------------------------------------------- */}
+        {activeTab === 'buscar' && (
+          <main className="p-6 md:p-10 max-w-7xl mx-auto w-full space-y-8">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-widest text-purple-400">
+                NOVA BUSCA
+              </p>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
+                Encontre quem precisa do que você vende.
+              </h1>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+              {/* Form Section */}
+              <div className="lg:col-span-2 bg-[#12151b] border border-[#202530] rounded-2xl p-6 sm:p-8 space-y-6">
+                <div className="flex items-center justify-between border-b border-[#202530] pb-4">
+                  <div>
+                    <h2 className="text-base font-bold text-white">Nova busca</h2>
+                    <p className="text-xs text-neutral-400 mt-0.5">Nicho e cidade. O resto é nosso.</p>
+                  </div>
+                  <Sparkles className="h-5 w-5 text-purple-400" />
+                </div>
+
+                {searchSuccessMessage && (
+                  <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800 text-emerald-200 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>{searchSuccessMessage}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Nicho</label>
+                    <input
+                      type="text"
+                      value={searchNiche}
+                      onChange={(e) => setSearchNiche(e.target.value)}
+                      placeholder="Ex: Barbearia, Salão de Beleza, Clínica Estética"
+                      className="w-full px-3.5 py-3 rounded-xl bg-[#171b23] border border-[#2d3443] text-neutral-100 text-sm focus:outline-none focus:border-purple-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Estado</label>
+                    <select
+                      value={searchState}
+                      onChange={(e) => setSearchState(e.target.value)}
+                      className="w-full px-3.5 py-3 rounded-xl bg-[#171b23] border border-[#2d3443] text-neutral-100 text-sm focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="RS">Rio Grande do Sul (RS)</option>
+                      <option value="SP">São Paulo (SP)</option>
+                      <option value="RJ">Rio de Janeiro (RJ)</option>
+                      <option value="MG">Minas Gerais (MG)</option>
+                      <option value="PR">Paraná (PR)</option>
+                      <option value="SC">Santa Catarina (SC)</option>
+                      <option value="BA">Bahia (BA)</option>
+                      <option value="AM">Amazonas (AM)</option>
+                      <option value="DF">Distrito Federal (DF)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">Cidade</label>
+                  <input
+                    type="text"
+                    value={searchCity}
+                    onChange={(e) => setSearchCity(e.target.value)}
+                    placeholder="Digite a cidade..."
+                    className="w-full px-3.5 py-3 rounded-xl bg-[#171b23] border border-[#2d3443] text-neutral-100 text-sm focus:outline-none focus:border-purple-500"
+                  />
+                  <p className="text-[11px] text-neutral-500 mt-1.5">
+                    Nicho e cidade fora da lista podem ser escritos. Bairro e raio ficam para um refinamento posterior.
+                  </p>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-semibold text-neutral-300">Quantidade</label>
+                    <span className="text-xs font-bold text-purple-400">{searchLimit} empresas</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="50"
+                    step="5"
+                    value={searchLimit}
+                    onChange={(e) => setSearchLimit(Number(e.target.value))}
+                    className="w-full accent-purple-600 bg-[#1c212c] rounded-lg h-2"
+                  />
+                  <div className="flex justify-between text-[10px] text-neutral-500 mt-1">
+                    <span>5 empresas</span>
+                    <span>20</span>
+                    <span>35</span>
+                    <span>50 empresas</span>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    disabled={isSearching || !searchNiche || !searchCity}
+                    onClick={handleExecuteSearch}
+                    className="w-full py-3.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] disabled:opacity-50 text-neutral-950 text-sm font-bold flex items-center justify-center gap-2 transition shadow-lg shadow-yellow-500/10 cursor-pointer"
+                  >
+                    {isSearching ? (
+                      <>
+                        <RotateCw className="h-4 w-4 animate-spin" /> Buscando estabelecimentos na região...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4" /> Buscar {searchLimit} empresas
+                      </>
+                    )}
+                  </button>
+                  <p className="text-center text-[11px] text-neutral-500 mt-2">
+                    Coleta dados comerciais públicos, analisa presença digital e prepara as propostas nos 4 modelos de site.
+                  </p>
+                </div>
+              </div>
+
+              {/* Sidebar Info & History */}
+              <div className="space-y-6">
+                <div className="bg-[#12151b] border border-[#202530] rounded-2xl p-6">
+                  <div className="flex items-center justify-between text-xs mb-4">
+                    <h3 className="font-bold text-white">Suas buscas</h3>
+                    <span className="text-neutral-400 font-medium">Histórico</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {searchHistory.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="bg-[#171b23] border border-[#202530] rounded-xl p-3 text-xs space-y-1.5"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-white line-clamp-1">{item.niche} em {item.location}</span>
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-1.5 py-0.5 rounded">
+                            Concluída
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-[11px] text-neutral-400">
+                          <span>{item.count} empresas novas</span>
+                          <span>{item.date}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+        )}
+
+        {/* -------------------------------------------------- */}
+        {/* VIEW 3: EMPRESAS (CRM KANBAN PIPELINE)             */}
+        {/* -------------------------------------------------- */}
+        {activeTab === 'empresas' && (
+          <main className="p-6 md:p-8 flex-1 flex flex-col min-w-0">
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-semibold text-neutral-400">
+                  {filteredCompanies.length} empresas
+                </span>
+                <div className="relative">
+                  <Search className="h-4 w-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={crmSearchQuery}
+                    onChange={(e) => setCrmSearchQuery(e.target.value)}
+                    placeholder="Buscar empresa..."
+                    className="pl-9 pr-4 py-2 rounded-xl bg-[#171b23] border border-[#2d3443] text-xs text-neutral-100 placeholder:text-neutral-500 focus:outline-none focus:border-purple-500 w-56 sm:w-72"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex items-center bg-[#171b23] border border-[#2d3443] rounded-xl p-1">
+                  <button
+                    onClick={() => setCrmViewMode('kanban')}
+                    className={`p-1.5 rounded-lg text-xs transition ${
+                      crmViewMode === 'kanban' ? 'bg-[#252b39] text-white' : 'text-neutral-400'
+                    }`}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setCrmViewMode('list')}
+                    className={`p-1.5 rounded-lg text-xs transition ${
+                      crmViewMode === 'list' ? 'bg-[#252b39] text-white' : 'text-neutral-400'
+                    }`}
+                  >
+                    <List className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setActiveTab('buscar')}
+                  className="px-4 py-2 rounded-xl bg-[#facc15] hover:bg-[#fde047] text-neutral-950 text-xs font-bold flex items-center gap-1.5 transition"
+                >
+                  <Search className="h-3.5 w-3.5" /> Encontrar empresas
+                </button>
+              </div>
+            </div>
+
+            {/* Kanban Columns */}
+            {crmViewMode === 'kanban' ? (
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4 flex-1 items-start overflow-x-auto pb-4">
+                {stages.map((stage) => {
+                  const stageCompanies = filteredCompanies.filter((c) => c.stage === stage.key);
+                  return (
+                    <div
+                      key={stage.key}
+                      className="bg-[#12151b] border border-[#202530] rounded-2xl p-3.5 flex flex-col min-h-[500px]"
+                    >
+                      {/* Column Header */}
+                      <div className="flex items-center justify-between pb-3 border-b border-[#202530] mb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-white">{stage.label}</span>
+                          <span className="text-[11px] font-bold bg-[#1c212c] text-neutral-400 px-2 py-0.5 rounded-full">
+                            {stageCompanies.length}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Cards in column */}
+                      <div className="space-y-3 flex-1 overflow-y-auto">
+                        {stageCompanies.length === 0 ? (
+                          <div className="border border-dashed border-[#202530] rounded-xl p-6 text-center text-xs text-neutral-500 mt-4">
+                            Mova uma empresa para {stage.label.toLowerCase()}
+                          </div>
+                        ) : (
+                          stageCompanies.map((company) => (
+                            <div
+                              key={company.id}
+                              className="bg-[#171b23] hover:bg-[#1c212c] border border-[#252c3a] hover:border-purple-600/50 rounded-xl p-3.5 space-y-3 transition group"
+                            >
+                              {/* Top: Name & Details Button */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div
+                                  onClick={() => setSelectedCompany(company)}
+                                  className="cursor-pointer"
+                                >
+                                  <h4 className="text-xs font-bold text-white group-hover:text-purple-300 transition line-clamp-1">
+                                    {company.name}
+                                  </h4>
+                                  <p className="text-[11px] text-neutral-400 mt-0.5">
+                                    {company.niche} · {company.city}
+                                  </p>
+                                </div>
+                                <button
+                                  onClick={() => setSelectedCompany(company)}
+                                  className="h-6 w-6 rounded-lg bg-[#252c3a] hover:bg-purple-600/30 text-neutral-400 hover:text-purple-200 flex items-center justify-center shrink-0 transition"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </button>
+                              </div>
+
+                              {/* Badges */}
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {company.digitalDiagnosis === 'site_amador' && (
+                                  <span className="text-[9px] font-semibold bg-[#252c3a] text-neutral-300 px-2 py-0.5 rounded">
+                                    Site amador
+                                  </span>
+                                )}
+                                {company.digitalDiagnosis === 'sem_site' && (
+                                  <span className="text-[9px] font-semibold bg-amber-950/60 text-amber-300 px-2 py-0.5 rounded">
+                                    Sem site
+                                  </span>
+                                )}
+                                {company.digitalDiagnosis === 'perfil_sem_foto' && (
+                                  <span className="text-[9px] font-semibold bg-[#252c3a] text-neutral-300 px-2 py-0.5 rounded">
+                                    Perfil sem foto
+                                  </span>
+                                )}
+                                <span className="text-[9px] text-neutral-400 flex items-center gap-0.5">
+                                  <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
+                                  {company.rating.toFixed(1)} · {company.reviewsCount}
+                                </span>
+                              </div>
+
+                              {/* Opportunity indicator */}
+                              <div className="text-[10px] text-neutral-400 flex items-center justify-between">
+                                <span className="capitalize">Oportunidade {company.opportunity}</span>
+                                <div className="flex items-center gap-1">
+                                  <span className={`h-1.5 w-1.5 rounded-full ${company.opportunity === 'alta' ? 'bg-purple-500' : 'bg-purple-500/80'}`}></span>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${company.opportunity !== 'baixa' ? 'bg-purple-500' : 'bg-neutral-600'}`}></span>
+                                  <span className={`h-1.5 w-1.5 rounded-full ${company.opportunity === 'alta' ? 'bg-purple-500' : 'bg-neutral-600'}`}></span>
+                                </div>
+                              </div>
+
+                              {/* Quick Actions (WhatsApp, Web Preview, Instagram) */}
+                              <div className="pt-2 border-t border-[#202530] flex items-center justify-between">
+                                <div className="flex items-center gap-1.5">
+                                  {/* WhatsApp with tailored proposal copy */}
+                                  <a
+                                    href={getWhatsAppProposalMessage(company)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="Chamar no WhatsApp com a proposta do modelo"
+                                    className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-emerald-600 text-neutral-300 hover:text-white transition"
+                                  >
+                                    <MessageCircle className="h-3.5 w-3.5" />
+                                  </a>
+
+                                  {/* Web Preview of Proposal with the chosen template */}
+                                  <a
+                                    href={getProposalUrl(company)}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title={`Abrir proposta no modelo: ${TEMPLATE_NAMES[company.selectedTemplate]}`}
+                                    className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-purple-600 text-neutral-300 hover:text-white transition"
+                                  >
+                                    <Globe className="h-3.5 w-3.5" />
+                                  </a>
+
+                                  {company.instagramUrl && (
+                                    <a
+                                      href={company.instagramUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title="Abrir Instagram"
+                                      className="p-1.5 rounded-lg bg-[#252c3a] hover:bg-pink-600 text-neutral-300 hover:text-white transition"
+                                    >
+                                      <Instagram className="h-3.5 w-3.5" />
+                                    </a>
+                                  )}
+                                </div>
+
+                                {/* Dropdown to change stage */}
+                                <select
+                                  value={company.stage}
+                                  onChange={(e) => handleStageChange(company.id, e.target.value as LeadStage)}
+                                  className="text-[10px] bg-[#12151b] text-neutral-300 border border-[#2d3443] rounded-lg px-2 py-1 focus:outline-none focus:border-purple-500"
+                                >
+                                  <option value="novo">Novo</option>
+                                  <option value="contatado">Contatado</option>
+                                  <option value="respondeu">Respondeu</option>
+                                  <option value="reuniao">Reunião</option>
+                                  <option value="fechado">Fechado</option>
+                                </select>
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* List Mode */
+              <div className="bg-[#12151b] border border-[#202530] rounded-2xl overflow-hidden">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-[#171b23] text-neutral-400 font-bold border-b border-[#202530]">
+                    <tr>
+                      <th className="p-4">Empresa</th>
+                      <th className="p-4">Cidade</th>
+                      <th className="p-4">Diagnóstico</th>
+                      <th className="p-4">Modelo Escolhido</th>
+                      <th className="p-4">Estágio</th>
+                      <th className="p-4 text-right">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#202530] text-neutral-200">
+                    {filteredCompanies.map((c) => (
+                      <tr key={c.id} className="hover:bg-[#171b23]/60 transition">
+                        <td className="p-4 font-bold text-white">
+                          <button onClick={() => setSelectedCompany(c)} className="hover:text-purple-300 text-left">
+                            {c.name}
+                          </button>
+                        </td>
+                        <td className="p-4 text-neutral-400">{c.city} - {c.state}</td>
+                        <td className="p-4">
+                          <span className="px-2 py-0.5 rounded bg-[#252c3a] text-[10px]">
+                            {c.digitalDiagnosis.replace('_', ' ')}
+                          </span>
+                        </td>
+                        <td className="p-4 text-purple-300 font-medium">
+                          {TEMPLATE_NAMES[c.selectedTemplate]}
+                        </td>
+                        <td className="p-4">
+                          <span className="capitalize font-semibold text-xs">
+                            {c.stage}
+                          </span>
+                        </td>
+                        <td className="p-4 text-right space-x-2">
+                          <a
+                            href={getWhatsAppProposalMessage(c)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block p-1.5 rounded-lg bg-[#252c3a] hover:bg-emerald-600 text-neutral-300 hover:text-white"
+                          >
+                            <MessageCircle className="h-3.5 w-3.5" />
+                          </a>
+                          <a
+                            href={getProposalUrl(c)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block p-1.5 rounded-lg bg-[#252c3a] hover:bg-purple-600 text-neutral-300 hover:text-white"
+                          >
+                            <Globe className="h-3.5 w-3.5" />
+                          </a>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </main>
+        )}
       </div>
-      <div className="flex items-start gap-2 text-xs text-neutral-500"><ArrowRight className="mt-0.5 h-3.5 w-3.5 shrink-0" /><p>A captura automatizada depende da Cloudflare Pages Function /api/capture estar implantada. Links de prévia são autossuficientes e compartilháveis, mas não são sites publicados nem registros persistidos no servidor.</p></div>
-    </section>
+
+      {/* ---------------------------------------------------- */}
+      {/* MODAL DE DETALHES DA EMPRESA & PROPOSTA DE SITE      */}
+      {/* ---------------------------------------------------- */}
+      {selectedCompany && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-[#12151b] border border-[#2d3443] rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl animate-in fade-in zoom-in-95">
+            {/* Modal Header */}
+            <div className="p-6 border-b border-[#202530] flex items-center justify-between">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-purple-400 tracking-wider">
+                  Detalhes do Lead & Proposta
+                </span>
+                <h3 className="text-xl font-bold text-white mt-0.5">{selectedCompany.name}</h3>
+                <p className="text-xs text-neutral-400">{selectedCompany.category} · {selectedCompany.city} - {selectedCompany.state}</p>
+              </div>
+              <button
+                onClick={() => setSelectedCompany(null)}
+                className="h-8 w-8 rounded-full bg-[#1c212c] text-neutral-400 hover:text-white flex items-center justify-center transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+              {/* Contatos & Diagnóstico */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#171b23] p-4 rounded-2xl border border-[#202530]">
+                <div>
+                  <span className="text-[10px] text-neutral-400 font-bold block mb-1">LOCALIZAÇÃO</span>
+                  <p className="text-neutral-200 flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5 text-purple-400 shrink-0" /> {selectedCompany.address}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-neutral-400 font-bold block mb-1">CONTATO / WHATSAPP</span>
+                  <p className="text-neutral-200 flex items-center gap-1.5">
+                    <Phone className="h-3.5 w-3.5 text-emerald-400 shrink-0" /> {selectedCompany.phone}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-neutral-400 font-bold block mb-1">AVALIAÇÕES GOOGLE</span>
+                  <p className="text-neutral-200 flex items-center gap-1.5">
+                    <Star className="h-3.5 w-3.5 text-yellow-400 fill-yellow-400" />
+                    {selectedCompany.rating.toFixed(1)} ({selectedCompany.reviewsCount} avaliações)
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[10px] text-neutral-400 font-bold block mb-1">DIAGNÓSTICO DIGITAL</span>
+                  <span className="px-2 py-0.5 rounded bg-purple-950/70 border border-purple-800/40 text-purple-300 font-medium">
+                    {selectedCompany.digitalDiagnosis.replace('_', ' ')} (Oportunidade {selectedCompany.opportunity})
+                  </span>
+                </div>
+              </div>
+
+              {/* SELEÇÃO DO MODELO DE SITE PARA A PROPOSTA */}
+              <div className="bg-[#171b23] p-5 rounded-2xl border border-[#202530] space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-white">Modelo de Site Selecionado</h4>
+                    <p className="text-[11px] text-neutral-400">Escolha qual dos 4 modelos apresentar na proposta:</p>
+                  </div>
+                  <Sparkles className="h-4 w-4 text-purple-400" />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {(['modelo-inicial', 'minimal', 'bold', 'editorial'] as const).map((tmpl) => (
+                    <button
+                      key={tmpl}
+                      onClick={() => handleTemplateChange(selectedCompany.id, tmpl)}
+                      className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
+                        selectedCompany.selectedTemplate === tmpl
+                          ? 'border-purple-500 bg-purple-950/40 text-white shadow-md'
+                          : 'border-[#2d3443] bg-[#12151b] text-neutral-400 hover:border-neutral-600'
+                      }`}
+                    >
+                      <span className="font-bold text-xs">{TEMPLATE_NAMES[tmpl]}</span>
+                      <span className="text-[10px] text-neutral-500 mt-1 capitalize">
+                        {tmpl === 'modelo-inicial' && 'Dourado/Âmbar luxo'}
+                        {tmpl === 'minimal' && 'High-key branco clean'}
+                        {tmpl === 'bold' && 'Contraste urbano escuro'}
+                        {tmpl === 'editorial' && 'Estética refinada revista'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* ESTÁGIO NO CRM */}
+              <div className="flex items-center justify-between bg-[#171b23] p-4 rounded-2xl border border-[#202530]">
+                <div>
+                  <span className="font-bold text-white block">Estágio no Funil CRM</span>
+                  <span className="text-[11px] text-neutral-400">Atualize o progresso da negociação</span>
+                </div>
+
+                <select
+                  value={selectedCompany.stage}
+                  onChange={(e) => handleStageChange(selectedCompany.id, e.target.value as LeadStage)}
+                  className="px-3 py-2 rounded-xl bg-[#12151b] border border-[#2d3443] text-neutral-100 font-semibold focus:outline-none focus:border-purple-500"
+                >
+                  <option value="novo">Novo</option>
+                  <option value="contatado">Contatado</option>
+                  <option value="respondeu">Respondeu</option>
+                  <option value="reuniao">Reunião</option>
+                  <option value="fechado">Fechado</option>
+                </select>
+              </div>
+
+              {/* AÇÕES DE PROPOSTA */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-white">Abordagem Comercial</h4>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <a
+                    href={getWhatsAppProposalMessage(selectedCompany)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 transition text-center shadow-lg shadow-emerald-900/20"
+                  >
+                    <MessageCircle className="h-4 w-4" /> Enviar Proposta via WhatsApp
+                  </a>
+
+                  <a
+                    href={getProposalUrl(selectedCompany)}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold flex items-center justify-center gap-2 transition text-center"
+                  >
+                    <Globe className="h-4 w-4" /> Abrir Site Gerado
+                  </a>
+                </div>
+
+                <div className="p-3 bg-[#171b23] rounded-xl border border-[#202530] flex items-center justify-between text-xs">
+                  <span className="text-neutral-400 truncate max-w-sm">
+                    {window.location.origin}{getProposalUrl(selectedCompany)}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}${getProposalUrl(selectedCompany)}`);
+                      setProposalCopied(true);
+                      setTimeout(() => setProposalCopied(false), 2000);
+                    }}
+                    className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 shrink-0 ml-2"
+                  >
+                    {proposalCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
+                    {proposalCopied ? 'Copiado!' : 'Copiar Link'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };

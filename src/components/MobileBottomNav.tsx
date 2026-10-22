@@ -29,7 +29,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   setCurrentPage,
   onBookClick,
 }) => {
-  const { company, store, establishment } = useStore();
+  const { company, establishment, store } = useStore();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showPWAModal, setShowPWAModal] = useState(false);
 

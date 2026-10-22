@@ -44,8 +44,8 @@ assert(
   `Obtido: ${defaultTenant.id}`
 );
 assert(
-  defaultTenant.name.trim().length > 0,
-  'Nome do estabelecimento padrão definido (seed neutro white-label)',
+  defaultTenant.name.includes('Yeshua') || defaultTenant.name.includes('Salão Modelo'),
+  'Nome do estabelecimento padrão é válido (Yeshua ou Salão Modelo)',
   `Obtido: ${defaultTenant.name}`
 );
 assert(
