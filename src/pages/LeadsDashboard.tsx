@@ -78,113 +78,7 @@ export const TEMPLATE_NAMES: Record<string, string> = {
   'editorial': '5. Rubi & Vinho Lounge (Velvet)',
 };
 
-const INITIAL_COMPANIES: LeadCompany[] = [
-  {
-    id: 'lead-poa-1',
-    name: 'Ceará Barbearia | Cel. Massot',
-    niche: 'Barbearia',
-    category: 'Barbearia Tradicional',
-    city: 'Porto Alegre',
-    state: 'RS',
-    address: 'Av. Cel. Massot, 1140 - Camaquã, Porto Alegre - RS',
-    phone: '(51) 98123-4567',
-    whatsapp: '5551981234567',
-    websiteUrl: '',
-    instagramUrl: 'https://instagram.com/cearabearbearia',
-    rating: 5.0,
-    reviewsCount: 516,
-    digitalDiagnosis: 'perfil_sem_foto',
-    opportunity: 'media',
-    stage: 'novo',
-    selectedTemplate: 'modelo-inicial',
-    notes: ['516 avaliações excelentes no Google. Não possui site próprio, apenas página do Maps.'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'lead-poa-2',
-    name: 'Reizor Barber Club | Barbearia Porto Alegre',
-    niche: 'Barbearia',
-    category: 'Barbearia Premium',
-    city: 'Porto Alegre',
-    state: 'RS',
-    address: 'R. 24 de Outubro, 1450 - Moinhos de Vento, Porto Alegre - RS',
-    phone: '(51) 99876-5432',
-    whatsapp: '5551998765432',
-    websiteUrl: 'http://reizorbarber.wixsite.com/site',
-    instagramUrl: 'https://instagram.com/reizorbarber',
-    rating: 5.0,
-    reviewsCount: 1120,
-    digitalDiagnosis: 'site_amador',
-    opportunity: 'media',
-    stage: 'novo',
-    selectedTemplate: 'bold',
-    notes: ['Usa subdomínio Wix não responsivo. Excelente oportunidade para migrar para o modelo Bold Barber Club.'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'lead-poa-3',
-    name: 'Barbearia Men’s Day | Barbearia Menino Deus',
-    niche: 'Barbearia',
-    category: 'Barbearia & Estética',
-    city: 'Porto Alegre',
-    state: 'RS',
-    address: 'Av. Getúlio Vargas, 950 - Menino Deus, Porto Alegre - RS',
-    phone: '(51) 99111-2233',
-    whatsapp: '5551991112233',
-    websiteUrl: '',
-    instagramUrl: 'https://instagram.com/mensdaybarbearia',
-    rating: 4.8,
-    reviewsCount: 561,
-    digitalDiagnosis: 'sem_site',
-    opportunity: 'baixa',
-    stage: 'novo',
-    selectedTemplate: 'modelo-inicial',
-    notes: ['Muito movimento local, porém agendamento apenas via WhatsApp manual.'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'lead-poa-4',
-    name: 'Barbearia Bunker barbershop | Porto Alegre | RS',
-    niche: 'Barbearia',
-    category: 'Barbearia Urbana',
-    city: 'Porto Alegre',
-    state: 'RS',
-    address: 'R. Hilário Ribeiro, 312 - Floresta, Porto Alegre - RS',
-    phone: '(51) 99345-6789',
-    whatsapp: '5551993456789',
-    websiteUrl: 'http://bunkerbarbershop.blogspot.com',
-    instagramUrl: 'https://instagram.com/bunkerbarbershop',
-    rating: 4.9,
-    reviewsCount: 278,
-    digitalDiagnosis: 'site_amador',
-    opportunity: 'media',
-    stage: 'novo',
-    selectedTemplate: 'bold',
-    notes: ['Blogspot antigo sem agendamento online.'],
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: 'lead-poa-5',
-    name: 'Barbearia Lacorte',
-    niche: 'Barbearia',
-    category: 'Barbearia & Cortes Masculinos',
-    city: 'Porto Alegre',
-    state: 'RS',
-    address: 'Av. Assis Brasil, 3200 - Cristo Redentor, Porto Alegre - RS',
-    phone: '(51) 98888-9999',
-    whatsapp: '5551988889999',
-    websiteUrl: '',
-    instagramUrl: 'https://instagram.com/barbearialacorte',
-    rating: 5.0,
-    reviewsCount: 459,
-    digitalDiagnosis: 'site_amador',
-    opportunity: 'media',
-    stage: 'novo',
-    selectedTemplate: 'minimal',
-    notes: ['Site lento e desconfigurado. Candidato ideal para proposta com demonstração rápida.'],
-    createdAt: new Date().toISOString()
-  }
-];
+const INITIAL_COMPANIES: LeadCompany[] = [];
 
 export interface LeadsDashboardProps {
   initialTab?: 'hoje' | 'buscar' | 'empresas';
@@ -209,17 +103,10 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     setActiveTab(tab);
     if (onTabChange) onTabChange(tab);
   };
-  const [companies, setCompanies] = useState<LeadCompany[]>(() => {
-    try {
-      const saved = localStorage.getItem('alvanto_leads_crm_v2');
-      if (saved) return JSON.parse(saved);
-    } catch { /* use initial */ }
-    return INITIAL_COMPANIES;
-  });
+  // Never seed operational CRM with sample businesses. Persist only after a server-backed API is connected.
+  const [companies, setCompanies] = useState<LeadCompany[]>(INITIAL_COMPANIES);
 
-  const [searchHistory, setSearchHistory] = useState<Array<{ niche: string; location: string; count: number; date: string }>>([
-    { niche: 'Barbearia', location: 'Porto Alegre, RS', count: 5, date: '21/10/2026, 11:24' }
-  ]);
+  const [searchHistory, setSearchHistory] = useState<Array<{ niche: string; location: string; count: number; date: string }>>([]);
 
   // Form states for "Nova busca"
   const [searchNiche, setSearchNiche] = useState('Barbearia');
@@ -235,12 +122,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   const [selectedCompany, setSelectedCompany] = useState<LeadCompany | null>(null);
   const [proposalCopied, setProposalCopied] = useState(false);
 
-  // Persistence
-  useEffect(() => {
-    try {
-      localStorage.setItem('alvanto_leads_crm_v2', JSON.stringify(companies));
-    } catch { /* ignore */ }
-  }, [companies]);
+  // CRM changes remain in memory until the authenticated server-side persistence API is connected.
 
   // Metrics calculation
   const metrics = useMemo(() => {
@@ -273,56 +155,12 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     }
   };
 
-  // Execute Scraping / Discovery
+  // Do not fabricate prospects when the real provider endpoint is not configured.
   const handleExecuteSearch = () => {
-    setIsSearching(true);
-    setSearchSuccessMessage(null);
-
-    setTimeout(() => {
-      // Create new dynamic leads based on search query
-      const newFound: LeadCompany[] = [];
-      const prefixes = ['Studio', 'Espaço', 'Barber Shop', 'Confraria', 'Ateliê dos Cortes'];
-      for (let i = 1; i <= searchLimit; i++) {
-        const prefix = prefixes[i % prefixes.length];
-        const name = `${prefix} ${searchNiche} ${i} | ${searchCity}`;
-        newFound.push({
-          id: `lead-dyn-${Date.now()}-${i}`,
-          name,
-          niche: searchNiche,
-          category: `${searchNiche} & Estética`,
-          city: searchCity,
-          state: searchState,
-          address: `Rua Central, ${100 + i * 45} - Centro, ${searchCity} - ${searchState}`,
-          phone: `(${searchState === 'RS' ? '51' : searchState === 'SP' ? '11' : '21'}) 9${8000 + i * 111}-${1000 + i * 222}`,
-          whatsapp: `55${searchState === 'RS' ? '51' : searchState === 'SP' ? '11' : '21'}9${8000 + i * 111}${1000 + i * 222}`,
-          websiteUrl: i % 2 === 0 ? `http://${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.wixsite.com` : '',
-          instagramUrl: `https://instagram.com/${name.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-          rating: 4.7 + (i % 3) * 0.1,
-          reviewsCount: 150 + i * 75,
-          digitalDiagnosis: i % 2 === 0 ? 'site_amador' : 'sem_site',
-          opportunity: i === 1 ? 'alta' : 'media',
-          stage: 'novo',
-          selectedTemplate: i % 2 === 0 ? 'bold' : 'modelo-inicial',
-          notes: [`Descoberto na busca de ${searchNiche} em ${searchCity}-${searchState}.`],
-          createdAt: new Date().toISOString()
-        });
-      }
-
-      setCompanies((prev) => [...newFound, ...prev]);
-      setSearchHistory((prev) => [
-        {
-          niche: searchNiche,
-          location: `${searchCity}, ${searchState}`,
-          count: newFound.length,
-          date: new Date().toLocaleString('pt-BR')
-        },
-        ...prev
-      ]);
-
-      setIsSearching(false);
-      setSearchSuccessMessage(`Busca concluída! ${newFound.length} novas empresas adicionadas ao seu CRM.`);
-      setTimeout(() => switchTab('hoje'), 1200);
-    }, 1500);
+    setIsSearching(false);
+    setSearchSuccessMessage(
+      'Busca não executada: a integração com o provedor real de prospecção ainda não está conectada a esta tela. Nenhum lead foi criado.'
+    );
   };
 
   // Generate proposal link for a lead
@@ -702,14 +540,14 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
                 <div className="flex items-center justify-between border-b border-[#202530] pb-4">
                   <div>
                     <h2 className="text-base font-bold text-white">Nova busca</h2>
-                    <p className="text-xs text-neutral-400 mt-0.5">Nicho e cidade. O resto é nosso.</p>
+                    <p className="text-xs text-neutral-400 mt-0.5">Nicho e cidade. A busca só exibirá dados retornados por uma fonte real.</p>
                   </div>
                   <Sparkles className="h-5 w-5 text-purple-400" />
                 </div>
 
                 {searchSuccessMessage && (
-                  <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800 text-emerald-200 text-xs flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <div className="p-4 rounded-xl bg-amber-950/40 border border-amber-800 text-amber-200 text-xs flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-amber-400 shrink-0" />
                     <span>{searchSuccessMessage}</span>
                   </div>
                 )}
