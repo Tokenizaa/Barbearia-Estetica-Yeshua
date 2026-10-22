@@ -12,7 +12,7 @@ import { AppointmentPage } from './pages/AppointmentPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { ContactPage } from './pages/ContactPage';
-import { AdminPage } from './pages/AdminPage';
+import { PlatformSalonDashboard } from './pages/PlatformSalonDashboard';
 import { PlatformAdminDashboard } from './pages/PlatformAdminDashboard';
 import { PlatformAccessPage } from './pages/PlatformAccessPage';
 import { PlatformLeadsDashboard } from './pages/PlatformLeadsDashboard';
@@ -51,7 +51,7 @@ export default function App() {
     return <PlatformAdminDashboard />;
   }
   if (window.location.pathname === '/admin') {
-    return <AdminPage onBackToApp={handleBackToPublicSite} onNavigateToSuperAdmin={() => window.location.assign('/plataforma/login')} />;
+    return <PlatformSalonDashboard />;
   }
 
   // CRM e raspagem ficam no painel da plataforma, nunca no painel do salão.
