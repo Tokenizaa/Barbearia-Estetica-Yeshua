@@ -135,16 +135,12 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
 
   const businessData: SiteBusinessData = {
     name: preview.businessName,
-    category: preview.category || 'Barbearia & Estética Premium',
-    tagline: 'Excelência em Atendimento & Estilo Personalizado',
+    category: preview.category,
     description: preview.description,
-    phone: preview.phone || '+55 (51) 98888-0000',
-    whatsapp: preview.phone || '5551988880000',
-    address: preview.address || 'Porto Alegre - RS',
-    city: 'Porto Alegre',
-    state: 'RS',
-    logoUrl: '/logo.jpg',
-    coverUrl: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80',
+    phone: preview.phone,
+    whatsapp: preview.phone,
+    address: preview.address,
+    city: '',
   };
 
   const initialVar = normalizeTemplateId(preview.templateId);
