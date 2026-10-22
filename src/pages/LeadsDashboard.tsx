@@ -31,9 +31,17 @@ import {
   ChevronDown
 } from 'lucide-react';
 import { createShareablePreviewUrl } from './SharedSitePreview';
+import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
 
 export type LeadStage = 'novo' | 'contatado' | 'respondeu' | 'reuniao' | 'fechado';
 export type OpportunityLevel = 'alta' | 'media' | 'baixa';
+
+export type LeadTemplateKey =
+  | SiteVariationId
+  | 'modelo-inicial'
+  | 'minimal'
+  | 'bold'
+  | 'editorial';
 
 export interface LeadCompany {
   id: string;
@@ -52,17 +60,22 @@ export interface LeadCompany {
   digitalDiagnosis: 'site_amador' | 'sem_site' | 'perfil_sem_foto' | 'site_desatualizado';
   opportunity: OpportunityLevel;
   stage: LeadStage;
-  selectedTemplate: 'modelo-inicial' | 'minimal' | 'bold' | 'editorial';
+  selectedTemplate: LeadTemplateKey;
   notes: string[];
   followUpDate?: string;
   createdAt: string;
 }
 
-const TEMPLATE_NAMES: Record<string, string> = {
-  'modelo-inicial': 'Salão Modelo Elegance (Dourado/Âmbar)',
-  'minimal': 'Minimal Studio (Clean & Luminoso)',
-  'bold': 'Bold Barber Club (Urbano & Contraste)',
-  'editorial': 'Editorial Hair & Care (Estilo Revista)'
+export const TEMPLATE_NAMES: Record<string, string> = {
+  'ouro-classico': '1. Ouro & Âmbar Clássico (Imperial / Yeshua)',
+  'preto-esmeralda': '2. Preto Fosco & Esmeralda (Urbano & Street)',
+  'minimal-studio': '3. Minimal Studio & Platina (Clean & Arejado)',
+  'safira-executivo': '4. Safira Real Executivo (Navy VIP)',
+  'rubi-lounge': '5. Rubi & Vinho Lounge (Velvet Aesthetic)',
+  'modelo-inicial': '1. Ouro & Âmbar Clássico (Imperial)',
+  'bold': '2. Preto Fosco & Esmeralda (Urbano)',
+  'minimal': '3. Minimal Studio & Platina (Clean)',
+  'editorial': '5. Rubi & Vinho Lounge (Velvet)',
 };
 
 const INITIAL_COMPANIES: LeadCompany[] = [
@@ -173,8 +186,29 @@ const INITIAL_COMPANIES: LeadCompany[] = [
   }
 ];
 
-export const LeadsDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'hoje' | 'buscar' | 'empresas'>('hoje');
+export interface LeadsDashboardProps {
+  initialTab?: 'hoje' | 'buscar' | 'empresas';
+  onTabChange?: (tab: 'hoje' | 'buscar' | 'empresas') => void;
+  embeddedInUnifiedAdmin?: boolean;
+}
+
+export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
+  initialTab = 'hoje',
+  onTabChange,
+  embeddedInUnifiedAdmin = false,
+}) => {
+  const [activeTab, setActiveTab] = useState<'hoje' | 'buscar' | 'empresas'>(initialTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  const switchTab = (tab: 'hoje' | 'buscar' | 'empresas') => {
+    setActiveTab(tab);
+    if (onTabChange) onTabChange(tab);
+  };
   const [companies, setCompanies] = useState<LeadCompany[]>(() => {
     try {
       const saved = localStorage.getItem('alvanto_leads_crm_v2');
@@ -287,12 +321,13 @@ export const LeadsDashboard: React.FC = () => {
 
       setIsSearching(false);
       setSearchSuccessMessage(`Busca concluída! ${newFound.length} novas empresas adicionadas ao seu CRM.`);
-      setTimeout(() => setActiveTab('hoje'), 1200);
+      setTimeout(() => switchTab('hoje'), 1200);
     }, 1500);
   };
 
   // Generate proposal link for a lead
   const getProposalUrl = (company: LeadCompany) => {
+    const templateKey = normalizeTemplateId(company.selectedTemplate);
     return createShareablePreviewUrl({
       version: 1,
       businessName: company.name,
@@ -302,8 +337,8 @@ export const LeadsDashboard: React.FC = () => {
       email: '',
       address: company.address,
       websiteUrl: company.websiteUrl,
-      templateId: company.selectedTemplate,
-      templateName: TEMPLATE_NAMES[company.selectedTemplate] || 'Modelo Oficial',
+      templateId: templateKey,
+      templateName: TEMPLATE_NAMES[templateKey] || 'Modelo Oficial',
       projectVersion: 1,
       generatedAt: new Date().toISOString(),
     });
@@ -338,99 +373,134 @@ export const LeadsDashboard: React.FC = () => {
   ];
 
   return (
-    <div className="flex min-h-screen bg-[#0d0f12] text-neutral-100 font-sans antialiased selection:bg-purple-600 selection:text-white">
+    <div className={`flex min-h-screen bg-[#0d0f12] text-neutral-100 font-sans antialiased selection:bg-purple-600 selection:text-white ${embeddedInUnifiedAdmin ? 'w-full' : ''}`}>
       {/* ---------------------------------------------------- */}
       {/* SIDEBAR NAVIGATION (INSPIRADA NO ALVANTO)            */}
       {/* ---------------------------------------------------- */}
-      <aside className="w-16 md:w-20 bg-[#12151b] border-r border-[#202530] flex flex-col items-center py-5 justify-between shrink-0 z-20">
-        <div className="flex flex-col items-center gap-6 w-full">
-          {/* Logo Badge */}
-          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-900/30 text-white font-black text-lg cursor-pointer">
-            A
+      {!embeddedInUnifiedAdmin && (
+        <aside className="w-16 md:w-20 bg-[#12151b] border-r border-[#202530] flex flex-col items-center py-5 justify-between shrink-0 z-20">
+          <div className="flex flex-col items-center gap-6 w-full">
+            {/* Logo Badge */}
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-purple-700 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-900/30 text-white font-black text-lg cursor-pointer">
+              A
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="flex flex-col items-center gap-2 w-full px-2 mt-4">
+              <button
+                onClick={() => switchTab('hoje')}
+                title="Hoje (Dashboard)"
+                className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                  activeTab === 'hoje'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+                }`}
+              >
+                <Compass className="h-5 w-5" />
+              </button>
+
+              <button
+                onClick={() => switchTab('buscar')}
+                title="Nova busca de leads"
+                className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                  activeTab === 'buscar'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+                }`}
+              >
+                <Search className="h-5 w-5" />
+              </button>
+
+              <button
+                onClick={() => switchTab('empresas')}
+                title="CRM / Empresas"
+                className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
+                  activeTab === 'empresas'
+                    ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
+                    : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
+                }`}
+              >
+                <Users className="h-5 w-5" />
+              </button>
+            </nav>
           </div>
 
-          {/* Navigation Links */}
-          <nav className="flex flex-col items-center gap-2 w-full px-2 mt-4">
-            <button
-              onClick={() => setActiveTab('hoje')}
-              title="Hoje (Dashboard)"
-              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'hoje'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
-              }`}
+          {/* User profile / Return Link */}
+          <div className="flex flex-col items-center gap-4">
+            <a
+              href="/plataforma/admin"
+              title="Voltar ao Painel Geral da Plataforma"
+              className="text-[10px] text-neutral-400 hover:text-white uppercase font-bold text-center leading-tight hover:underline p-1"
             >
-              <Compass className="h-5 w-5" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('buscar')}
-              title="Nova busca de leads"
-              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'buscar'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
-              }`}
-            >
-              <Search className="h-5 w-5" />
-            </button>
-
-            <button
-              onClick={() => setActiveTab('empresas')}
-              title="CRM / Empresas"
-              className={`h-11 w-11 rounded-xl flex items-center justify-center transition-all ${
-                activeTab === 'empresas'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
-                  : 'text-neutral-400 hover:text-neutral-200 hover:bg-[#1a1f28]'
-              }`}
-            >
-              <Users className="h-5 w-5" />
-            </button>
-          </nav>
-        </div>
-
-        {/* User profile / Return Link */}
-        <div className="flex flex-col items-center gap-4">
-          <a
-            href="/plataforma/admin"
-            title="Voltar ao Painel Geral da Plataforma"
-            className="text-[10px] text-neutral-400 hover:text-white uppercase font-bold text-center leading-tight hover:underline p-1"
-          >
-            Admin
-          </a>
-          <div className="h-9 w-9 rounded-full bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center justify-center shadow-inner">
-            NF
+              Admin
+            </a>
+            <div className="h-9 w-9 rounded-full bg-purple-900/60 border border-purple-500/40 text-purple-200 font-bold text-xs flex items-center justify-center shadow-inner">
+              NF
+            </div>
           </div>
-        </div>
-      </aside>
+        </aside>
+      )}
+
 
       {/* ---------------------------------------------------- */}
       {/* MAIN CONTENT AREA                                    */}
       {/* ---------------------------------------------------- */}
       <div className="flex-1 flex flex-col min-w-0 overflow-y-auto">
         {/* Top Header */}
-        <header className="h-16 border-b border-[#202530] bg-[#12151b]/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-semibold text-neutral-400">
-              {activeTab === 'hoje' && 'Hoje / Alvanto Prospecção'}
-              {activeTab === 'buscar' && 'Nova busca / Alvanto Prospecção'}
-              {activeTab === 'empresas' && 'Empresas / CRM Kanban'}
-            </span>
-            <span className="text-xs bg-purple-950/60 text-purple-300 border border-purple-800/40 px-2 py-0.5 rounded-full font-medium">
-              4 Modelos Integrados
+        <header className="h-16 border-b border-[#202530] bg-[#12151b]/80 backdrop-blur-md px-4 sm:px-6 flex items-center justify-between shrink-0 sticky top-0 z-10 gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Direct Tab Switcher Pills */}
+            <div className="flex items-center bg-[#181c24] p-1 rounded-xl border border-[#2d3443]">
+              <button
+                type="button"
+                onClick={() => switchTab('hoje')}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  activeTab === 'hoje'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Hoje
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab('buscar')}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  activeTab === 'buscar'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                Nova busca
+              </button>
+              <button
+                type="button"
+                onClick={() => switchTab('empresas')}
+                className={`px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                  activeTab === 'empresas'
+                    ? 'bg-purple-600 text-white shadow-sm'
+                    : 'text-neutral-400 hover:text-white'
+                }`}
+              >
+                CRM / Empresas
+              </button>
+            </div>
+
+            <span className="hidden md:inline-flex text-[11px] bg-purple-950/60 text-purple-300 border border-purple-800/40 px-2 py-0.5 rounded-full font-medium">
+              5 Modelos Integrados
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <a
               href="/"
               className="text-xs text-neutral-400 hover:text-white transition px-2.5 py-1.5 rounded-lg hover:bg-[#1c212c]"
             >
               Ver Site
             </a>
-            <div className="flex items-center gap-2 bg-[#1c212c] px-3 py-1.5 rounded-xl border border-[#2d3443] text-xs">
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#1c212c] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#2d3443] text-xs">
               <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-neutral-300 font-medium">Mecanismo Ativo</span>
+              <span className="text-neutral-300 font-medium hidden sm:inline">Mecanismo Ativo</span>
             </div>
           </div>
         </header>
@@ -453,14 +523,16 @@ export const LeadsDashboard: React.FC = () => {
 
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setActiveTab('empresas')}
-                  className="px-4 py-2.5 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-sm font-medium text-neutral-200 transition"
+                  type="button"
+                  onClick={() => switchTab('empresas')}
+                  className="px-4 py-2.5 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-sm font-medium text-neutral-200 transition cursor-pointer"
                 >
                   Ver empresas
                 </button>
                 <button
-                  onClick={() => setActiveTab('buscar')}
-                  className="px-5 py-2.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] text-neutral-950 text-sm font-bold flex items-center gap-2 transition shadow-lg shadow-yellow-500/10"
+                  type="button"
+                  onClick={() => switchTab('buscar')}
+                  className="px-5 py-2.5 rounded-xl bg-[#facc15] hover:bg-[#fde047] text-neutral-950 text-sm font-bold flex items-center gap-2 transition shadow-lg shadow-yellow-500/10 cursor-pointer"
                 >
                   <Search className="h-4 w-4" /> Nova busca
                 </button>
@@ -487,8 +559,9 @@ export const LeadsDashboard: React.FC = () => {
                     Seus {companies.length} leads estão no CRM. Marque um retorno no detalhe do lead e ele aparece aqui no dia certo.
                   </p>
                   <button
-                    onClick={() => setActiveTab('empresas')}
-                    className="mt-4 px-4 py-2 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-xs font-semibold text-neutral-200 transition"
+                    type="button"
+                    onClick={() => switchTab('empresas')}
+                    className="mt-4 px-4 py-2 rounded-xl bg-[#1c212c] hover:bg-[#252b39] border border-[#2d3443] text-xs font-semibold text-neutral-200 transition cursor-pointer"
                   >
                     Marcar um retorno
                   </button>
@@ -1084,31 +1157,45 @@ export const LeadsDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-sm font-bold text-white">Modelo de Site Selecionado</h4>
-                    <p className="text-[11px] text-neutral-400">Escolha qual dos 4 modelos apresentar na proposta:</p>
+                    <p className="text-[11px] text-neutral-400">Escolha qual dos 5 modelos oficiais da plataforma apresentar na proposta:</p>
                   </div>
                   <Sparkles className="h-4 w-4 text-purple-400" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 mt-2">
-                  {(['modelo-inicial', 'minimal', 'bold', 'editorial'] as const).map((tmpl) => (
-                    <button
-                      key={tmpl}
-                      onClick={() => handleTemplateChange(selectedCompany.id, tmpl)}
-                      className={`p-3 rounded-xl border text-left transition flex flex-col justify-between ${
-                        selectedCompany.selectedTemplate === tmpl
-                          ? 'border-purple-500 bg-purple-950/40 text-white shadow-md'
-                          : 'border-[#2d3443] bg-[#12151b] text-neutral-400 hover:border-neutral-600'
-                      }`}
-                    >
-                      <span className="font-bold text-xs">{TEMPLATE_NAMES[tmpl]}</span>
-                      <span className="text-[10px] text-neutral-500 mt-1 capitalize">
-                        {tmpl === 'modelo-inicial' && 'Dourado/Âmbar luxo'}
-                        {tmpl === 'minimal' && 'High-key branco clean'}
-                        {tmpl === 'bold' && 'Contraste urbano escuro'}
-                        {tmpl === 'editorial' && 'Estética refinada revista'}
-                      </span>
-                    </button>
-                  ))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  {SITE_TEMPLATES_LIST.map((tmpl) => {
+                    const isSelected = normalizeTemplateId(selectedCompany.selectedTemplate) === tmpl.id;
+                    return (
+                      <button
+                        key={tmpl.id}
+                        type="button"
+                        onClick={() => handleTemplateChange(selectedCompany.id, tmpl.id)}
+                        className={`p-3 rounded-xl border text-left transition flex flex-col justify-between cursor-pointer ${
+                          isSelected
+                            ? 'border-purple-500 bg-purple-950/40 text-white shadow-md ring-1 ring-purple-500'
+                            : 'border-[#2d3443] bg-[#12151b] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-bold text-xs text-white flex items-center gap-2">
+                            <span
+                              className="h-2.5 w-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: tmpl.primaryColor }}
+                            />
+                            {tmpl.name}
+                          </span>
+                          {isSelected && (
+                            <span className="text-[10px] font-bold text-purple-300 bg-purple-500/20 px-1.5 py-0.5 rounded">
+                              Ativo
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] text-neutral-400 mt-1.5 line-clamp-1">
+                          {tmpl.tagline}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 

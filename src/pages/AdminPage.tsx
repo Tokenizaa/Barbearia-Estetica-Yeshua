@@ -46,14 +46,20 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 
-interface AdminPageProps {
+export interface AdminPageProps {
   onNavigateToSuperAdmin?: () => void;
   onBackToApp?: () => void;
+  initialTab?: AdminTab;
+  onTabChange?: (tab: AdminTab) => void;
+  embeddedInUnifiedAdmin?: boolean;
 }
 
 export const AdminPage: React.FC<AdminPageProps> = ({
   onNavigateToSuperAdmin,
   onBackToApp,
+  initialTab = 'dashboard',
+  onTabChange,
+  embeddedInUnifiedAdmin = false,
 }) => {
   const {
     establishment,
@@ -67,8 +73,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     store,
   } = useStore();
 
-  // Authentication State: valid if local session belongs to this establishment OR if super admin
+  // Authentication State: valid if local session belongs to this establishment OR if super admin OR embedded
   const isAuthorized =
+    Boolean(embeddedInUnifiedAdmin) ||
     (session?.role === 'establishment_admin' && session?.establishmentId === establishment.id) ||
     session?.role === 'super_admin' ||
     sessionStorage.getItem('yeshua_admin_logged') === 'true';
@@ -78,7 +85,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [pinError, setPinError] = useState(false);
 
   // Active Admin Tab
-  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<AdminTab>(initialTab);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+
+  React.useEffect(() => {
+    if (embeddedInUnifiedAdmin) {
+      setIsAuthenticated(true);
+    }
+  }, [embeddedInUnifiedAdmin]);
 
   // Modals & Edit States
   const [editingService, setEditingService] = useState<ServiceItem | null>(null);
@@ -318,59 +337,64 @@ export const AdminPage: React.FC<AdminPageProps> = ({
       </div>
 
       {/* Admin Menu Tabs */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-neutral-800/80">
-        {(() => {
-          const pendingCount = appointments.filter((a) => a.status === 'pendente').length;
-          return [
-            { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-            { id: 'servicos', label: 'Serviços', icon: Scissors },
-            { id: 'produtos', label: 'Produtos', icon: ShoppingBag },
-            { id: 'galeria', label: 'Galeria', icon: Images },
-            { id: 'videos', label: 'Vídeos', icon: Video },
-            {
-              id: 'agendamentos',
-              label: 'Agendamentos',
-              icon: Calendar,
-              badge: pendingCount > 0 ? `${pendingCount} novo(s)` : undefined,
-            },
-            {
-              id: 'instagram',
-              label: 'Instagram Embeds',
-              icon: Instagram,
-              badge: `${instagramEmbeds.length}`,
-            },
-            { id: 'configuracoes', label: 'Configurações', icon: Settings },
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as AdminTab)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
-                  isActive
-                    ? 'bg-amber-500 text-neutral-950 shadow-xs'
-                    : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
-                {tab.badge && (
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                      isActive
-                        ? 'bg-neutral-950 text-amber-300'
-                        : 'bg-amber-500 text-neutral-950'
-                    }`}
-                  >
-                    {tab.badge}
-                  </span>
-                )}
-              </button>
-            );
-          });
-        })()}
-      </div>
+      {!embeddedInUnifiedAdmin && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 no-scrollbar border-b border-neutral-800/80">
+          {(() => {
+            const pendingCount = appointments.filter((a) => a.status === 'pendente').length;
+            return [
+              { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+              { id: 'servicos', label: 'Serviços', icon: Scissors },
+              { id: 'produtos', label: 'Produtos', icon: ShoppingBag },
+              { id: 'galeria', label: 'Galeria', icon: Images },
+              { id: 'videos', label: 'Vídeos', icon: Video },
+              {
+                id: 'agendamentos',
+                label: 'Agendamentos',
+                icon: Calendar,
+                badge: pendingCount > 0 ? `${pendingCount} novo(s)` : undefined,
+              },
+              {
+                id: 'instagram',
+                label: 'Instagram Embeds',
+                icon: Instagram,
+                badge: `${instagramEmbeds.length}`,
+              },
+              { id: 'configuracoes', label: 'Configurações', icon: Settings },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setActiveTab(tab.id as AdminTab);
+                    if (onTabChange) onTabChange(tab.id as AdminTab);
+                  }}
+                  className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shrink-0 cursor-pointer ${
+                    isActive
+                      ? 'bg-amber-500 text-neutral-950 shadow-xs'
+                      : 'text-neutral-400 hover:text-white hover:bg-neutral-900'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
+                  {tab.badge && (
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                        isActive
+                          ? 'bg-neutral-950 text-amber-300'
+                          : 'bg-amber-500 text-neutral-950'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            });
+          })()}
+        </div>
+      )}
 
       {/* TAB 1: DASHBOARD */}
       {activeTab === 'dashboard' && (

@@ -12,14 +12,10 @@ import { AppointmentPage } from './pages/AppointmentPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { GalleryPage } from './pages/GalleryPage';
 import { ContactPage } from './pages/ContactPage';
-import { AdminPage } from './pages/AdminPage';
-import { SuperAdminPage } from './pages/SuperAdminPage';
+import { UnifiedAdminDashboard } from './pages/UnifiedAdminDashboard';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
-import { PlatformAccessPage } from './pages/PlatformAccessPage';
-import { PlatformAdminDashboard } from './pages/PlatformAdminDashboard';
 import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
-import { LeadsDashboard } from './pages/LeadsDashboard';
-import { AlertTriangle, Building2, Check } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageView>('home');
@@ -34,28 +30,42 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (window.location.pathname === '/plataforma/admin') {
-    return <PlatformAdminDashboard />;
+  const handleBackToPublicSite = () => {
+    setCurrentPage('home');
+    if (window.location.pathname !== '/') {
+      window.history.pushState({}, '', '/');
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Route: Platform Network / Super Admin
+  if (['/plataforma/admin', '/admin', '/plataforma/login', '/plataforma/cadastro'].includes(window.location.pathname)) {
+    return <UnifiedAdminDashboard initialSection="rede-saloes" onBackToApp={handleBackToPublicSite} />;
+  }
+
+  // Route: Leads Discovery & CRM Scraping Dashboard
+  if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao'].includes(window.location.pathname)) {
+    return <UnifiedAdminDashboard initialSection="prospeccao-hoje" onBackToApp={handleBackToPublicSite} />;
   }
 
   if (publicDemoMatch) {
     return <PublicDemoSelectionPage token={publicDemoMatch[1]} />;
   }
 
-  if (['/plataforma/prospeccao', '/plataforma/crm', '/plataforma/leads', '/prospeccao'].includes(window.location.pathname)) {
-    return <LeadsDashboard />;
-  }
-
-  if (window.location.pathname === '/plataforma/cadastro' || window.location.pathname === '/plataforma/login') {
-    return <PlatformAccessPage />;
-  }
-
   if (new URLSearchParams(window.location.search).has('site-preview')) {
     return <SharedSitePreview preview={sharedPreview} />;
   }
 
-  const isPublicPage =
-    currentPage !== 'admin' && currentPage !== 'super-admin';
+  // If in admin mode, display Unified Admin full-screen
+  if (currentPage === 'admin') {
+    return <UnifiedAdminDashboard initialSection="salao-dashboard" onBackToApp={handleBackToPublicSite} />;
+  }
+
+  if (currentPage === 'super-admin') {
+    return <UnifiedAdminDashboard initialSection="rede-saloes" onBackToApp={handleBackToPublicSite} />;
+  }
+
+  const isPublicPage = true;
 
   const renderCurrentPage = () => {
     // If establishment is inactive and client is on a public page, show inactive message
@@ -111,22 +121,6 @@ export default function App() {
         return <GalleryPage />;
       case 'contato':
         return <ContactPage />;
-      case 'admin':
-        return (
-          <AdminPage
-            onNavigateToSuperAdmin={() => {
-              window.location.assign('/plataforma/login');
-            }}
-            onBackToApp={() => {
-              setCurrentPage('home');
-              window.scrollTo({ top: 0, behavior: 'smooth' });
-            }}
-          />
-        );
-      case 'super-admin':
-        // Administração geral usa a autenticação real da plataforma (Supabase),
-        // nunca o PIN mestre legado armazenado no estado local do navegador.
-        return <PlatformAccessPage />;
       default:
         return (
           <HomePage

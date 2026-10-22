@@ -40,10 +40,11 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const goToPlatformLogin = () => {
+  const goToPlatformSuperAdmin = () => {
     setMobileMenuOpen(false);
     setAccessMenuOpen(false);
-    window.location.assign('/plataforma/login');
+    setCurrentPage('super-admin');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -114,17 +115,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                     <PWAInstallButton variant="navbar" className="w-full justify-start" />
                     <button
                       onClick={() => handleNavClick('admin')}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer"
                     >
                       <ShieldCheck className="h-4 w-4 text-neutral-400" />
                       Área administrativa
                     </button>
                     <button
-                      onClick={goToPlatformLogin}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white"
+                      onClick={goToPlatformSuperAdmin}
+                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer"
                     >
                       <Building2 className="h-4 w-4 text-neutral-400" />
-                      Administração da plataforma
+                      Rede & Super Admin
                     </button>
                   </div>
                 </>
@@ -165,17 +166,17 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
               <PWAInstallButton variant="navbar" className="w-full justify-center" />
               <button
                 onClick={() => handleNavClick('admin')}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
               >
                 <ShieldCheck className="h-4 w-4" />
                 Área administrativa
               </button>
               <button
-                onClick={goToPlatformLogin}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900"
+                onClick={goToPlatformSuperAdmin}
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
               >
                 <Building2 className="h-4 w-4" />
-                Administração da plataforma
+                Rede & Super Admin
               </button>
             </div>
           </nav>

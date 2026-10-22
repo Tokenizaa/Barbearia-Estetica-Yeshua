@@ -1,4 +1,6 @@
 import React from 'react';
+import { SiteTemplateRenderer } from '../components/SiteTemplateRenderer';
+import { normalizeTemplateId, SiteBusinessData } from '../types/templates';
 
 export interface ShareableSitePreview {
   version: 1;
@@ -82,10 +84,6 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
     const safeText = (input: unknown, max = 500) =>
       typeof input === 'string' ? input.trim().slice(0, max) : '';
 
-    const templateId = ['modelo-inicial', 'minimal', 'editorial', 'bold'].includes(String(value.templateId))
-      ? String(value.templateId)
-      : 'modelo-inicial';
-
     const safeBusinessName = safeText(value.businessName, 120);
 
     return {
@@ -99,8 +97,8 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
       email: safeText(value.email, 120),
       address: safeText(value.address, 200),
       websiteUrl: safeText(value.websiteUrl, 300),
-      templateId,
-      templateName: safeText(value.templateName, 80) || 'Modelo inicial neutro',
+      templateId: safeText(value.templateId, 60) || 'ouro-classico',
+      templateName: safeText(value.templateName, 80) || 'Modelo Oficial',
       projectVersion:
         typeof value.projectVersion === 'number' && Number.isFinite(value.projectVersion)
           ? Math.max(1, Math.floor(value.projectVersion))
@@ -120,13 +118,13 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 text-amber-400">
             ⚠️
           </div>
-          <h1 className="text-2xl font-semibold">Prévia indisponível</h1>
+          <h1 className="text-2xl font-semibold">Demonstração indisponível</h1>
           <p className="mt-3 text-sm text-neutral-400">
-            O link de prévia está incompleto, expirou ou contém dados malformados.
+            O link de demonstração está incompleto, expirou ou contém dados malformados.
           </p>
           <a
             href="/"
-            className="mt-6 inline-block rounded-xl bg-emerald-500 px-5 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-emerald-400"
+            className="mt-6 inline-block rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-semibold text-neutral-950 transition hover:bg-amber-400"
           >
             Voltar ao início
           </a>
@@ -135,193 +133,57 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
     );
   }
 
-  const light = preview.templateId === 'minimal' || preview.templateId === 'editorial';
-  const editorial = preview.templateId === 'editorial';
-  const bold = preview.templateId === 'bold';
+  const businessData: SiteBusinessData = {
+    name: preview.businessName,
+    category: preview.category || 'Barbearia & Estética Premium',
+    tagline: 'Excelência em Atendimento & Estilo Personalizado',
+    description: preview.description,
+    phone: preview.phone || '+55 (51) 98888-0000',
+    whatsapp: preview.phone || '5551988880000',
+    address: preview.address || 'Porto Alegre - RS',
+    city: 'Porto Alegre',
+    state: 'RS',
+    logoUrl: '/logo.jpg',
+    coverUrl: 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80',
+  };
 
-  // Format safe contact links
-  const phoneDigits = preview.phone.replace(/\D/g, '');
-  let whatsappNumber = phoneDigits;
-  if (phoneDigits.length === 10 || phoneDigits.length === 11) {
-    whatsappNumber = `55${phoneDigits}`;
-  }
-  const whatsappUrl = whatsappNumber.length >= 10 ? `https://wa.me/${whatsappNumber}` : '';
-  const emailHref = preview.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(preview.email) ? `mailto:${preview.email}` : '';
-  const phoneHref = preview.phone ? `tel:${preview.phone.replace(/[^+\d]/g, '')}` : '';
-
-  const primaryContactHref = whatsappUrl || emailHref || phoneHref;
-  const safeWebsiteUrl = /^https?:\/\//i.test(preview.websiteUrl) ? preview.websiteUrl : '';
+  const initialVar = normalizeTemplateId(preview.templateId);
 
   return (
-    <div className="min-h-screen bg-neutral-100 text-neutral-900">
-      {/* Top Banner differentiating snapshot from published site */}
-      <header className="sticky top-0 z-30 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs text-amber-900 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2">
+    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+      {/* Top Banner differentiating proposal demo from published site */}
+      <header className="sticky top-0 z-50 border-b border-amber-500/30 bg-neutral-950/95 px-4 py-2.5 text-xs text-amber-300 backdrop-blur-md">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <span className="rounded-md bg-amber-500/20 px-2 py-0.5 font-bold uppercase tracking-wider text-amber-800">
-              Prévia de Proposta
+            <span className="rounded-md bg-amber-500/20 px-2 py-0.5 font-bold uppercase tracking-wider text-amber-300 text-[10px]">
+              Demonstração Interativa
             </span>
-            <span className="font-medium text-neutral-800">
-              {preview.businessName} · Modelo: {preview.templateName} (v{preview.projectVersion})
+            <span className="font-semibold text-neutral-200">
+              {preview.businessName} · Proposta de Site Profissional (v{preview.projectVersion})
             </span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-[11px] text-neutral-600 hidden sm:inline">
-              Snapshot interativo não publicado
+            <span className="text-[11px] text-neutral-400 hidden md:inline">
+              Compare os 5 modelos no seletor abaixo e veja seu site completo funcionando
             </span>
             <a
-              href="/"
-              className="rounded-lg border border-neutral-300 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-neutral-700 hover:bg-white"
+              href={`/plataforma/cadastro?name=${encodeURIComponent(preview.businessName)}`}
+              className="rounded-lg bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-neutral-950 hover:bg-amber-400 shadow-md shadow-amber-500/20 transition"
             >
-              Voltar ao site
+              Quero Este Site
             </a>
           </div>
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 py-6 sm:px-8 sm:py-10">
-        {/* Main Showcase Hero */}
-        <section
-          className={`relative overflow-hidden rounded-3xl shadow-2xl transition-all ${
-            editorial
-              ? 'bg-stone-100 text-stone-900 border border-stone-300'
-              : light
-              ? 'bg-white text-neutral-900 border border-neutral-200'
-              : bold
-              ? 'bg-neutral-950 text-white border border-emerald-500/30'
-              : 'bg-slate-950 text-white border border-slate-800'
-          }`}
-        >
-          {/* Subtle Ambient Background Gradients */}
-          <div
-            className={`absolute inset-0 pointer-events-none ${
-              bold
-                ? 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-emerald-500/15 via-neutral-950 to-neutral-950'
-                : editorial
-                ? 'bg-gradient-to-br from-stone-100 via-amber-50/40 to-stone-200/50'
-                : light
-                ? 'bg-gradient-to-br from-white via-neutral-50 to-neutral-100/50'
-                : 'bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-sky-500/15 via-slate-950 to-neutral-950'
-            }`}
-          />
-
-          <div className="relative grid min-h-[500px] items-center gap-10 px-6 py-12 sm:px-12 sm:py-16 md:grid-cols-[1.3fr_0.7fr]">
-            {/* Left Column: Brand & Copy */}
-            <div className="space-y-6">
-              <span
-                className={`inline-block text-xs font-bold uppercase tracking-[0.2em] ${
-                  editorial || light ? 'text-emerald-700' : 'text-emerald-400'
-                }`}
-              >
-                {preview.category || 'Atendimento Especializado'}
-              </span>
-
-              <h1
-                className={`text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl ${
-                  editorial ? 'font-serif' : ''
-                }`}
-              >
-                {preview.businessName}
-              </h1>
-
-              <p
-                className={`max-w-xl text-base sm:text-lg leading-relaxed ${
-                  light ? 'text-neutral-600' : 'text-neutral-300'
-                }`}
-              >
-                {preview.description}
-              </p>
-
-              <div className="pt-2 flex flex-wrap items-center gap-3">
-                {primaryContactHref ? (
-                  <a
-                    href={primaryContactHref}
-                    target={whatsappUrl ? '_blank' : undefined}
-                    rel={whatsappUrl ? 'noreferrer' : undefined}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-sm font-bold text-neutral-950 shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-400 transform active:scale-95"
-                  >
-                    <span>Entre em contato</span>
-                    {whatsappUrl && <span className="text-xs font-semibold">via WhatsApp</span>}
-                  </a>
-                ) : (
-                  <span className="inline-flex rounded-xl bg-emerald-500/80 px-6 py-3.5 text-sm font-bold text-neutral-950">
-                    Entre em contato
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Public Business Data Card */}
-            <div
-              className={`rounded-2xl border p-6 sm:p-8 backdrop-blur-md shadow-lg ${
-                light
-                  ? 'border-neutral-200/90 bg-neutral-50/90'
-                  : 'border-white/10 bg-neutral-900/80'
-              }`}
-            >
-              <h2 className="text-xs font-bold uppercase tracking-wider opacity-60">
-                Informações Confirmadas
-              </h2>
-
-              <div className="mt-5 space-y-4 text-sm">
-                {preview.address ? (
-                  <div>
-                    <span className="text-xs opacity-60 block font-medium">Localização</span>
-                    <p className="mt-1 font-medium break-words">{preview.address}</p>
-                  </div>
-                ) : null}
-
-                {preview.phone ? (
-                  <div>
-                    <span className="text-xs opacity-60 block font-medium">Telefone / WhatsApp</span>
-                    <p className="mt-1 font-semibold">{preview.phone}</p>
-                  </div>
-                ) : null}
-
-                {preview.email ? (
-                  <div>
-                    <span className="text-xs opacity-60 block font-medium">E-mail</span>
-                    <p className="mt-1 break-words font-mono text-xs">{preview.email}</p>
-                  </div>
-                ) : null}
-
-                {safeWebsiteUrl ? (
-                  <div>
-                    <span className="text-xs opacity-60 block font-medium">Site Atual</span>
-                    <a
-                      href={safeWebsiteUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 block break-all text-emerald-600 dark:text-emerald-400 underline font-medium"
-                    >
-                      {safeWebsiteUrl}
-                    </a>
-                  </div>
-                ) : null}
-
-                {!preview.address && !preview.phone && !preview.email && (
-                  <p className="text-xs italic opacity-70">
-                    Os dados de contato e localização serão completados antes da publicação definitiva.
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Footer Disclaimer */}
-        <footer className="mx-auto max-w-2xl py-10 text-center space-y-2">
-          <p className="text-xs text-neutral-500 leading-relaxed">
-            Esta é uma proposta visual personalizada de site para avaliação do cliente. Ela não representa um site publicado, não possui domínio próprio e todas as informações serão validadas antes do lançamento.
-          </p>
-          {preview.generatedAt && (
-            <p className="text-[11px] text-neutral-400">
-              Proposta gerada em {new Date(preview.generatedAt).toLocaleDateString('pt-BR')} às{' '}
-              {new Date(preview.generatedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          )}
-        </footer>
-      </div>
+      <SiteTemplateRenderer
+        businessData={businessData}
+        initialVariation={initialVar}
+        isDemoSelection={true}
+        onContinueToActivation={() => {
+          window.location.assign(`/plataforma/cadastro?name=${encodeURIComponent(preview.businessName)}`);
+        }}
+      />
     </div>
   );
 };

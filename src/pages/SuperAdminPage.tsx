@@ -37,14 +37,22 @@ import {
   KeyRound,
 } from 'lucide-react';
 
-interface SuperAdminPageProps {
+export interface SuperAdminPageProps {
   onBackToApp?: () => void;
   onEnterEstablishmentAdmin?: (establishmentId: string) => void;
+  initialTab?: SuperAdminTab;
+  onTabChange?: (tab: SuperAdminTab) => void;
+  autoAuthenticated?: boolean;
+  embeddedInUnifiedAdmin?: boolean;
 }
 
 export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   onBackToApp,
   onEnterEstablishmentAdmin,
+  initialTab = 'overview',
+  onTabChange,
+  autoAuthenticated = false,
+  embeddedInUnifiedAdmin = false,
 }) => {
   const {
     allEstablishments,
@@ -55,14 +63,23 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
     store,
   } = useStore();
 
-  const isSuperAdmin = session?.role === 'super_admin';
+  const isSuperAdmin =
+    Boolean(autoAuthenticated) ||
+    Boolean(embeddedInUnifiedAdmin) ||
+    session?.role === 'super_admin';
 
   // Login PIN state
   const [masterPinInput, setMasterPinInput] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
 
   // Tab State
-  const [activeTab, setActiveTab] = useState<SuperAdminTab>('overview');
+  const [activeTab, setActiveTab] = useState<SuperAdminTab>(initialTab);
+
+  React.useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
@@ -373,91 +390,114 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-neutral-800 pb-2 overflow-x-auto">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'overview'
-              ? 'bg-amber-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Activity className="w-4 h-4" />
-          <span>Visão Geral & Métricas</span>
-        </button>
+      {!embeddedInUnifiedAdmin && (
+        <div className="flex items-center gap-2 border-b border-neutral-800 pb-2 overflow-x-auto">
+          <button
+            onClick={() => {
+              setActiveTab('overview');
+              if (onTabChange) onTabChange('overview');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'overview'
+                ? 'bg-amber-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Activity className="w-4 h-4" />
+            <span>Visão Geral & Métricas</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('establishments')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'establishments'
-              ? 'bg-amber-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Building2 className="w-4 h-4" />
-          <span>Estabelecimentos ({allEstablishments.length})</span>
-        </button>
+          <button
+            onClick={() => {
+              setActiveTab('establishments');
+              if (onTabChange) onTabChange('establishments');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'establishments'
+                ? 'bg-amber-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Building2 className="w-4 h-4" />
+            <span>Estabelecimentos ({allEstablishments.length})</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('new-establishment')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'new-establishment'
-              ? 'bg-amber-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Plus className="w-4 h-4" />
-          <span>Cadastrar Novo</span>
-        </button>
+          <button
+            onClick={() => {
+              setActiveTab('new-establishment');
+              if (onTabChange) onTabChange('new-establishment');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'new-establishment'
+                ? 'bg-amber-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Plus className="w-4 h-4" />
+            <span>Cadastrar Novo</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('administrators')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'administrators'
-              ? 'bg-amber-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Administradores Vinculados</span>
-        </button>
+          <button
+            onClick={() => {
+              setActiveTab('administrators');
+              if (onTabChange) onTabChange('administrators');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'administrators'
+                ? 'bg-amber-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Administradores Vinculados</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('audit-logs')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'audit-logs'
-              ? 'bg-amber-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          <span>Auditoria & Segurança</span>
-        </button>
+          <button
+            onClick={() => {
+              setActiveTab('audit-logs');
+              if (onTabChange) onTabChange('audit-logs');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'audit-logs'
+                ? 'bg-amber-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Lock className="w-4 h-4" />
+            <span>Auditoria & Segurança</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('leads')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'leads'
-              ? 'bg-emerald-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          <span>Prospecção de Leads</span>
-        </button>
+          <button
+            onClick={() => {
+              setActiveTab('leads');
+              if (onTabChange) onTabChange('leads');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'leads'
+                ? 'bg-emerald-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Prospecção de Leads</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
-            activeTab === 'settings'
-              ? 'bg-amber-500 text-neutral-950 shadow-md'
-              : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          <span>Configurações Globais</span>
-        </button>
-      </div>
+          <button
+            onClick={() => {
+              setActiveTab('settings');
+              if (onTabChange) onTabChange('settings');
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-colors flex items-center gap-2 cursor-pointer ${
+              activeTab === 'settings'
+                ? 'bg-amber-500 text-neutral-950 shadow-md'
+                : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-900'
+            }`}
+          >
+            <Settings className="w-4 h-4" />
+            <span>Configurações Globais</span>
+          </button>
+        </div>
+      )}
 
       {activeTab === 'leads' && <LeadsDashboard />}
 
