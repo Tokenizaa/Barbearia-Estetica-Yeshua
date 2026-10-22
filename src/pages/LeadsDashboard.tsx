@@ -106,7 +106,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   // Never seed operational CRM with sample businesses. Persist only after a server-backed API is connected.
   const [companies, setCompanies] = useState<LeadCompany[]>(INITIAL_COMPANIES);
 
-  const [searchHistory, setSearchHistory] = useState<Array<{ niche: string; location: string; count: number; date: string }>>([]);
+  const searchHistory: Array<{ niche: string; location: string; count: number; date: string }> = [];
 
   // Form states for "Nova busca"
   const [searchNiche, setSearchNiche] = useState('Barbearia');
@@ -342,6 +342,10 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
             </div>
           </div>
         </header>
+
+        <div className="border-b border-amber-800/70 bg-amber-950/40 px-4 py-3 text-xs text-amber-200 sm:px-6" role="status">
+          CRM em modo temporário: os leads e alterações não são persistidos no banco e serão perdidos ao recarregar a página. Não registre dados operacionais até a integração de persistência ser concluída.
+        </div>
 
         {/* -------------------------------------------------- */}
         {/* VIEW 1: HOJE (DASHBOARD DIÁRIO)                   */}
