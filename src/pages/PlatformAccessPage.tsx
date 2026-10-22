@@ -151,6 +151,7 @@ export function PlatformAccessPage() {
           return;
         }
         setMessage('Login do salão realizado.');
+        window.location.replace('/admin');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Não foi possível concluir o acesso.');
