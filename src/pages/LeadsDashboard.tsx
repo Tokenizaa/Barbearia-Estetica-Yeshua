@@ -185,7 +185,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   // WhatsApp click-to-chat with tailored copy
   const getWhatsAppProposalMessage = (company: LeadCompany) => {
     const proposalLink = `${window.location.origin}${getProposalUrl(company)}`;
-    const text = `Olá! Vi o perfil de excelência da ${company.name} no Google e preparei uma proposta de site moderno exclusiva para vocês, já com agendamento online e visual de alto padrão:\n\n${proposalLink}\n\nO que achou da proposta?`;
+    const text = `Olá! Preparei uma proposta visual de site para ${company.name}, para vocês avaliarem o conceito e o visual antes de qualquer publicação:\n\n${proposalLink}\n\nO que achou da proposta?`;
     return `https://wa.me/${company.whatsapp}?text=${encodeURIComponent(text)}`;
   };
 
