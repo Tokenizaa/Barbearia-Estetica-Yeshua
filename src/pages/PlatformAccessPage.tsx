@@ -35,12 +35,9 @@ export function PlatformAccessPage() {
   const initialDemoToken = queryParams.get('demoToken') || '';
   const initialVersionId = queryParams.get('versionId') || '';
   const initialSalonName = queryParams.get('name') || '';
+  const initialMode = queryParams.get('mode') || 'signup';
 
-  const [mode, setMode] = useState<'signup' | 'login'>(
-    window.location.pathname.endsWith('/login') ? 'login' : 'signup'
-  );
-  const [accountKind, setAccountKind] = useState<'salon_owner' | 'platform_admin'>('salon_owner');
-  const [bootstrapCode, setBootstrapCode] = useState('');
+  const [mode, setMode] = useState<'signup' | 'login'>(initialMode === 'login' ? 'login' : 'signup');
   const [isPlatformAdmin, setIsPlatformAdmin] = useState(false);
   const [ownerName, setOwnerName] = useState('');
   const [salonName, setSalonName] = useState(initialSalonName);
@@ -54,6 +51,11 @@ export function PlatformAccessPage() {
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [payment, setPayment] = useState<Payment | null>(null);
+
+  // Sync mode with URL
+  useEffect(() => {
+    window.history.replaceState({}, '', `/plataforma/acesso?mode=${mode}${initialDemoToken ? `&demoToken=${initialDemoToken}` : ''}${initialVersionId ? `&versionId=${initialVersionId}` : ''}${initialSalonName ? `&name=${encodeURIComponent(initialSalonName)}` : ''}`);
+  }, [mode, initialDemoToken, initialVersionId, initialSalonName]);
 
   useEffect(() => {
     if (!supabase) return;
@@ -102,16 +104,12 @@ export function PlatformAccessPage() {
     try {
       if (mode === 'signup') {
         if (password.length < 10) throw new Error('Use uma senha com pelo menos 10 caracteres.');
-        if (accountKind === 'platform_admin' && !bootstrapCode.trim()) throw new Error('Informe o código de ativação do administrador geral.');
-        if (accountKind === 'salon_owner' && slugify(salonName).length < 2) throw new Error('Informe um nome válido para o salão.');
+        if (slugify(salonName).length < 2) throw new Error('Informe um nome válido para o salão.');
         const { data, error: signUpError } = await supabase.auth.signUp({
           email: email.trim().toLowerCase(),
           password,
           options: {
-            data: accountKind === 'platform_admin' ? {
-              signup_type: 'platform_admin',
-              platform_admin_bootstrap_code: bootstrapCode.trim(),
-            } : {
+            data: {
               signup_type: 'salon_owner',
               owner_name: ownerName.trim(),
               establishment_name: salonName.trim(),
@@ -124,9 +122,9 @@ export function PlatformAccessPage() {
         if (signUpError) throw signUpError;
         if (data.session) {
           setSessionEmail(data.user?.email ?? email);
-          setMessage(accountKind === 'platform_admin' ? 'Conta criada e ativada como administradora geral da plataforma.' : 'Conta criada. Seu salão foi cadastrado como rascunho; escolha um plano para ativá-lo.');
+          setMessage('Conta criada. Seu salão foi cadastrado como rascunho; escolha um plano para ativá-lo.');
         } else {
-          setMessage(accountKind === 'platform_admin' ? 'Cadastro de administrador iniciado. Confirme o e-mail enviado; a ativação será concluída pelo código informado.' : 'Cadastro iniciado. Confirme o e-mail enviado e depois entre para continuar a contratação.');
+          setMessage('Cadastro iniciado. Confirme o e-mail enviado e depois entre para continuar a contratação.');
         }
       } else {
         const { data, error: signInError } = await supabase.auth.signInWithPassword({
@@ -137,14 +135,6 @@ export function PlatformAccessPage() {
           .from('platform_admins').select('user_id').eq('user_id', data.user.id).maybeSingle();
         if (roleError) throw new Error('Não foi possível confirmar o tipo desta conta. Tente novamente.');
         const isAdminAccount = Boolean(adminRow);
-        if (accountKind === 'platform_admin' && !isAdminAccount) {
-          await supabase.auth.signOut();
-          throw new Error('Esta conta não é de administrador geral. Selecione “Salão” para entrar com uma conta de estabelecimento.');
-        }
-        if (accountKind === 'salon_owner' && isAdminAccount) {
-          await supabase.auth.signOut();
-          throw new Error('Esta conta é de administrador geral. Selecione “Admin geral” para acessar o painel correto.');
-        }
         setSessionEmail(data.user.email ?? email);
         if (isAdminAccount) {
           window.location.replace('/plataforma/admin');
@@ -219,15 +209,13 @@ export function PlatformAccessPage() {
                   Demonstração vinculada: os dados e o modelo escolhido serão associados à sua nova conta.
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-2 rounded-xl border border-neutral-800 p-1"><button type="button" onClick={() => setAccountKind('salon_owner')} className={`rounded-lg px-3 py-2 text-sm ${accountKind === 'salon_owner' ? 'bg-amber-400 text-neutral-950 font-semibold' : 'text-neutral-400'}`}>{mode === 'signup' ? 'Cadastrar salão' : 'Salão'}</button><button type="button" onClick={() => setAccountKind('platform_admin')} className={`rounded-lg px-3 py-2 text-sm ${accountKind === 'platform_admin' ? 'bg-amber-400 text-neutral-950 font-semibold' : 'text-neutral-400'}`}>{mode === 'signup' ? 'Administrador geral' : 'Admin geral'}</button></div>
-              {mode === 'signup' && accountKind === 'salon_owner' && <><label className="block text-sm">Seu nome<input required autoComplete="name" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Nome do salão<input required maxLength={120} value={salonName} onChange={e => { setSalonName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Endereço do site (identificador)<input required maxLength={45} value={slug} onChange={e => { setSlug(slugify(e.target.value)); setSlugEdited(true); }} placeholder="meu-salao" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /><span className="mt-1 block text-xs text-neutral-500">Pode ser ajustado posteriormente, se estiver disponível.</span></label></>}
-              {mode === 'signup' && accountKind === 'platform_admin' && <label className="block text-sm">Código de ativação do administrador geral<input required autoComplete="off" value={bootstrapCode} onChange={e => setBootstrapCode(e.target.value.toUpperCase().trim())} placeholder="PLATAFORMA-ADMIN-XXXXX-XXXXX-XXXXX" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3 font-mono tracking-wide" /><span className="mt-1 block text-xs text-neutral-500">Código único, com prazo de validade. Só o primeiro cadastro válido poderá usá-lo.</span></label>}
+              {mode === 'signup' && <><label className="block text-sm">Seu nome<input required autoComplete="name" value={ownerName} onChange={e => setOwnerName(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Nome do salão<input required maxLength={120} value={salonName} onChange={e => { setSalonName(e.target.value); if (!slugEdited) setSlug(slugify(e.target.value)); }} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label><label className="block text-sm">Endereço do site (identificador)<input required maxLength={45} value={slug} onChange={e => { setSlug(slugify(e.target.value)); setSlugEdited(true); }} placeholder="meu-salao" className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /><span className="mt-1 block text-xs text-neutral-500">Pode ser ajustado posteriormente, se estiver disponível.</span></label></>}
               <label className="block text-sm">E-mail<input required type="email" autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label>
               <label className="block text-sm">Senha<input required type="password" autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} minLength={mode === 'signup' ? 10 : 1} value={password} onChange={e => setPassword(e.target.value)} className="mt-1 w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-3" /></label>
               {error && <p role="alert" className="rounded-lg bg-rose-950/50 p-3 text-sm text-rose-300">{error}</p>}
               {message && <p role="status" className="rounded-lg bg-neutral-800 p-3 text-sm text-neutral-300">{message}</p>}
-              <button disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-400 px-4 py-3 font-semibold text-neutral-950 disabled:opacity-50">{busy ? 'Aguarde...' : mode === 'signup' ? <><UserPlus size={17} /> {accountKind === 'platform_admin' ? 'Criar conta de administrador' : 'Criar conta e salão'}</> : <><LogIn size={17} /> Entrar</>}</button>
-              <button type="button" onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(''); setMessage(''); window.history.replaceState({}, '', mode === 'signup' ? '/plataforma/login' : '/plataforma/cadastro'); }} className="w-full text-sm text-neutral-400 hover:text-white">{mode === 'signup' ? 'Já tem uma conta? Entrar' : 'Ainda não tem conta? Cadastrar salão'}</button>
+              <button disabled={busy} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-amber-400 px-4 py-3 font-semibold text-neutral-950 disabled:opacity-50">{busy ? 'Aguarde...' : mode === 'signup' ? <><UserPlus size={17} /> Criar conta e salão</> : <><LogIn size={17} /> Entrar</>}</button>
+              <button type="button" onClick={() => { setMode(mode === 'signup' ? 'login' : 'signup'); setError(''); setMessage(''); }} className="w-full text-sm text-neutral-400 hover:text-white">{mode === 'signup' ? 'Já tem uma conta? Entrar' : 'Ainda não tem conta? Cadastrar salão'}</button>
             </form>
           )}
           {error && sessionEmail && <p role="alert" className="mt-4 rounded-lg bg-rose-950/50 p-3 text-sm text-rose-300">{error}</p>}

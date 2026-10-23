@@ -42,8 +42,17 @@ export default function App() {
   };
 
   // Autenticação/cadastro usam Supabase Auth e o fluxo de contratação VenoPag.
-  if (['/plataforma/login', '/plataforma/cadastro'].includes(window.location.pathname)) {
+  // Rota unificada: /plataforma/acesso?mode=signup|login
+  if (window.location.pathname === '/plataforma/acesso') {
     return <PlatformAccessPage />;
+  }
+  // Redireciona rotas legadas para a nova unificada
+  if (['/plataforma/login', '/plataforma/cadastro'].includes(window.location.pathname)) {
+    const mode = window.location.pathname.endsWith('/login') ? 'login' : 'signup';
+    const params = new URLSearchParams(window.location.search);
+    params.set('mode', mode);
+    window.location.replace(`/plataforma/acesso?${params.toString()}`);
+    return null;
   }
 
   // Administração geral e gestão do salão são rotas independentes.
