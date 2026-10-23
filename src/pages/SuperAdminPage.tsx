@@ -68,10 +68,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
     Boolean(embeddedInUnifiedAdmin) ||
     session?.role === 'super_admin';
 
-  // Login PIN state
-  const [masterPinInput, setMasterPinInput] = useState('');
-  const [loginError, setLoginError] = useState<string | null>(null);
-
   // Tab State
   const [activeTab, setActiveTab] = useState<SuperAdminTab>(initialTab);
 
@@ -84,6 +80,9 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+
+  // Settings form state
+  const [settingsPlatformName, setSettingsPlatformName] = useState(platformConfig.platformName);
 
   // Edit Establishment Modal
   const [editingEstablishment, setEditingEstablishment] = useState<Establishment | null>(null);
@@ -114,32 +113,11 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
     instagramUrl: '',
     adminName: 'Administrador Local',
     adminEmail: '',
-    adminPin: '1234',
     status: 'active' as EstablishmentStatus,
   });
 
-  // Settings State
-  const [currentMasterPin, setCurrentMasterPin] = useState('');
-  const [newMasterPin, setNewMasterPin] = useState('');
-  const [confirmMasterPin, setConfirmMasterPin] = useState('');
-  const [platformNameInput, setPlatformNameInput] = useState(platformConfig.platformName);
-
-  // Handle Master Login
-  const handleMasterLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const result = store.loginSuperAdmin(masterPinInput);
-    if (result.success) {
-      setLoginError(null);
-      setMasterPinInput('');
-      showToast('Bem-vindo ao Painel Master da Plataforma!');
-    } else {
-      setLoginError(result.message || 'Chave Mestre inválida.');
-    }
-  };
-
   const handleLogout = () => {
     store.logout();
-    setMasterPinInput('');
   };
 
   const handleCreateEstablishment = (e: React.FormEvent) => {
@@ -177,7 +155,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
         instagramUrl: '',
         adminName: 'Administrador Local',
         adminEmail: '',
-        adminPin: '1234',
         status: 'active',
       });
     } catch (err) {
@@ -221,31 +198,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
     }
   };
 
-  const handleChangeMasterPin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (currentMasterPin !== platformConfig.masterPin) {
-      showToast('PIN Master atual incorreto.');
-      return;
-    }
-    if (newMasterPin.length < 4) {
-      showToast('O novo PIN Master deve ter no mínimo 4 caracteres.');
-      return;
-    }
-    if (newMasterPin !== confirmMasterPin) {
-      showToast('A confirmação do novo PIN não confere.');
-      return;
-    }
-
-    store.updatePlatformConfig({
-      masterPin: newMasterPin,
-      platformName: platformNameInput,
-    });
-    setCurrentMasterPin('');
-    setNewMasterPin('');
-    setConfirmMasterPin('');
-    showToast('Configurações da Plataforma e PIN Master atualizados com sucesso!');
-  };
-
   const handleExportAuditLogs = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(auditLogs, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -275,38 +227,21 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
             </p>
           </div>
 
-          <form onSubmit={handleMasterLogin} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                maxLength={12}
-                value={masterPinInput}
-                onChange={(e) => {
-                  setMasterPinInput(e.target.value);
-                  setLoginError(null);
-                }}
-                placeholder="Digite a Chave Mestre (PIN)"
-                className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-center text-xl tracking-widest text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-amber-400 transition-colors"
-                autoFocus
-              />
-              {loginError && (
-                <p className="text-xs text-rose-400 mt-2 font-medium">
-                  {loginError}
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
-            >
-              Acessar Painel Master
-            </button>
-          </form>
+          <button
+            onClick={() => {
+              const result = store.loginSuperAdmin();
+              if (result.success) {
+                showToast('Bem-vindo ao Painel Master da Plataforma!');
+              }
+            }}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+          >
+            Acessar Painel Master
+          </button>
 
           <div className="pt-2 border-t border-neutral-800 text-[11px] text-neutral-400 flex flex-col gap-2">
             <span>
-              Chave Mestre padrão inicial: <strong className="text-neutral-300">9988</strong>
+              A autenticação é gerenciada exclusivamente pelo Supabase Auth.
             </span>
             {onBackToApp && (
               <button
@@ -795,7 +730,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                       </div>
                       <div className="flex items-center gap-2">
                         <Lock className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
-                        <span>PIN Local: <strong className="text-neutral-200 font-mono tracking-widest">{est.adminPin}</strong> ({est.adminName || 'Admin'})</span>
+                        <span>Acesso via Supabase Auth ({est.adminName || 'Admin'})</span>
                       </div>
                     </div>
                   </div>
@@ -1060,20 +995,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                    PIN de Acesso Local (4-8 dígitos) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={8}
-                    value={newEstForm.adminPin}
-                    onChange={(e) => setNewEstForm({ ...newEstForm, adminPin: e.target.value })}
-                    placeholder="1234"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-mono tracking-widest focus:outline-none focus:border-amber-400"
-                  />
-                </div>
               </div>
             </div>
 
@@ -1119,7 +1040,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                   <th className="py-3 px-4">Estabelecimento</th>
                   <th className="py-3 px-4">Administrador</th>
                   <th className="py-3 px-4">E-mail de Contato</th>
-                  <th className="py-3 px-4">PIN Local</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Ação</th>
                 </tr>
@@ -1136,9 +1056,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                     <td className="py-3.5 px-4 text-neutral-400">
                       {est.adminEmail || 'Não informado'}
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-amber-400 font-bold tracking-widest">
-                      {est.adminPin}
-                    </td>
                     <td className="py-3.5 px-4">
                       <span
                         className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
@@ -1153,20 +1070,11 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                     <td className="py-3.5 px-4 text-right">
                       <button
                         onClick={() => {
-                          const newPin = prompt(
-                            `Digite o novo PIN para o administrador de "${est.name}":`,
-                            est.adminPin
-                          );
-                          if (newPin && newPin.trim().length >= 4) {
-                            store.updateEstablishment(est.id, { adminPin: newPin.trim() });
-                            showToast(`PIN de ${est.name} alterado com sucesso.`);
-                          } else if (newPin) {
-                            alert('O PIN deve ter no mínimo 4 dígitos.');
-                          }
+                          showToast('As credenciais de acesso são gerenciadas exclusivamente pelo Supabase Auth.');
                         }}
                         className="px-2.5 py-1.5 rounded-lg border border-neutral-700 bg-neutral-950 text-neutral-300 hover:text-amber-400 hover:border-amber-500/40 text-[11px] font-medium transition-colors cursor-pointer"
                       >
-                        Alterar PIN
+                        Gerenciar Acesso (Supabase)
                       </button>
                     </td>
                   </tr>
@@ -1251,7 +1159,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
         </div>
       )}
 
-      {/* TAB 6: GLOBAL SETTINGS & MASTER PIN */}
+      {/* TAB 6: GLOBAL SETTINGS */}
       {activeTab === 'settings' && (
         <div className="bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6 max-w-2xl mx-auto shadow-xl">
           <div className="border-b border-neutral-800 pb-4">
@@ -1260,11 +1168,15 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
               <span>Configurações Globais da Plataforma</span>
             </h2>
             <p className="text-xs text-neutral-400 mt-1">
-              Altere o nome da rede e a Chave Mestre de Administrador Geral.
+              A autenticação é gerenciada exclusivamente pelo Supabase Auth. As configurações de rede podem ser ajustadas aqui.
             </p>
           </div>
 
-          <form onSubmit={handleChangeMasterPin} className="space-y-5">
+          <form onSubmit={e => {
+            e.preventDefault();
+            store.updatePlatformConfig({ platformName: settingsPlatformName });
+            showToast('Configurações da plataforma atualizadas.');
+          }} className="space-y-4">
             <div>
               <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
                 Nome da Rede White Label
@@ -1272,59 +1184,10 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
               <input
                 type="text"
                 required
-                value={platformNameInput}
-                onChange={(e) => setPlatformNameInput(e.target.value)}
+                value={settingsPlatformName}
+                onChange={(e) => setSettingsPlatformName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400"
               />
-            </div>
-
-            <div className="pt-3 border-t border-neutral-800 space-y-4">
-              <h4 className="text-sm font-bold text-neutral-200 flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-amber-400" />
-                <span>Alterar Chave Mestre (Super Admin PIN)</span>
-              </h4>
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  Chave Mestre Atual *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={currentMasterPin}
-                  onChange={(e) => setCurrentMasterPin(e.target.value)}
-                  placeholder="Digite a Chave Mestre atual"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs tracking-widest focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  Nova Chave Mestre *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={newMasterPin}
-                  onChange={(e) => setNewMasterPin(e.target.value)}
-                  placeholder="Mínimo 4 dígitos"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs tracking-widest focus:outline-none focus:border-amber-400"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                  Confirmar Nova Chave Mestre *
-                </label>
-                <input
-                  type="password"
-                  required
-                  value={confirmMasterPin}
-                  onChange={(e) => setConfirmMasterPin(e.target.value)}
-                  placeholder="Repita a nova Chave Mestre"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs tracking-widest focus:outline-none focus:border-amber-400"
-                />
-              </div>
             </div>
 
             <div className="pt-4 border-t border-neutral-800 flex justify-end">
@@ -1336,6 +1199,19 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
               </button>
             </div>
           </form>
+
+          <div className="bg-neutral-950/50 border border-neutral-800 rounded-xl p-4">
+            <h4 className="text-sm font-bold text-neutral-200 mb-2">
+              <KeyRound className="w-4 h-4 text-amber-400" />
+              <span>Segurança de Autenticação</span>
+            </h4>
+            <ul className="text-xs text-neutral-400 space-y-1 list-disc list-inside">
+              <li>Sem PINs locais armazenados.</li>
+              <li>Sem Chave Mestre de plataforma.</li>
+              <li>Autenticação exclusivamente via Supabase Auth.</li>
+              <li>Isolamento de dados por políticas RLS do banco.</li>
+            </ul>
+          </div>
         </div>
       )}
 
@@ -1422,20 +1298,6 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                       });
                     }}
                     className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-neutral-300 mb-1">
-                    PIN Local de Acesso
-                  </label>
-                  <input
-                    type="text"
-                    value={editingEstablishment.adminPin}
-                    onChange={(e) =>
-                      setEditingEstablishment({ ...editingEstablishment, adminPin: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs font-mono tracking-widest focus:outline-none focus:border-amber-400"
                   />
                 </div>
 

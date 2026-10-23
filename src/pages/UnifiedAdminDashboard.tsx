@@ -90,51 +90,32 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
   // Auth State
   const isAuthorized =
     session?.role === 'super_admin' ||
-    session?.role === 'establishment_admin' ||
-    sessionStorage.getItem('yeshua_admin_logged') === 'true' ||
-    sessionStorage.getItem('master_admin_logged') === 'true';
+    session?.role === 'establishment_admin';
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(isAuthorized));
-  const [pinInput, setPinInput] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
   // Template Showcase preview state
   const [selectedShowcaseTemplate, setSelectedShowcaseTemplate] = useState<SiteVariationId>('ouro-classico');
 
-  // Handle Master / Salon PIN Login
-  const handlePinLogin = (e: React.FormEvent) => {
-    e.preventDefault();
+  // Handle Login (sem PIN — autenticação via Supabase Auth)
+  const handleLogin = (isSuper: boolean) => {
     setAuthError(null);
-
-    // 1. Check Super Admin Master PIN (platformConfig.masterPin or fallback 9988 / 9999)
-    if (
-      pinInput === platformConfig.masterPin ||
-      pinInput === '9988' ||
-      pinInput === '9999'
-    ) {
-      store.loginSuperAdmin(pinInput);
-      sessionStorage.setItem('master_admin_logged', 'true');
+    try {
+      if (isSuper) {
+        store.loginSuperAdmin();
+      } else {
+        store.loginLocalAdmin('', establishment.id);
+      }
       setIsAuthenticated(true);
-      return;
+    } catch {
+      setAuthError('Não foi possível estabelecer a sessão. Verifique suas permissões no Supabase Auth.');
     }
-
-    // 2. Check local salon PIN
-    if (pinInput === establishment.adminPin || pinInput === '1234') {
-      store.loginLocalAdmin(pinInput, establishment.id);
-      sessionStorage.setItem('yeshua_admin_logged', 'true');
-      setIsAuthenticated(true);
-      return;
-    }
-
-    setAuthError('Chave de acesso (PIN) inválida. Digite o PIN do salão ou a Chave Mestre da rede.');
   };
 
   const handleLogout = () => {
     store.logout();
-    sessionStorage.removeItem('yeshua_admin_logged');
-    sessionStorage.removeItem('master_admin_logged');
     setIsAuthenticated(false);
-    setPinInput('');
   };
 
   const handleSelectEstablishment = (estId: string) => {
@@ -199,53 +180,29 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
             </p>
           </div>
 
-          <form onSubmit={handlePinLogin} className="space-y-4 text-left">
-            <div>
-              <label className="block text-xs font-semibold text-neutral-400 mb-1">
-                Chave de Acesso (PIN ou Chave Mestre)
-              </label>
-              <input
-                type="password"
-                maxLength={12}
-                value={pinInput}
-                onChange={(e) => {
-                  setPinInput(e.target.value);
-                  setAuthError(null);
-                }}
-                placeholder="••••"
-                className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-center text-xl tracking-widest text-neutral-100 focus:outline-none focus:border-amber-400 transition"
-                autoFocus
-              />
-              {authError && (
-                <p className="text-xs text-rose-400 mt-2 font-medium">
-                  {authError}
-                </p>
-              )}
-            </div>
-
+          <div className="space-y-3 text-left">
+            {authError && (
+              <p className="text-xs text-rose-400 mt-2 font-medium">
+                {authError}
+              </p>
+            )}
             <button
-              type="submit"
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition cursor-pointer"
+              onClick={() => handleLogin(false)}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
             >
-              Entrar no Painel Administrativo
+              Entrar como Administrador do Estabelecimento
             </button>
-
             <button
-              type="button"
-              onClick={() => {
-                store.loginSuperAdmin('9988');
-                sessionStorage.setItem('master_admin_logged', 'true');
-                setIsAuthenticated(true);
-              }}
-              className="w-full py-2.5 rounded-xl border border-neutral-800 bg-neutral-950 hover:bg-neutral-800 text-neutral-300 text-xs font-semibold transition cursor-pointer flex items-center justify-center gap-1.5"
+              onClick={() => handleLogin(true)}
+              className="w-full py-3.5 rounded-xl border border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-sm shadow-md transition-all cursor-pointer"
             >
-              <span>Acesso Rápido com Chave Mestre (9988)</span>
+              Entrar como Super Administrador da Plataforma
             </button>
-          </form>
+          </div>
 
           <div className="pt-4 border-t border-neutral-800 text-xs text-neutral-400 flex flex-col gap-2">
             <span>
-              Chave Mestre da Rede: <strong className="text-neutral-300">9988</strong> · PIN do Salão: <strong className="text-neutral-300">1234</strong>
+              A autenticação é gerenciada exclusivamente pelo Supabase Auth.
             </span>
             {onBackToApp && (
               <button

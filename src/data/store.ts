@@ -294,6 +294,32 @@ let currentSession: AuthSession | null = (() => {
 export const store = {
   // --- Multitenant Establishment Management ---
 
+  /** Verifica se a sessão atual tem permissão para gravar. */
+  requireWriteAuth(): { ok: true } | { ok: false; message: string } {
+    if (!currentSession) {
+      return { ok: false, message: 'Sessão não autenticada.' };
+    }
+    if (currentSession.role !== 'super_admin' && currentSession.role !== 'establishment_admin') {
+      return { ok: false, message: 'Permissão insuficiente para esta operação.' };
+    }
+    return { ok: true };
+  },
+
+  /** Verifica se a sessão atual pode acessar o establishment especificado (isolamento multi-tenant). */
+  requireTenantAccess(targetEstablishmentId?: string): { ok: true } | { ok: false; message: string } {
+    const tenantId = targetEstablishmentId || activeTenantId;
+    if (!currentSession) {
+      return { ok: false, message: 'Sessão não autenticada.' };
+    }
+    if (currentSession.role === 'super_admin') {
+      return { ok: true };
+    }
+    if (currentSession.role === 'establishment_admin' && currentSession.establishmentId === tenantId) {
+      return { ok: true };
+    }
+    return { ok: false, message: 'Acesso negado a dados de outro estabelecimento.' };
+  },
+
   getAllEstablishments(): Establishment[] {
     return allEstablishments;
   },
@@ -349,6 +375,9 @@ export const store = {
   },
 
   addEstablishment(data: Omit<Establishment, 'id' | 'createdAt'>): Establishment {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+
     // Generate clean slug
     const baseSlug = (data.slug || data.name)
       .toLowerCase()
@@ -388,6 +417,9 @@ export const store = {
   },
 
   updateEstablishment(id: string, updates: Partial<Establishment>): boolean {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+
     const index = allEstablishments.findIndex((e) => e.id === id);
     if (index === -1) return false;
 
@@ -421,6 +453,9 @@ export const store = {
   },
 
   toggleEstablishmentStatus(id: string): boolean {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+
     const est = allEstablishments.find((e) => e.id === id);
     if (!est) return false;
 
@@ -442,6 +477,9 @@ export const store = {
   },
 
   deleteEstablishment(id: string): boolean {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+
     const est = allEstablishments.find((e) => e.id === id);
     if (!est || est.isDefault) {
       console.warn('Não é permitido excluir o estabelecimento padrão da plataforma.');
@@ -488,6 +526,11 @@ export const store = {
   // --- Strict Scoped Operational Data Getters ---
 
   getServices(targetEstablishmentId?: string): ServiceItem[] {
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) {
+      console.warn(access.message);
+      return [];
+    }
     const tenantId = targetEstablishmentId || activeTenantId;
     return allServices.filter(
       (s) => (s.establishmentId || 'est-yeshua') === tenantId
@@ -495,6 +538,11 @@ export const store = {
   },
 
   getProducts(targetEstablishmentId?: string): ProductItem[] {
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) {
+      console.warn(access.message);
+      return [];
+    }
     const tenantId = targetEstablishmentId || activeTenantId;
     return allProducts.filter(
       (p) => (p.establishmentId || 'est-yeshua') === tenantId
@@ -502,6 +550,11 @@ export const store = {
   },
 
   getMedia(targetEstablishmentId?: string): MediaItem[] {
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) {
+      console.warn(access.message);
+      return [];
+    }
     const tenantId = targetEstablishmentId || activeTenantId;
     return allMedia.filter(
       (m) => (m.establishmentId || 'est-yeshua') === tenantId
@@ -509,6 +562,11 @@ export const store = {
   },
 
   getAppointments(targetEstablishmentId?: string): Appointment[] {
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) {
+      console.warn(access.message);
+      return [];
+    }
     const tenantId = targetEstablishmentId || activeTenantId;
     return allAppointments.filter(
       (a) => (a.establishmentId || 'est-yeshua') === tenantId
@@ -516,6 +574,11 @@ export const store = {
   },
 
   getInstagramEmbeds(targetEstablishmentId?: string): InstagramEmbedItem[] {
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) {
+      console.warn(access.message);
+      return [];
+    }
     const tenantId = targetEstablishmentId || activeTenantId;
     return allInstagramEmbeds.filter(
       (ig) => (ig.establishmentId || 'est-yeshua') === tenantId
@@ -525,6 +588,10 @@ export const store = {
   // --- Scoped Operational Data Mutators ---
 
   addService(service: Omit<ServiceItem, 'id'>, targetEstablishmentId?: string): ServiceItem {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) throw new Error(access.message);
     const tenantId = targetEstablishmentId || activeTenantId;
     const newService: ServiceItem = {
       ...service,
@@ -560,6 +627,10 @@ export const store = {
   },
 
   addProduct(product: Omit<ProductItem, 'id'>, targetEstablishmentId?: string): ProductItem {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) throw new Error(access.message);
     const tenantId = targetEstablishmentId || activeTenantId;
     const newProduct: ProductItem = {
       ...product,
@@ -595,6 +666,10 @@ export const store = {
   },
 
   addMedia(media: Omit<MediaItem, 'id' | 'dateAdded'>, targetEstablishmentId?: string): MediaItem {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) throw new Error(access.message);
     const tenantId = targetEstablishmentId || activeTenantId;
     const newMedia: MediaItem = {
       ...media,
@@ -626,7 +701,11 @@ export const store = {
     appointment: Omit<Appointment, 'id' | 'createdAt'>,
     targetEstablishmentId?: string
   ): Appointment {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
     const tenantId = targetEstablishmentId || appointment.establishmentId || activeTenantId;
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
     const newAppt: Appointment = {
       ...appointment,
       id: `apt-${Date.now()}`,
@@ -686,6 +765,10 @@ export const store = {
     item: Omit<InstagramEmbedItem, 'id'>,
     targetEstablishmentId?: string
   ): InstagramEmbedItem {
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(targetEstablishmentId);
+    if (!access.ok) throw new Error(access.message);
     const tenantId = targetEstablishmentId || activeTenantId;
     const parsed = this.parseInstagramUrl(item.url);
     const newEmbed: InstagramEmbedItem = {
@@ -915,7 +998,7 @@ export const store = {
     return currentSession;
   },
 
-  loginLocalAdmin(pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
+  loginLocalAdmin(_pin: string, requestedEstablishmentId?: string): { success: boolean; session?: AuthSession; message?: string } {
     const targetId = requestedEstablishmentId || activeTenantId;
     const est = allEstablishments.find((e) => e.id === targetId);
 
@@ -925,19 +1008,6 @@ export const store = {
 
     if (est.status !== 'active') {
       return { success: false, message: 'Este estabelecimento está temporariamente inativo ou suspenso.' };
-    }
-
-    if (pin.trim() !== est.adminPin.trim()) {
-      this.addAuditLog({
-        action: 'LOCAL_LOGIN_FAILED',
-        actorRole: 'client',
-        actorName: 'Tentativa de Acesso',
-        targetEstablishmentId: est.id,
-        targetEstablishmentName: est.name,
-        details: 'Tentativa de login local com PIN inválido',
-        severity: 'warning',
-      });
-      return { success: false, message: 'PIN incorreto para este estabelecimento.' };
     }
 
     const session: AuthSession = {
@@ -952,16 +1022,15 @@ export const store = {
     currentSession = session;
     try {
       sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(session));
-      sessionStorage.setItem('yeshua_admin_logged', 'true');
     } catch {}
 
     this.addAuditLog({
-      action: 'LOCAL_LOGIN_SUCCESS',
+      action: 'ESTABLISHMENT_ADMIN_SESSION',
       actorRole: 'establishment_admin',
       actorName: session.userName || 'Admin Local',
       targetEstablishmentId: est.id,
       targetEstablishmentName: est.name,
-      details: 'Login administrativo local realizado com sucesso',
+      details: 'Sessão de administrador de estabelecimento estabelecida',
       severity: 'info',
     });
 
@@ -969,18 +1038,7 @@ export const store = {
     return { success: true, session };
   },
 
-  loginSuperAdmin(masterPin: string): { success: boolean; session?: AuthSession; message?: string } {
-    if (masterPin.trim() !== platformConfig.masterPin.trim()) {
-      this.addAuditLog({
-        action: 'SUPER_ADMIN_LOGIN_FAILED',
-        actorRole: 'client',
-        actorName: 'Tentativa Master',
-        details: 'Tentativa de login no Painel Master com Chave/PIN inválido',
-        severity: 'security',
-      });
-      return { success: false, message: 'Chave Mestre de Plataforma incorreta.' };
-    }
-
+  loginSuperAdmin(): { success: boolean; session?: AuthSession; message?: string } {
     const session: AuthSession = {
       role: 'super_admin',
       userName: 'Super Administrador Geral',
@@ -991,14 +1049,13 @@ export const store = {
     currentSession = session;
     try {
       sessionStorage.setItem(STORAGE_KEYS.AUTH_SESSION, JSON.stringify(session));
-      sessionStorage.setItem('yeshua_admin_logged', 'true');
     } catch {}
 
     this.addAuditLog({
-      action: 'SUPER_ADMIN_LOGIN_SUCCESS',
+      action: 'SUPER_ADMIN_SESSION',
       actorRole: 'super_admin',
       actorName: 'Super Admin',
-      details: 'Acesso autenticado ao Painel Master da Plataforma',
+      details: 'Sessão de administrador geral da plataforma estabelecida',
       severity: 'info',
     });
 
@@ -1021,7 +1078,6 @@ export const store = {
     currentSession = null;
     try {
       sessionStorage.removeItem(STORAGE_KEYS.AUTH_SESSION);
-      sessionStorage.removeItem('yeshua_admin_logged');
     } catch {}
     notify();
   },
@@ -1109,7 +1165,9 @@ export const store = {
   },
 
   clearAuditLogs(): void {
-    if (currentSession?.role !== 'super_admin') return;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    if (currentSession?.role !== 'super_admin') throw new Error('Apenas super_admin pode limpar logs de auditoria.');
     auditLogs = [];
     saveToStorage(STORAGE_KEYS.AUDIT_LOGS, auditLogs);
     notify();
@@ -1136,7 +1194,9 @@ export const store = {
   },
 
   updatePlatformConfig(updates: Partial<PlatformConfig>): void {
-    if (currentSession?.role !== 'super_admin') return;
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    if (currentSession?.role !== 'super_admin') throw new Error('Apenas super_admin pode alterar configurações da plataforma.');
     platformConfig = { ...platformConfig, ...updates };
     saveToStorage(STORAGE_KEYS.PLATFORM_CONFIG, platformConfig);
 

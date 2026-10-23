@@ -11,7 +11,6 @@ import {
 
 export const INITIAL_PLATFORM_CONFIG: PlatformConfig = {
   platformName: 'Plataforma para Salões',
-  masterPin: '9988',
   supportEmail: 'contato@tokenizaa.com',
   supportWhatsapp: '',
 };
@@ -49,8 +48,7 @@ export const INITIAL_ESTABLISHMENT_YESHUA: Establishment = {
   instagramPostsCount: '',
   showInstagramGallery: false, // Ocultado provisoriamente a pedido do usuário
 
-  // Administração Local
-  adminPin: '1234',
+  // Administração Local (sem PIN — autenticação via Supabase)
   adminName: 'Administrador do estabelecimento',
   adminEmail: '',
   openingHoursNote: 'Atendimento com horário marcado e por ordem de chegada no WhatsApp.',
@@ -93,8 +91,7 @@ export const INITIAL_ESTABLISHMENT_DEMO: Establishment = {
   instagramPostsCount: '',
   showInstagramGallery: false,
 
-  // Administração Local
-  adminPin: '4321',
+  // Administração Local (sem PIN — autenticação via Supabase)
   adminName: 'Administrador do estabelecimento',
   adminEmail: '',
   openingHoursNote: 'Terça a Sábado das 09h às 21h.',

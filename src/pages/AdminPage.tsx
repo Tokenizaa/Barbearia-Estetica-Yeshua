@@ -77,11 +77,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const isAuthorized =
     Boolean(embeddedInUnifiedAdmin) ||
     (session?.role === 'establishment_admin' && session?.establishmentId === establishment.id) ||
-    session?.role === 'super_admin' ||
-    sessionStorage.getItem('yeshua_admin_logged') === 'true';
+    session?.role === 'super_admin';
 
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(Boolean(isAuthorized));
-  const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
   // Active Admin Tab
@@ -134,23 +132,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Login handler
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    const res = store.loginLocalAdmin(pinInput, establishment.id);
-    if (res.success) {
-      setIsAuthenticated(true);
-      setPinError(false);
-      showNotification(`Bem-vindo ao painel de ${establishment.name}!`);
-    } else {
-      setPinError(true);
-    }
-  };
-
   const handleLogout = () => {
     store.logout();
     setIsAuthenticated(false);
-    setPinInput('');
   };
 
   // Helper for image upload to base64
@@ -195,34 +179,21 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             </p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-              <input
-                type="password"
-                maxLength={8}
-                value={pinInput}
-                onChange={(e) => {
-                  setPinInput(e.target.value);
-                  setPinError(false);
-                }}
-                placeholder="Digite o PIN deste estabelecimento"
-                className="w-full px-4 py-3 rounded-xl bg-neutral-950 border border-neutral-700 text-center text-xl tracking-widest text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-amber-400 transition-colors"
-                autoFocus
-              />
-              {pinError && (
-                <p className="text-xs text-rose-400 mt-2">
-                  PIN incorreto para este estabelecimento. (Padrão: {establishment.adminPin})
-                </p>
-              )}
-            </div>
-
-            <button
-              type="submit"
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
-            >
-              Entrar no Painel do Estabelecimento
-            </button>
-          </form>
+          <button
+            onClick={() => {
+              const res = store.loginLocalAdmin('', establishment.id);
+              if (res.success) {
+                setIsAuthenticated(true);
+                setPinError(false);
+                showNotification(`Bem-vindo ao painel de ${establishment.name}!`);
+              } else {
+                setPinError(true);
+              }
+            }}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+          >
+            Entrar no Painel do Estabelecimento
+          </button>
 
           <div className="pt-4 border-t border-neutral-800 flex flex-col gap-2.5">
             {onNavigateToSuperAdmin && (
@@ -1790,14 +1761,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
               <div className="pt-4 border-t border-neutral-800">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-400 mb-1">
-                  PIN de Acesso do Administrador
+                  Autenticação do Administrador
                 </label>
-                <input
-                  type="text"
-                  value={company.adminPin}
-                  onChange={(e) => store.updateCompany({ adminPin: e.target.value })}
-                  className="w-48 px-3.5 py-2.5 rounded-xl bg-neutral-950 border border-neutral-700 text-sm font-mono text-amber-300 focus:border-amber-400 focus:outline-none"
-                />
+                <span className="text-xs text-neutral-500">
+                  Gerenciado exclusivamente pelo Supabase Auth — nenhum PIN local é armazenado.
+                </span>
               </div>
             </div>
 

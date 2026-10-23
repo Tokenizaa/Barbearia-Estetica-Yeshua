@@ -49,8 +49,7 @@ export interface Establishment {
   instagramPostsCount?: string;
   showInstagramGallery?: boolean;
 
-  // Configurações e Acesso Local
-  adminPin: string;
+  // Configurações e Acesso Local (sem PIN de autenticação — uso exclusivo do mecanismo oficial do Supabase)
   adminName?: string;
   adminEmail?: string;
   openingHoursNote?: string;
@@ -159,10 +158,9 @@ export interface AuditLogEntry {
   severity?: 'info' | 'warning' | 'security';
 }
 
-// Configuração Geral da Plataforma White Label
+// Configuração Geral da Plataforma White Label (sem Chave Mestre — autenticação via Supabase)
 export interface PlatformConfig {
   platformName: string;
-  masterPin: string;
   supportEmail: string;
   supportWhatsapp: string;
 }

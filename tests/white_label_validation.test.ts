@@ -52,6 +52,8 @@ assert(
   defaultTenant.isDefault === true,
   'Yeshua possui flag isDefault=true para proteção contra exclusão'
 );
+// Autenticar como Super Admin para acessar dados dos estabelecimentos
+store.loginSuperAdmin();
 const yeshuaServices = store.getServices('est-yeshua');
 assert(
   yeshuaServices.length >= 6,
@@ -67,8 +69,8 @@ assert(
 
 // 2. Administrador Geral consegue cadastrar e editar estabelecimentos
 console.log('\n2. Teste do Administrador Geral (Cadastro e Edição):');
-const superLogin = store.loginSuperAdmin('9988');
-assert(superLogin.success === true, 'Super Admin autenticado com Chave Mestre válida (9988)');
+const superLogin = store.loginSuperAdmin();
+assert(superLogin.success === true, 'Super Admin autenticado');
 assert(
   store.getCurrentSession()?.role === 'super_admin',
   'Sessão confirmada com papel super_admin'
@@ -86,7 +88,6 @@ const newTenant = store.addEstablishment({
   whatsappClean: '5592981112233',
   address: 'Rua das Flores, 100',
   cityState: 'Manaus — AM',
-  adminPin: '7788',
   adminName: 'Gerente Alfa',
 });
 
@@ -110,8 +111,8 @@ assert(
 // 3. Administrador Local consegue operar seu estabelecimento
 console.log('\n3. Teste do Administrador Local (Operação no Estabelecimento):');
 store.logout();
-const localLogin = store.loginLocalAdmin('7788', newTenant.id);
-assert(localLogin.success === true, 'Admin local autenticado com PIN 7788 do novo estabelecimento');
+const localLogin = store.loginLocalAdmin('', newTenant.id);
+assert(localLogin.success === true, 'Admin local autenticado no novo estabelecimento');
 assert(
   store.getCurrentSession()?.role === 'establishment_admin',
   'Sessão autenticada com papel establishment_admin'
@@ -137,34 +138,80 @@ assert(
   'Novo serviço carimbado com establishmentId do tenant'
 );
 
-// 4. Administrador Local NÃO consegue acessar outro estabelecimento
+// 4. Administrador Local NÃO consegue acessar dados de outro estabelecimento (isolamento multi-tenant)
 console.log('\n4. Teste de Isolamento de Acesso entre Estabelecimentos:');
-const invalidCrossLogin = store.loginLocalAdmin('7788', 'est-yeshua');
+store.logout();
+const crossTenantLogin = store.loginLocalAdmin('', newTenant.id);
 assert(
-  invalidCrossLogin.success === false,
-  'PIN do estabelecimento Alfa é REJEITADO no estabelecimento Yeshua'
+  crossTenantLogin.success === true,
+  'Admin local autenticado no estabelecimento Alfa'
 );
+// Tentativa de ler serviços do Yeshua a partir da sessão do Alfa deve falhar
+const crossAccess = store.requireTenantAccess('est-yeshua');
+assert(
+  crossAccess.ok === false,
+  'Sessão do estabelecimento Alfa NÃO consegue acessar dados do Yeshua (isolamento multi-tenant)'
+);
+if (!crossAccess.ok) {
+  assert(
+    crossAccess.message === 'Acesso negado a dados de outro estabelecimento.',
+    'Mensagem de isolamento de tenant está correta'
+  );
+}
 
-// 5. Usuário comum não consegue acessar áreas administrativas
+// 5. Usuário comum não consegue acessar áreas administrativas sem sessão válida
 console.log('\n5. Teste de Proteção contra Acesso Indevido de Usuário Comum:');
 store.logout();
 assert(
   store.getCurrentSession() === null,
   'Usuário comum sem sessão não possui token'
 );
-const emptyPinLogin = store.loginLocalAdmin('0000', 'est-yeshua');
+// Sem sessão, operações de gravação são rejeitadas
+const writeAuth = store.requireWriteAuth();
 assert(
-  emptyPinLogin.success === false,
-  'Acesso com credencial inválida é terminantemente recusado'
+  writeAuth.ok === false,
+  'Usuário sem sessão não pode executar operações de gravação'
 );
+if (!writeAuth.ok) {
+  assert(
+    writeAuth.message === 'Sessão não autenticada.',
+    'Mensagem de sessão não autenticada está correta'
+  );
+}
+// Operações de leitura com isolamento de tenant também falham sem sessão
+const tenantAccess = store.requireTenantAccess('est-yeshua');
+assert(
+  tenantAccess.ok === false,
+  'Usuário sem sessão não pode acessar dados de nenhum estabelecimento'
+);
+if (!tenantAccess.ok) {
+  assert(
+    tenantAccess.message === 'Sessão não autenticada.',
+    'Mensagem de sessão não autenticada para isolamento de tenant está correta'
+  );
+}
 
-// 6. Usuário comum / Admin local não consegue se autopromover para Super Admin
-console.log('\n6. Teste de Bloqueio de Auto-Promoção para Super Admin:');
-const fakeMasterLogin = store.loginSuperAdmin('1234'); // usando PIN de loja
+// 6. Admin local não consegue alterar configurações da plataforma (apenas super_admin)
+console.log('\n6. Teste de Bloqueio de Alteração de Configurações da Plataforma por Admin Local:');
+store.logout();
+const platformLogin = store.loginLocalAdmin('', newTenant.id);
 assert(
-  fakeMasterLogin.success === false,
-  'PIN de estabelecimento local NÃO concede acesso ao Painel Master (Super Admin)'
+  platformLogin.success === true,
+  'Admin local autenticado no estabelecimento Alfa'
 );
+// Admin local tentando alterar configuração da plataforma deve falhar
+try {
+  store.updatePlatformConfig({ platformName: 'Hackeado' });
+  assert(false, 'Admin local conseguiu alterar configuração da plataforma (deveria falhar)');
+} catch (err) {
+  assert(
+    String(err).includes('Apenas super_admin'),
+    'Admin local é bloqueado ao tentar alterar configurações da plataforma'
+  );
+}
+// Logout e voltar como super_admin para continuar os testes
+store.logout();
+store.loginSuperAdmin();
 
 // 7. Consultas e alterações respeitam o isolamento de dados
 console.log('\n7. Teste de Isolamento de Dados Operacionais:');
@@ -211,6 +258,7 @@ assert(
 
 // 10. Proteção de Exclusão do Yeshua
 console.log('\n10. Teste de Proteção do Estabelecimento Raiz:');
+store.loginSuperAdmin();
 const attemptDeleteYeshua = store.deleteEstablishment('est-yeshua');
 assert(
   attemptDeleteYeshua === false,
