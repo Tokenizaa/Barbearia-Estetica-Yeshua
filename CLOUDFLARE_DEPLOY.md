@@ -15,9 +15,9 @@ Este projeto já está 100% preparado para rodar no **Cloudflare Pages** ou **Cl
    ```bash
    npm run pages:deploy
    ```
-   *(Ou execute diretamente: `npx wrangler pages deploy dist --project-name=barbearia-yeshua`)*
+   *(Ou execute diretamente: `npx wrangler pages deploy dist --project-name=beleza-digital`)*
 
-3. Quando o comando finalizar, o Cloudflare fornecerá uma URL pública gratuita (ex: `https://barbearia-yeshua.pages.dev`).
+3. Quando o comando finalizar, o Cloudflare fornecerá uma URL pública gratuita (ex: `https://beleza-digital.pages.dev`).
 
 ---
 

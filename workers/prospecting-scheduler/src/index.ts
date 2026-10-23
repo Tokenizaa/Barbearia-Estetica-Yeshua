@@ -366,7 +366,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   let scrapedResults: Array<Record<string, unknown>> = [];
   try {
     // Dynamic import to avoid bundling playwright in the worker unless needed
-    const { chromium } = await import("playwright-core");
+    const { chromium } = await import("@cloudflare/playwright");
     const browser = await chromium.connectOverCDP(env.BROWSER);
     const page = await browser.newPage();
     
