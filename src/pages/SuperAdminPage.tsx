@@ -248,21 +248,28 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              const result = store.loginSuperAdmin();
-              if (result.success) {
-                showToast('Bem-vindo ao Painel Master da Plataforma!');
-              }
-            }}
-            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
-          >
-            Acessar Painel Master
-          </button>
 
           <div className="pt-2 border-t border-neutral-800 text-[11px] text-neutral-400 flex flex-col gap-2">
             <span>
               A autenticação é gerenciada exclusivamente pelo Supabase Auth.
+          <button
+            onClick={async () => {
+              // Acesso ao Painel Master apenas para super_adins autenticados via Supabase Auth.
+              const { userRole } = useStore(); const { isSupabaseConfigured } = await import('../lib/supabase');
+              if (!isSupabaseConfigured) {
+                showToast('Auth nao configurada. Contate o administrador.');
+                return;
+              }
+              if (userRole === 'super_admin') {
+                showToast('Bem-vindo ao Painel Master da Plataforma!');
+              } else {
+                showToast('Acesso negado. Apenas super_adins podem acessar este painel.');
+              }
+            }}
+            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-500 text-neutral-950 font-bold text-sm shadow-md transition-all cursor-pointer"
+          >
+            Acessar Painel Master
+          </button>
             </span>
             {onBackToApp && (
               <button
