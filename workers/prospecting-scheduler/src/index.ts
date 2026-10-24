@@ -3,7 +3,7 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  PROSPECTING_SCRAPER_URL: string;
+  PROSPECTING_BROWSER: any;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
   // WHATSAPP_EVOLUTION_API_KEY?: string;
@@ -361,31 +361,50 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const countryCode = String(campaign.countryCode ?? "BR");
   const searchQuery = `${segment} ${region}`.trim();
 
-  // Delegate browser execution to the private Python + Playwright service.
-  // The Worker itself does not run Chromium and does not require the legacy BROWSER binding.
+  // Run Playwright directly in the Cloudflare Worker using the Browser Run binding.
+  // No Docker, container, VPS, or external Python service is required.
   let scrapedResults: Array<Record<string, unknown>> = [];
+  let browser: any;
   try {
-    const response = await fetch(env.PROSPECTING_SCRAPER_URL.replace(/\\/$/, "") + "/search", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        "x-scraper-secret": env.PROSPECTING_WORKER_SECRET,
-      },
-      body: JSON.stringify({ search: searchQuery, limit: Math.min(limit, 100) }),
-      signal: AbortSignal.timeout(90_000),
+    if (!env.PROSPECTING_BROWSER) throw new Error("prospecting_browser_binding_missing");
+    const { chromium } = await import("@cloudflare/playwright");
+    browser = await chromium.connectOverCDP(env.PROSPECTING_BROWSER);
+    const page = await browser.newPage();
+    const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
+    await page.goto(searchUrl, { waitUntil: "domcontentloaded", timeout: 30000 });
+    await page.waitForSelector('[role="feed"]', { timeout: 15000 });
+    const listings = await page.evaluate(() => {
+      const output: Array<Record<string, unknown>> = [];
+      const cards = document.querySelectorAll('a[href*="/maps/place/"]');
+      cards.forEach((card) => {
+        if (output.length >= 100) return;
+        const name = card.getAttribute("aria-label") || card.textContent?.trim() || "";
+        const sourceUrl = (card as HTMLAnchorElement).href;
+        if (!name || !sourceUrl) return;
+        const parentText = card.parentElement?.innerText || card.innerText || "";
+        const ratingMatch = parentText.match(/(\d[.,]\d)\s*\(([\d.,]+)\)/);
+        const phoneMatch = parentText.match(/(?:\+?\d[\d ()-]{7,}\d)/);
+        output.push({
+          name,
+          phone: phoneMatch?.[0] ?? null,
+          rating: ratingMatch ? Number(ratingMatch[1].replace(",", ".")) : null,
+          reviews: ratingMatch ? ratingMatch[2] : null,
+          sourceUrl,
+        });
+      });
+      return output;
     });
-    if (!response.ok) throw new Error(`private_scraper_http_${response.status}`);
-    const payload = await response.json() as { ok?: boolean; results?: Array<Record<string, unknown>> };
-    if (payload.ok !== true || !Array.isArray(payload.results)) throw new Error("private_scraper_invalid_response");
-    scrapedResults = payload.results;
+    scrapedResults = listings.slice(0, Math.min(limit, 100));
   } catch (error) {
-    const message = error instanceof Error ? error.message : "private_scraper_failed";
+    const message = error instanceof Error ? error.message : "browser_run_failed";
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha no serviço privado Python/Playwright: ${message}`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "private_scraper_failed" },
+      last_error: `Falha na coleta via Cloudflare Browser Run: ${message}`,
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed" },
     });
     return "blocked";
+  } finally {
+    try { await browser?.close(); } catch { /* close is best-effort after failed navigation */ }
   }
 
   if (!scrapedResults.length) {
@@ -428,7 +447,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId,
-        provider: "google-maps-python-playwright",
+        provider: "google-maps-cloudflare-playwright",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
