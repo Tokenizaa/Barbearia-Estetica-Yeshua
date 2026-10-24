@@ -109,7 +109,6 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.PROSPECTING_SCRAPER_URL?.trim()) return "PROSPECTING_SCRAPER_URL ausente";
   return null;
 }
 
