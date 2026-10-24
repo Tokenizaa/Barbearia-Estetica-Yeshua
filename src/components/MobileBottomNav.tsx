@@ -288,8 +288,9 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               {/* Painel Administrativo */}
               <button
                 onClick={() => {
+                        setIsMenuOpen(false);
                         if (!session) {
-                          showToast('Faça login via Supabase Auth primeiro.');
+                          window.location.href = '/plataforma/acesso?mode=login';
                           return;
                         }
                         if (session.role === 'establishment_admin' || session.role === 'super_admin') {

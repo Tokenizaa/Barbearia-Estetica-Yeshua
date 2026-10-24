@@ -117,8 +117,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                     <PWAInstallButton variant="navbar" className="w-full justify-start" />
                     <button
                       onClick={() => {
+                        setAccessMenuOpen(false);
                         if (!session) {
-                          showToast('Faça login via Supabase Auth primeiro.');
+                          window.location.href = '/plataforma/acesso?mode=login';
                           return;
                         }
                         if (session.role === 'establishment_admin' || session.role === 'super_admin') {
@@ -134,8 +135,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                     </button>
                     <button
                       onClick={() => {
+                        setAccessMenuOpen(false);
                         if (!session) {
-                          showToast('Faça login via Supabase Auth primeiro.');
+                          window.location.href = '/plataforma/acesso?mode=login';
                           return;
                         }
                         if (session.role === 'super_admin') {
@@ -188,8 +190,9 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
               <PWAInstallButton variant="navbar" className="w-full justify-center" />
               <button
                 onClick={() => {
+                        setMobileMenuOpen(false);
                         if (!session) {
-                          showToast('Faça login via Supabase Auth primeiro.');
+                          window.location.href = '/plataforma/acesso?mode=login';
                           return;
                         }
                         if (session.role === 'establishment_admin' || session.role === 'super_admin') {
@@ -204,7 +207,18 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                 Área administrativa
               </button>
               <button
-                onClick={goToPlatformSuperAdmin}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  if (!session) {
+                    window.location.href = '/plataforma/acesso?mode=login';
+                    return;
+                  }
+                  if (session.role === 'super_admin') {
+                    goToPlatformSuperAdmin();
+                  } else {
+                    showToast('Acesso negado. Apenas super_adins.');
+                  }
+                }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
               >
                 <Building2 className="h-4 w-4" />
