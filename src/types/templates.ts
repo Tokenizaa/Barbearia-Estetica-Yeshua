@@ -157,6 +157,7 @@ export interface SiteBusinessData {
   coverUrl?: string;
   instagramHandle?: string;
   instagramUrl?: string;
+  googleMapsUrl?: string;
   services?: ServiceItem[];
   products?: ProductItem[];
   media?: MediaItem[];

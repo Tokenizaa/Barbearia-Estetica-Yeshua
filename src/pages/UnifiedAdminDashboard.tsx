@@ -406,7 +406,7 @@ export const UnifiedAdminDashboard: React.FC<UnifiedAdminDashboardProps> = ({
                   description: establishment.tagline || 'Excelência em atendimento masculino com cortes modernos, barba terapia e ambiente climatizado.',
                   phone: establishment.phone || establishment.whatsapp,
                   whatsapp: establishment.whatsappClean || establishment.whatsapp,
-                  address: establishment.address,
+                  address: establishment.address || 'Endereço não informado',
                   city: establishment.cityState || 'Porto Alegre - RS',
                   logoUrl: establishment.logoUrl || '/logo.jpg',
                   coverUrl: establishment.coverUrl || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80',

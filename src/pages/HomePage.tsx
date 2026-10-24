@@ -159,7 +159,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <MapPin className="w-5 h-5 text-amber-400 shrink-0" />
               <div className="text-xs">
                 <span className="text-neutral-400 block">Endereço</span>
-                <span className="text-neutral-200 font-medium">{company.address}</span>
+                <span className="text-neutral-200 font-medium">{company.address || 'Endereço não informado'}</span>
               </div>
             </div>
 
@@ -167,7 +167,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               <Instagram className="w-5 h-5 text-amber-400 shrink-0" />
               <div className="text-xs">
                 <span className="text-neutral-400 block">Instagram</span>
-                <span className="text-neutral-200 font-medium">{company.instagramHandle}</span>
+                <span className="text-neutral-200 font-medium">{company.instagramHandle || 'Não informado'}</span>
               </div>
             </div>
 
@@ -556,10 +556,11 @@ export const HomePage: React.FC<HomePageProps> = ({
               className="group relative aspect-square rounded-xl overflow-hidden bg-neutral-900 border border-neutral-800 cursor-pointer hover:border-amber-500/40 transition-all"
             >
               <img
-                src={item.url}
+                src={item.url || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=400&q=80'}
                 alt={item.title}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 loading="lazy"
+                onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=400&q=80'; }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-neutral-950 via-neutral-950/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
                 <span className="text-[10px] font-semibold text-amber-300 uppercase tracking-wider">
@@ -674,7 +675,7 @@ export const HomePage: React.FC<HomePageProps> = ({
               >
                 <div className="relative aspect-square overflow-hidden bg-neutral-950">
                   <img
-                    src={product.mainImage}
+                    src={product.mainImage || 'https://images.unsplash.com/photo-1556228578-0d85b4874995?auto=format&fit=crop&w=400&q=80'}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
@@ -695,7 +696,7 @@ export const HomePage: React.FC<HomePageProps> = ({
                   </p>
 
                   <div className="pt-2 text-xl font-bold font-display text-amber-400">
-                    R$ {product.price.toFixed(2).replace('.', ',')}
+                    R$ {(product.price ?? 0).toFixed(2).replace('.', ',')}
                   </div>
                 </div>
               </div>

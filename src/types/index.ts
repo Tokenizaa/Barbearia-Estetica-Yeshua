@@ -37,9 +37,14 @@ export interface Establishment {
   whatsapp: string;
   whatsappClean: string;
   phone?: string;
-  address: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
   cityState: string;
   googleMapsUrl?: string;
+  latitude?: number;
+  longitude?: number;
 
   // Instagram e Redes
   instagramHandle?: string;

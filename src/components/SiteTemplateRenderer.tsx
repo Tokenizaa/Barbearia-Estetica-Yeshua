@@ -144,6 +144,7 @@ export interface SiteBusinessData {
   coverUrl?: string;
   instagramHandle?: string;
   instagramUrl?: string;
+  googleMapsUrl?: string;
   services?: ServiceItem[];
   products?: ProductItem[];
   media?: MediaItem[];
@@ -480,7 +481,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                         {service.name}
                       </h3>
                       <span className="text-[11px] text-neutral-400 flex items-center gap-1">
-                        <Clock className="w-3 h-3" /> {service.durationMinutes} minutos
+                        <Clock className="w-3 h-3" /> {service.durationMinutes ? `${service.durationMinutes} min` : 'Duração sob consulta'}
                       </span>
                     </div>
                   </div>
@@ -596,11 +597,11 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
               <div className="mt-5 pt-3 border-t border-neutral-800 flex items-center justify-between">
                 <div>
                   <span className="text-[10px] text-neutral-500 uppercase block font-semibold">Preço</span>
-                  <span className="text-base font-black text-white">R$ {product.price.toFixed(2)}</span>
+                  <span className="text-base font-black text-white">R$ {(product.price ?? 0).toFixed(2)}</span>
                 </div>
 
                 <a
-                  href={`https://wa.me/${whatsappClean}?text=${encodeURIComponent(`Olá! Tenho interesse no produto: ${product.name} (R$ ${product.price.toFixed(2)}).`)}`}
+                  href={`https://wa.me/${whatsappClean}?text=${encodeURIComponent(`Olá! Tenho interesse no produto: ${product.name} (R$ ${(product.price ?? 0).toFixed(2)}).`)}`}
                   target="_blank"
                   rel="noreferrer"
                   className={`px-3 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${theme.buttonPrimary}`}
@@ -664,7 +665,7 @@ export const SiteTemplateRenderer: React.FC<SiteTemplateRendererProps> = ({
                   </a>
                 )}
                 <a
-                  href={`https://maps.google.com/?q=${encodeURIComponent(`${businessData.name} ${businessData.address} ${businessData.city}`)}`}
+                  href={businessData.googleMapsUrl || `https://maps.google.com/?q=${encodeURIComponent(`${businessData.name} ${businessData.address} ${businessData.city}`)}`}
                   target="_blank"
                   rel="noreferrer"
                   className={`px-5 py-3 rounded-xl text-xs font-bold flex items-center gap-2 transition ${theme.buttonSecondary}`}

@@ -6,15 +6,26 @@ export interface ShareableSitePreview {
   version: 1;
   businessName: string;
   category: string;
+  tagline?: string | null;
   description: string;
   phone: string;
-  email: string;
+  whatsapp?: string | null;
+  email?: string | null;
   address: string;
+  city?: string | null;
+  state?: string | null;
   websiteUrl: string;
   templateId: string;
   templateName: string;
   projectVersion: number;
   generatedAt: string;
+  logoUrl?: string | null;
+  coverUrl?: string | null;
+  instagramHandle?: string | null;
+  instagramUrl?: string | null;
+  googleMapsUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 const MAX_PAYLOAD_LENGTH = 16000;
@@ -90,12 +101,16 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
       version: 1,
       businessName: safeBusinessName,
       category: safeText(value.category, 100),
+      tagline: safeText(value.tagline, 120) || null,
       description:
         safeText(value.description, 700) ||
         `Uma presença digital feita para apresentar os serviços de ${safeBusinessName} com clareza e facilitar o contato com novos clientes.`,
       phone: safeText(value.phone, 40),
-      email: safeText(value.email, 120),
+      whatsapp: safeText(value.whatsapp, 40) || safeText(value.phone, 40) || null,
+      email: safeText(value.email, 120) || null,
       address: safeText(value.address, 200),
+      city: safeText(value.city, 100) || null,
+      state: safeText(value.state, 60) || null,
       websiteUrl: safeText(value.websiteUrl, 300),
       templateId: safeText(value.templateId, 60) || 'ouro-classico',
       templateName: safeText(value.templateName, 80) || 'Modelo Oficial',
@@ -104,6 +119,13 @@ export function readShareablePreview(searchOrUrl?: string): ShareableSitePreview
           ? Math.max(1, Math.floor(value.projectVersion))
           : 1,
       generatedAt: safeText(value.generatedAt, 40),
+      logoUrl: safeText(value.logoUrl, 500) || null,
+      coverUrl: safeText(value.coverUrl, 500) || null,
+      instagramHandle: safeText(value.instagramHandle, 100) || null,
+      instagramUrl: safeText(value.instagramUrl, 500) || null,
+      googleMapsUrl: safeText(value.googleMapsUrl, 500) || null,
+      latitude: typeof value.latitude === 'number' && Number.isFinite(value.latitude) ? value.latitude : null,
+      longitude: typeof value.longitude === 'number' && Number.isFinite(value.longitude) ? value.longitude : null,
     };
   } catch {
     return null;
@@ -136,11 +158,18 @@ export const SharedSitePreview: React.FC<{ preview: ShareableSitePreview | null 
   const businessData: SiteBusinessData = {
     name: preview.businessName,
     category: preview.category,
+    tagline: preview.tagline ?? undefined,
     description: preview.description,
     phone: preview.phone,
-    whatsapp: preview.phone,
+    whatsapp: preview.whatsapp ?? preview.phone,
     address: preview.address,
-    city: '',
+    city: preview.city ?? '',
+    state: preview.state ?? undefined,
+    logoUrl: preview.logoUrl ?? undefined,
+    coverUrl: preview.coverUrl ?? undefined,
+    instagramHandle: preview.instagramHandle ?? undefined,
+    instagramUrl: preview.instagramUrl ?? undefined,
+    googleMapsUrl: preview.googleMapsUrl ?? undefined,
   };
 
   const initialVar = normalizeTemplateId(preview.templateId);

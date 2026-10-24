@@ -84,7 +84,7 @@ export const ProductsPage: React.FC = () => {
                 {/* Image */}
                 <div className="relative aspect-square overflow-hidden bg-neutral-950">
                   <img
-                    src={product.mainImage}
+                    src={product.mainImage || 'https://images.unsplash.com/photo-1556228578-0d85b4874995?auto=format&fit=crop&w=400&q=80'}
                     alt={product.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
@@ -133,7 +133,7 @@ export const ProductsPage: React.FC = () => {
                   </p>
 
                   <div className="pt-2 text-2xl font-bold font-display text-amber-400">
-                    R$ {product.price.toFixed(2).replace('.', ',')}
+                    R$ {(product.price ?? 0).toFixed(2).replace('.', ',')}
                   </div>
                 </div>
               </div>

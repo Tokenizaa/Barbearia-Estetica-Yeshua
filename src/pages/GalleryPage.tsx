@@ -160,10 +160,11 @@ export const GalleryPage: React.FC = () => {
                 </div>
               ) : (
                 <img
-                  src={item.url}
+                  src={item.url || 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=400&q=80'}
                   alt={item.title}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   loading="lazy"
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=400&q=80'; }}
                 />
               )}
 

@@ -14,7 +14,7 @@ import {
 export const ContactPage: React.FC = () => {
   const { company, store } = useStore();
 
-  const mapsQuery = encodeURIComponent(`${company.address}, ${company.cityState}`);
+  const mapsQuery = encodeURIComponent(`${company.address || ''}, ${company.cityState}`);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
