@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { createShareablePreviewUrl } from './SharedSitePreview';
 import { SITE_TEMPLATES, SITE_TEMPLATES_LIST, SiteVariationId, normalizeTemplateId } from '../types/templates';
+import { supabase } from '../lib/supabase';
 
 export type LeadStage = 'novo' | 'contatado' | 'respondeu' | 'reuniao' | 'fechado';
 export type OpportunityLevel = 'alta' | 'media' | 'baixa';
@@ -105,6 +106,79 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
   };
   // Never seed operational CRM with sample businesses. Persist only after a server-backed API is connected.
   const [companies, setCompanies] = useState<LeadCompany[]>(INITIAL_COMPANIES);
+  const [crmLoading, setCrmLoading] = useState(true);
+  const [crmError, setCrmError] = useState<string | null>(null);
+  const [crmNotice, setCrmNotice] = useState<string | null>(null);
+
+  const loadCompanies = async () => {
+    if (!supabase) {
+      setCrmError('Supabase não está configurado neste ambiente. Configure a URL e a chave pública no build do Cloudflare Pages.');
+      setCrmLoading(false);
+      return;
+    }
+    setCrmLoading(true);
+    setCrmError(null);
+    const [candidateResult, stateResult] = await Promise.all([
+      supabase.from('prospecting_candidates').select('id,business_name,category,city,region,address,phone,normalized_phone,website_url,normalized_website,qualification_score,status,source_url,created_at').order('created_at', { ascending: false }).limit(500),
+      supabase.from('prospecting_crm_state').select('candidate_id,stage,selected_template,notes,follow_up_date'),
+    ]);
+    if (candidateResult.error) {
+      setCrmError('Não foi possível carregar empresas persistidas. Verifique a sessão de Admin Geral, as permissões e as migrations do Supabase.');
+      setCrmLoading(false);
+      return;
+    }
+    if (stateResult.error) {
+      setCrmError('A tabela de estado do CRM não está acessível. Confirme a migration prospecting_crm_persistence e a permissão administrativa.');
+      setCrmLoading(false);
+      return;
+    }
+    const states = new Map((stateResult.data ?? []).map((item: any) => [item.candidate_id, item]));
+    const mapped: LeadCompany[] = (candidateResult.data ?? []).map((row: any) => {
+      const state: any = states.get(row.id);
+      const phone = String(row.normalized_phone || row.phone || '').replace(/\\D/g, '');
+      const websiteUrl = String(row.normalized_website || row.website_url || '');
+      const category = String(row.category || 'Empresa local');
+      return {
+        id: row.id,
+        name: String(row.business_name || 'Empresa sem nome'),
+        niche: category,
+        category,
+        city: String(row.city || row.address || ''),
+        state: String(row.region || ''),
+        address: String(row.address || ''),
+        phone,
+        whatsapp: phone,
+        websiteUrl,
+        rating: 0,
+        reviewsCount: 0,
+        digitalDiagnosis: websiteUrl ? 'site_desatualizado' : 'sem_site',
+        opportunity: Number(row.qualification_score || 0) >= 70 ? 'alta' : Number(row.qualification_score || 0) >= 40 ? 'media' : 'baixa',
+        stage: state?.stage || 'novo',
+        selectedTemplate: (state?.selected_template || 'ouro-classico') as LeadTemplateKey,
+        notes: Array.isArray(state?.notes) ? state.notes : [],
+        followUpDate: state?.follow_up_date || undefined,
+        createdAt: row.created_at,
+      };
+    });
+    setCompanies(mapped);
+    setCrmLoading(false);
+  };
+
+  useEffect(() => { void loadCompanies(); }, []);
+
+  const persistCrmState = async (companyId: string, patch: Record<string, unknown>) => {
+    if (!supabase) return;
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    const { error } = await supabase.from('prospecting_crm_state').upsert({
+      candidate_id: companyId,
+      ...patch,
+      updated_by: userId || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'candidate_id' });
+    if (error) setCrmError('A alteração não foi salva. Verifique sua sessão administrativa e tente novamente.');
+    else setCrmError(null);
+  };
 
   const searchHistory: Array<{ niche: string; location: string; count: number; date: string }> = [];
 
@@ -137,6 +211,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   // Handle stage change
   const handleStageChange = (companyId: string, newStage: LeadStage) => {
+    void persistCrmState(companyId, { stage: newStage });
     setCompanies((prev) =>
       prev.map((c) => (c.id === companyId ? { ...c, stage: newStage } : c))
     );
@@ -147,6 +222,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
 
   // Change Template for proposal
   const handleTemplateChange = (companyId: string, template: LeadCompany['selectedTemplate']) => {
+    void persistCrmState(companyId, { selected_template: template });
     setCompanies((prev) =>
       prev.map((c) => (c.id === companyId ? { ...c, selectedTemplate: template } : c))
     );
@@ -155,12 +231,46 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
     }
   };
 
-  // Do not fabricate prospects when the real provider endpoint is not configured.
-  const handleExecuteSearch = () => {
+  const handleExecuteSearch = async () => {
+    if (!supabase) {
+      setSearchSuccessMessage('Supabase não está configurado neste ambiente. Nenhuma busca foi iniciada.');
+      return;
+    }
+    if (!searchNiche.trim() || !searchCity.trim() || !searchState.trim()) {
+      setSearchSuccessMessage('Informe nicho, cidade e estado para iniciar a busca.');
+      return;
+    }
+    setIsSearching(true);
+    setSearchSuccessMessage(null);
+    setCrmError(null);
+    const { data: authData } = await supabase.auth.getSession();
+    const user = authData.session?.user;
+    if (!user) {
+      setIsSearching(false);
+      setSearchSuccessMessage('Sua sessão expirou. Entre novamente no Admin Geral.');
+      return;
+    }
+    const now = new Date().toISOString();
+    const { error } = await supabase.from('prospecting_campaigns').insert({
+      name: `${searchNiche.trim()} — ${searchCity.trim()}/${searchState.trim()} — ${new Date().toLocaleDateString('pt-BR')}`,
+      segment: searchNiche.trim(),
+      region: `${searchCity.trim()} - ${searchState.trim()}`,
+      country_code: 'BR',
+      source_provider: 'playwright-browser-run',
+      source_config: { source: 'google-maps-public-listings' },
+      qualification_rules: { minimum_score: 50 },
+      schedule: { interval_minutes: 1440 },
+      daily_discovery_limit: Math.max(1, Math.min(100, Number(searchLimit) || 5)),
+      status: 'active',
+      next_run_at: now,
+      created_by: user.id,
+    });
     setIsSearching(false);
-    setSearchSuccessMessage(
-      'Busca não executada: a integração com o provedor real de prospecção ainda não está conectada a esta tela. Nenhum lead foi criado.'
-    );
+    if (error) {
+      setSearchSuccessMessage('Não foi possível registrar a busca no banco. Verifique as permissões de campanhas e a configuração do worker.');
+      return;
+    }
+    setSearchSuccessMessage('Busca registrada no banco e enviada para a fila de prospecção. O worker processará os resultados em segundo plano; atualize a lista para consultar as empresas persistidas.');
   };
 
   // Generate proposal link for a lead
@@ -343,9 +453,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
           </div>
         </header>
 
-        <div className="border-b border-amber-800/70 bg-amber-950/40 px-4 py-3 text-xs text-amber-200 sm:px-6" role="status">
-          CRM em modo temporário: os leads e alterações não são persistidos no banco e serão perdidos ao recarregar a página. Não registre dados operacionais até a integração de persistência ser concluída.
-        </div>
+        {(crmError || crmNotice) && <div className={`border-b px-4 py-3 text-xs sm:px-6 ${crmError ? 'border-red-800/70 bg-red-950/40 text-red-200' : 'border-emerald-800/70 bg-emerald-950/30 text-emerald-200'}`} role="status">{crmError || crmNotice}</div>}
 
         {/* -------------------------------------------------- */}
         {/* VIEW 1: HOJE (DASHBOARD DIÁRIO)                   */}
@@ -356,10 +464,10 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-widest text-purple-400">
-                  HOJE · QUARTA-FEIRA, 21 DE OUTUBRO
+                  HOJE · {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' }).toLocaleUpperCase('pt-BR')}
                 </p>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-white mt-1">
-                  0 retornos e {metrics.novos} empresas novas.
+                  {companies.filter((company) => company.stage === 'respondeu').length} retornos e {metrics.novos} empresas novas.
                 </h1>
               </div>
 
@@ -688,7 +796,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-semibold text-neutral-400">
-                  {filteredCompanies.length} empresas
+                  {crmLoading ? 'Carregando empresas…' : `${filteredCompanies.length} empresas`}
                 </span>
                 <div className="relative">
                   <Search className="h-4 w-4 text-neutral-500 absolute left-3 top-1/2 -translate-y-1/2" />
