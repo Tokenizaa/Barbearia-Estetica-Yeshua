@@ -31,8 +31,21 @@ python scraper.py --search "Barbearias em Porto Alegre RS" --limit 5 --headed
 
 Sem `--output`, o JSON é enviado para stdout. Erros são enviados para stderr e retornam código de saída diferente de zero. O limite permitido é 1–100 resultados.
 
-## Limites atuais
+## Serviço HTTP privado
 
-Este é o primeiro adaptador de coleta, não um serviço HTTP implantado. Ele ainda não grava diretamente no Supabase e não está conectado ao botão “Nova busca” do front-end. Não configurar segredo de serviço no navegador nem expor esse script publicamente. A próxima etapa é disponibilizar um endpoint privado autenticado no runtime apropriado, validar autorização administrativa, gravar em `prospecting_candidates` com deduplicação e conectar o formulário existente do CRM. Até essa integração e um teste real, a captação no front-end não deve ser considerada operacional.
+O `service.py` expõe `POST /search`, protegido pelo cabeçalho `X-Scraper-Secret`, e `GET /health` para verificação básica. A documentação OpenAPI fica desativada. O serviço não acessa o Supabase diretamente: o Worker existente recebe o JSON e mantém a responsabilidade pela normalização, deduplicação e persistência em `prospecting_candidates`.
+
+Construa a imagem a partir deste diretório e configure `PROSPECTING_SCRAPER_SECRET` como segredo do ambiente de execução:
+
+```bash
+docker build -t beleza-digital-prospecting-scraper .
+docker run --rm -p 8080:8080 -e PROSPECTING_SCRAPER_SECRET='use-um-segredo-forte' beleza-digital-prospecting-scraper
+```
+
+Para integração, configure `PROSPECTING_SCRAPER_URL` no `wrangler.prospecting-scheduler.toml` com a origem HTTPS do serviço (sem `/search`) e configure `PROSPECTING_WORKER_SECRET` no Worker com o mesmo valor de `PROSPECTING_SCRAPER_SECRET`. Não use o segredo no front-end. O serviço deve ser hospedado em runtime de contêiner que suporte Chromium, com HTTPS e restrição de acesso de rede quando disponível.
+
+## Estado da integração
+
+O front-end registra campanhas no Supabase; o Worker agora chama o endpoint Python/Playwright em vez de abrir `env.BROWSER`. O Worker continua responsável por persistir candidatos, aplicar deduplicação e enfileirar as etapas seguintes. A integração só estará operacional depois de implantar o serviço, configurar os dois segredos e `PROSPECTING_SCRAPER_URL`, executar build/testes e validar uma busca real até a lista do CRM após recarregar a página.
 
 O scraper não tenta contornar CAPTCHA, login, bloqueios ou controles antiabuso. Se o Google Maps não disponibilizar os resultados, a execução informa erro em vez de simular empresas.
