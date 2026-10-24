@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { PageView } from '../types';
 import { useStore } from '../data/store';
-import { PWAInstallButton } from './PWAInstallButton';
-import { useToast } from '../context/ToastContext';
 import {
   Menu,
   X,
-  ShieldCheck,
   ShoppingBag,
   Images,
   Phone,
   Calendar,
-  Building2,
-  ChevronDown,
   Scissors,
+  LogIn,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -22,10 +18,8 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
-  const { establishment, session } = useStore();
-  const { showToast } = useToast();
+  const { establishment } = useStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [accessMenuOpen, setAccessMenuOpen] = useState(false);
 
   const navItems: { label: string; page: PageView; icon?: React.ReactNode }[] = [
     { label: 'Início', page: 'home' },
@@ -38,14 +32,6 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
   const handleNavClick = (page: PageView) => {
     setCurrentPage(page);
     setMobileMenuOpen(false);
-    setAccessMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  const goToPlatformSuperAdmin = () => {
-    setMobileMenuOpen(false);
-    setAccessMenuOpen(false);
-    setCurrentPage('super-admin');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -95,66 +81,13 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
               <span>Agendar</span>
             </button>
 
-            <div className="relative hidden sm:block">
-              <button
-                onClick={() => setAccessMenuOpen((open) => !open)}
-                aria-expanded={accessMenuOpen}
-                aria-label="Abrir opções adicionais"
-                className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-neutral-800 px-3 text-sm text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
-              >
-                <span>Mais</span>
-                <ChevronDown className={`h-4 w-4 transition-transform ${accessMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-              {accessMenuOpen && (
-                <>
-                  <button
-                    aria-label="Fechar opções adicionais"
-                    className="fixed inset-0 z-40 cursor-default"
-                    onClick={() => setAccessMenuOpen(false)}
-                  />
-                  <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-neutral-800 bg-neutral-900 p-2 shadow-xl">
-                    <div className="px-3 pb-2 pt-1 text-xs font-medium text-neutral-500">Acesso e aplicativo</div>
-                    <PWAInstallButton variant="navbar" className="w-full justify-start" />
-                    <button
-                      onClick={() => {
-                        setAccessMenuOpen(false);
-                        if (!session) {
-                          window.location.href = '/plataforma/acesso?mode=login';
-                          return;
-                        }
-                        if (session.role === 'establishment_admin' || session.role === 'super_admin') {
-                          handleNavClick('admin');
-                        } else {
-                          showToast('Acesso negado. Permissões insuficientes.');
-                        }
-                      }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer"
-                    >
-                      <ShieldCheck className="h-4 w-4 text-neutral-400" />
-                      Área administrativa
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAccessMenuOpen(false);
-                        if (!session) {
-                          window.location.href = '/plataforma/acesso?mode=login';
-                          return;
-                        }
-                        if (session.role === 'super_admin') {
-                          goToPlatformSuperAdmin();
-                        } else {
-                          showToast('Acesso negado. Apenas super_adins.');
-                        }
-                      }}
-                      className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer"
-                    >
-                      <Building2 className="h-4 w-4 text-neutral-400" />
-                      Rede & Super Admin
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+            <button
+              onClick={() => { window.location.href = '/plataforma/acesso?mode=login'; }}
+              className="hidden sm:inline-flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-sm text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-900 hover:text-white"
+            >
+              <LogIn className="h-4 w-4" />
+              <span>Entrar</span>
+            </button>
 
             <button
               onClick={() => setMobileMenuOpen((open) => !open)}
@@ -187,42 +120,12 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
               </button>
             ))}
             <div className="mt-3 space-y-1 border-t border-neutral-800 pt-3">
-              <PWAInstallButton variant="navbar" className="w-full justify-center" />
               <button
-                onClick={() => {
-                        setMobileMenuOpen(false);
-                        if (!session) {
-                          window.location.href = '/plataforma/acesso?mode=login';
-                          return;
-                        }
-                        if (session.role === 'establishment_admin' || session.role === 'super_admin') {
-                          handleNavClick('admin');
-                        } else {
-                          showToast('Acesso negado. Permissões insuficientes.');
-                        }
-                      }}
+                onClick={() => { setMobileMenuOpen(false); window.location.href = '/plataforma/acesso?mode=login'; }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
               >
-                <ShieldCheck className="h-4 w-4" />
-                Área administrativa
-              </button>
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  if (!session) {
-                    window.location.href = '/plataforma/acesso?mode=login';
-                    return;
-                  }
-                  if (session.role === 'super_admin') {
-                    goToPlatformSuperAdmin();
-                  } else {
-                    showToast('Acesso negado. Apenas super_adins.');
-                  }
-                }}
-                className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
-              >
-                <Building2 className="h-4 w-4" />
-                Rede & Super Admin
+                <LogIn className="h-4 w-4" />
+                Entrar
               </button>
             </div>
           </nav>
