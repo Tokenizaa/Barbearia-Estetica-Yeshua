@@ -132,7 +132,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       setCrmLoading(false);
       return;
     }
-    const states = new Map((stateResult.data ?? []).map((item: any) => [item.candidate_id, item]));
+    const states = new Map<string, any>((stateResult.data ?? []).map((item: any) => [String(item.candidate_id), item]));
     const mapped: LeadCompany[] = (candidateResult.data ?? []).map((row: any) => {
       const state: any = states.get(row.id);
       const phone = String(row.normalized_phone || row.phone || '').replace(/\\D/g, '');
