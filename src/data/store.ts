@@ -422,11 +422,16 @@ export const store = {
 
     const index = allEstablishments.findIndex((e) => e.id === id);
     if (index === -1) return false;
+    const access = this.requireTenantAccess(id);
+    if (!access.ok) throw new Error(access.message);
 
     const current = allEstablishments[index];
     const updated: Establishment = {
       ...current,
       ...updates,
+      id: current.id,
+      isDefault: current.isDefault,
+      createdAt: current.createdAt,
       updatedAt: new Date().toISOString(),
     };
 
@@ -484,6 +489,9 @@ export const store = {
     if (!est || est.isDefault) {
       console.warn('Não é permitido excluir o estabelecimento padrão da plataforma.');
       return false;
+    }
+    if (currentSession?.role !== 'super_admin') {
+      throw new Error('Apenas o administrador da plataforma pode excluir estabelecimentos.');
     }
 
     allEstablishments = allEstablishments.filter((e) => e.id !== id);
@@ -605,23 +613,33 @@ export const store = {
   },
 
   updateService(id: string, updates: Partial<ServiceItem>) {
-    allServices = allServices.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
+    const item = allServices.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allServices = allServices.map((entry) => entry.id === id
+      ? { ...entry, ...updates, id: entry.id, establishmentId: entry.establishmentId }
+      : entry);
     saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
   deleteService(id: string) {
-    allServices = allServices.filter((item) => item.id !== id);
+    const item = allServices.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allServices = allServices.filter((entry) => entry.id !== id);
     saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
   toggleFeaturedService(id: string) {
-    allServices = allServices.map((item) =>
-      item.id === id ? { ...item, featured: !item.featured } : item
-    );
+    const item = allServices.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allServices = allServices.map((entry) => entry.id === id ? { ...entry, featured: !entry.featured } : entry);
     saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
@@ -644,23 +662,33 @@ export const store = {
   },
 
   updateProduct(id: string, updates: Partial<ProductItem>) {
-    allProducts = allProducts.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
+    const item = allProducts.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allProducts = allProducts.map((entry) => entry.id === id
+      ? { ...entry, ...updates, id: entry.id, establishmentId: entry.establishmentId }
+      : entry);
     saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
   deleteProduct(id: string) {
-    allProducts = allProducts.filter((item) => item.id !== id);
+    const item = allProducts.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allProducts = allProducts.filter((entry) => entry.id !== id);
     saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
   toggleFeaturedProduct(id: string) {
-    allProducts = allProducts.map((item) =>
-      item.id === id ? { ...item, featured: !item.featured } : item
-    );
+    const item = allProducts.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allProducts = allProducts.map((entry) => entry.id === id ? { ...entry, featured: !entry.featured } : entry);
     saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
@@ -684,15 +712,23 @@ export const store = {
   },
 
   updateMedia(id: string, updates: Partial<MediaItem>) {
-    allMedia = allMedia.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
-    );
+    const item = allMedia.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allMedia = allMedia.map((entry) => entry.id === id
+      ? { ...entry, ...updates, id: entry.id, establishmentId: entry.establishmentId }
+      : entry);
     saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
 
   deleteMedia(id: string) {
-    allMedia = allMedia.filter((item) => item.id !== id);
+    const item = allMedia.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allMedia = allMedia.filter((entry) => entry.id !== id);
     saveToStorage(STORAGE_KEYS.MEDIA, allMedia);
     notify();
   },
@@ -722,15 +758,21 @@ export const store = {
     id: string,
     status: 'pendente' | 'confirmado' | 'cancelado' | 'concluido'
   ) {
-    allAppointments = allAppointments.map((item) =>
-      item.id === id ? { ...item, status } : item
-    );
+    const item = allAppointments.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allAppointments = allAppointments.map((entry) => entry.id === id ? { ...entry, status } : entry);
     saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
     notify();
   },
 
   deleteAppointment(id: string) {
-    allAppointments = allAppointments.filter((item) => item.id !== id);
+    const item = allAppointments.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allAppointments = allAppointments.filter((entry) => entry.id !== id);
     saveToStorage(STORAGE_KEYS.APPOINTMENTS, allAppointments);
     notify();
   },
@@ -789,13 +831,19 @@ export const store = {
   },
 
   updateInstagramEmbed(id: string, updates: Partial<InstagramEmbedItem>) {
-    allInstagramEmbeds = allInstagramEmbeds.map((item) => {
-      if (item.id !== id) return item;
-      const updatedUrl = updates.url || item.url;
+    const item = allInstagramEmbeds.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allInstagramEmbeds = allInstagramEmbeds.map((entry) => {
+      if (entry.id !== id) return entry;
+      const updatedUrl = updates.url || entry.url;
       const parsed = updates.url ? this.parseInstagramUrl(updatedUrl) : null;
       return {
-        ...item,
+        ...entry,
         ...updates,
+        id: entry.id,
+        establishmentId: entry.establishmentId,
         ...(parsed ? { shortcode: parsed.shortcode, type: updates.type || parsed.type } : {}),
       };
     });
@@ -804,7 +852,11 @@ export const store = {
   },
 
   deleteInstagramEmbed(id: string) {
-    allInstagramEmbeds = allInstagramEmbeds.filter((item) => item.id !== id);
+    const item = allInstagramEmbeds.find((entry) => entry.id === id);
+    if (!item) return;
+    const access = this.requireTenantAccess(item.establishmentId || activeTenantId);
+    if (!access.ok) throw new Error(access.message);
+    allInstagramEmbeds = allInstagramEmbeds.filter((entry) => entry.id !== id);
     saveToStorage(STORAGE_KEYS.INSTAGRAM_EMBEDS, allInstagramEmbeds);
     notify();
   },
