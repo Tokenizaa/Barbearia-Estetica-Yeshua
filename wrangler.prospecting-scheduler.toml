@@ -10,13 +10,12 @@ crons = ["*/5 * * * *"]
 [vars]
 PROSPECTING_BATCH_SIZE = "10"
 
-# Private Python + Playwright service URL. Set to the private service origin (no trailing slash).
-PROSPECTING_SCRAPER_URL = "https://REPLACE_WITH_PRIVATE_SCRAPER_HOST"
+[browser]
+binding = "PROSPECTING_BROWSER"
 
 # Configure these as encrypted Worker secrets (wrangler secret put):
 # wrangler secret put SUPABASE_URL --config wrangler.prospecting-scheduler.toml
 # wrangler secret put SUPABASE_SERVICE_ROLE_KEY --config wrangler.prospecting-scheduler.toml
-# wrangler secret put PROSPECTING_WORKER_SECRET --config wrangler.prospecting-scheduler.toml
 
 # WhatsApp — Evolution API (futuro) ou manual por enquanto
 # wrangler secret put WHATSAPP_EVOLUTION_URL --config wrangler.prospecting-scheduler.toml
