@@ -3,8 +3,7 @@ export interface Env {
   SUPABASE_SERVICE_ROLE_KEY: string;
   PROSPECTING_WORKER_SECRET: string;
   PROSPECTING_BATCH_SIZE?: string;
-  // Discovery via Playwright + Cloudflare Browser Run (no external HTTP provider)
-  BROWSER: any; // Cloudflare Browser Run binding
+  PROSPECTING_SCRAPER_URL: string;
   // WhatsApp — Evolution API (futuro) ou manual por enquanto
   // WHATSAPP_EVOLUTION_URL?: string;
   // WHATSAPP_EVOLUTION_API_KEY?: string;
@@ -110,7 +109,7 @@ function requiredEnv(env: Env): string | null {
   if (!env.SUPABASE_URL?.trim()) return "SUPABASE_URL ausente";
   if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) return "SUPABASE_SERVICE_ROLE_KEY ausente";
   if (!env.PROSPECTING_WORKER_SECRET?.trim()) return "PROSPECTING_WORKER_SECRET ausente";
-  if (!env.BROWSER) return "BROWSER binding (Cloudflare Browser Run) não configurado";
+  if (!env.PROSPECTING_SCRAPER_URL?.trim()) return "PROSPECTING_SCRAPER_URL ausente";
   return null;
 }
 
@@ -362,61 +361,29 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
   const countryCode = String(campaign.countryCode ?? "BR");
   const searchQuery = `${segment} ${region}`.trim();
 
-  // Use Cloudflare Browser Run + Playwright for scraping
+  // Delegate browser execution to the private Python + Playwright service.
+  // The Worker itself does not run Chromium and does not require the legacy BROWSER binding.
   let scrapedResults: Array<Record<string, unknown>> = [];
   try {
-    // Dynamic import to avoid bundling playwright in the worker unless needed
-    const { chromium } = await import("@cloudflare/playwright");
-    const browser = await chromium.connectOverCDP(env.BROWSER);
-    const page = await browser.newPage();
-    
-    // Navigate to Google Maps search (or alternative allowed source)
-    // Note: Must respect robots.txt, ToS, and rate limits. This is a template.
-    const searchUrl = `https://www.google.com/maps/search/${encodeURIComponent(searchQuery)}`;
-    await page.goto(searchUrl, { waitUntil: "networkidle", timeout: 30000 });
-    
-    // Wait for results to load
-    await page.waitForSelector('[role="feed"]', { timeout: 15000 }).catch(() => {});
-    
-    // Extract business listings (simplified - real implementation needs robust selectors)
-    const listings = await page.evaluate(() => {
-      const results: Array<Record<string, unknown>> = [];
-      const cards = document.querySelectorAll('[role="feed"] > div[jsaction]');
-      cards.forEach((card, idx) => {
-        if (idx >= 20) return; // Limit per page
-        const nameEl = card.querySelector('.fontHeadlineSmall, h3, .NrDZNb');
-        const categoryEl = card.querySelector('.W4Efsd span, .fontBodyMedium');
-        const addressEl = card.querySelector('.W4Efsd span:nth-child(2), .fontBodyMedium:nth-child(2)');
-        const phoneEl = card.querySelector('[data-tooltip="Copiar número de telefone"], .UsdlK');
-        const websiteEl = card.querySelector('[data-tooltip="Abrir site"], a[aria-label*="site"]');
-        const ratingEl = card.querySelector('.MW4etd, .fontBodyMedium span[aria-label*="estrelas"]');
-        const reviewsEl = card.querySelector('.UY7F9, .fontBodyMedium span[aria-label*="avaliações"]');
-        
-        const name = nameEl?.textContent?.trim() || "";
-        if (!name) return;
-        
-        results.push({
-          name,
-          category: categoryEl?.textContent?.trim() || null,
-          address: addressEl?.textContent?.trim() || null,
-          phone: phoneEl?.textContent?.trim() || null,
-          website: websiteEl?.getAttribute('href') || websiteEl?.textContent?.trim() || null,
-          rating: ratingEl?.getAttribute('aria-label') || ratingEl?.textContent?.trim() || null,
-          reviews: reviewsEl?.textContent?.trim() || null,
-          sourceUrl: window.location.href,
-        });
-      });
-      return results;
+    const response = await fetch(env.PROSPECTING_SCRAPER_URL.replace(/\\/$/, "") + "/search", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-scraper-secret": env.PROSPECTING_WORKER_SECRET,
+      },
+      body: JSON.stringify({ search: searchQuery, limit: Math.min(limit, 100) }),
+      signal: AbortSignal.timeout(90_000),
     });
-    
-    scrapedResults = listings;
-    await browser.close();
+    if (!response.ok) throw new Error(`private_scraper_http_${response.status}`);
+    const payload = await response.json() as { ok?: boolean; results?: Array<Record<string, unknown>> };
+    if (payload.ok !== true || !Array.isArray(payload.results)) throw new Error("private_scraper_invalid_response");
+    scrapedResults = payload.results;
   } catch (error) {
-    const message = error instanceof Error ? error.message : "browser_run_failed";
+    const message = error instanceof Error ? error.message : "private_scraper_failed";
     await updateTask(env, task, workerId, {
       status: "blocked", last_error_code: "browser_scraping_failed",
-      last_error: `Falha no scraping via Browser Run: ${message}`,
-      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "browser_scraping_failed" },
+      last_error: `Falha no serviço privado Python/Playwright: ${message}`,
+      completed_at: new Date().toISOString(), result: { outcome: "blocked", reason: "private_scraper_failed" },
     });
     return "blocked";
   }
@@ -461,7 +428,7 @@ async function discoverCampaignTask(env: Env, task: ProspectingTask, workerId: s
       headers: { prefer: "resolution=ignore-duplicates,return=representation" },
       body: JSON.stringify({
         campaign_id: campaign.campaignId,
-        provider: "playwright-browser-run",
+        provider: "google-maps-python-playwright",
         provider_record_id: providerRecordId,
         dedupe_key: dedupeKey,
         business_name: businessName,
