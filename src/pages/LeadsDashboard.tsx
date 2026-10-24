@@ -256,7 +256,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       segment: searchNiche.trim(),
       region: `${searchCity.trim()} - ${searchState.trim()}`,
       country_code: 'BR',
-      source_provider: 'playwright-browser-run',
+      source_provider: 'google-maps-python-playwright',
       source_config: { source: 'google-maps-public-listings' },
       qualification_rules: { minimum_score: 50 },
       schedule: { interval_minutes: 1440 },
@@ -270,7 +270,7 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
       setSearchSuccessMessage('Não foi possível registrar a busca no banco. Verifique as permissões de campanhas e a configuração do worker.');
       return;
     }
-    setSearchSuccessMessage('Busca registrada no banco e enviada para a fila de prospecção. O worker processará os resultados em segundo plano; atualize a lista para consultar as empresas persistidas.');
+    setSearchSuccessMessage('Busca registrada na fila. O serviço privado Python/Playwright processará a pesquisa; atualize a lista para consultar os resultados persistidos.');
   };
 
   // Generate proposal link for a lead
