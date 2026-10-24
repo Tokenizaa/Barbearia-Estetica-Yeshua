@@ -1,7 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 function devCapturePlugin() {
@@ -47,36 +47,9 @@ function devCapturePlugin() {
   };
 }
 
-export default defineConfig(({ mode }) => {
-  // Vite loads .env files after evaluating the config. Read them explicitly
-  // when building define replacements, while preserving CI/Cloudflare env
-  // variables as the highest-priority source.
-  const fileEnv = loadEnv(mode, process.cwd(), '');
-  const resolvePublicEnv = (...names: string[]) => {
-    for (const name of names) {
-      const value = process.env[name] || fileEnv[name];
-      if (typeof value === 'string' && value.trim()) return value.trim();
-    }
-    return '';
-  };
-
-  const supabaseUrl = resolvePublicEnv('VITE_SUPABASE_URL', 'SUPABASE_URL');
-  const supabaseKey = resolvePublicEnv(
-    'VITE_SUPABASE_PUBLISHABLE_KEY',
-    'VITE_SUPABASE_ANON_KEY',
-    'SUPABASE_ANON_KEY',
-    'SUPABASE_PUBLISHABLE_KEY',
-  );
-
+export default defineConfig(() => {
   return {
     envPrefix: ['VITE_', 'SUPABASE_'],
-    define: {
-      'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(supabaseUrl),
-      'import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseKey),
-      'import.meta.env.SUPABASE_URL': JSON.stringify(supabaseUrl),
-      'import.meta.env.SUPABASE_ANON_KEY': JSON.stringify(supabaseKey),
-      'import.meta.env.SUPABASE_PUBLISHABLE_KEY': JSON.stringify(supabaseKey),
-    },
     plugins: [
       react(),
       tailwindcss(),
