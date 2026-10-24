@@ -108,6 +108,13 @@ export const HomePage: React.FC<HomePageProps> = ({
             </div>
           </div>
 
+          {/* Description */}
+          {company.description && (
+            <p className="mt-2 text-neutral-300 text-sm leading-relaxed">
+              {company.description}
+            </p>
+          )}
+
           {/* Title */}
           <div className="space-y-4">
             <h1 className="font-display text-4xl sm:text-6xl md:text-7xl font-bold uppercase tracking-wider text-neutral-100 leading-tight">

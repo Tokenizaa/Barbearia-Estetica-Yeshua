@@ -23,6 +23,7 @@ export interface Establishment {
   slug: string;
   name: string;
   tagline?: string;
+  description?: string;
   status: EstablishmentStatus;
   isDefault?: boolean;
 

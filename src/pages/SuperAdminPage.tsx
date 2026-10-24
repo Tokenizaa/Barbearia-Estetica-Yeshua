@@ -96,10 +96,30 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
   };
 
   // Form state for creating a new establishment
-  const [newEstForm, setNewEstForm] = useState({
+  const [newEstForm, setNewEstForm] = useState<{
+    name: string;
+    slug: string;
+    tagline: string;
+    description: string;
+    theme: EstablishmentTheme;
+    primaryColor: string;
+    logoUrl: string;
+    coverUrl: string;
+    whatsapp: string;
+    whatsappClean: string;
+    phone: string;
+    address: string;
+    cityState: string;
+    instagramHandle: string;
+    instagramUrl: string;
+    adminName: string;
+    adminEmail: string;
+    status: EstablishmentStatus;
+}>({
     name: '',
     slug: '',
     tagline: '',
+    description: '',
     theme: 'amber' as EstablishmentTheme,
     primaryColor: '#f59e0b',
     logoUrl: '/logo.jpg',
@@ -142,6 +162,7 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
         name: '',
         slug: '',
         tagline: '',
+        description: '',
         theme: 'amber',
         primaryColor: '#f59e0b',
         logoUrl: '/logo.jpg',
@@ -1326,6 +1347,20 @@ export const SuperAdminPage: React.FC<SuperAdminPageProps> = ({
                       setEditingEstablishment({ ...editingEstablishment, cityState: e.target.value })
                     }
                     className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-neutral-300 mb-1">
+                    Descrição
+                  </label>
+                  <textarea
+                    value={editingEstablishment.description || ''}
+                    onChange={(e) =>
+                      setEditingEstablishment({ ...editingEstablishment, description: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-xl bg-neutral-950 border border-neutral-700 text-neutral-100 text-xs focus:outline-none focus:border-amber-400 h-24 resize-y"
+                    rows={3}
                   />
                 </div>
 
