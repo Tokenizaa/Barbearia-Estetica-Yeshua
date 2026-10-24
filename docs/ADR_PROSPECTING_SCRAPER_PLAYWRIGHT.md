@@ -13,9 +13,9 @@ A referência escolhida na conversa é um scraper Python com Playwright que pesq
 
 ## Decisão
 
-Adaptar o scraper de referência ao fluxo já existente no front-end de Beleza-Digital e à persistência Supabase. Manter o escopo privado, pequeno e operável; não criar uma plataforma genérica de scraping nem adicionar provedores desnecessários.
+Executar a coleta no próprio Cloudflare Worker com Cloudflare Browser Run e Playwright. Não usar serviço Python externo, Docker, contêiner ou VPS. O binding de navegador será nomeado `PROSPECTING_BROWSER`, evitando a dependência do nome antigo `BROWSER` sem abandonar a execução de navegador remoto gerenciada pela Cloudflare.
 
-**Playwright continua sendo usado. O binding Cloudflare `BROWSER` deixa de ser uma dependência obrigatória.** O scraper Python/Playwright precisa executar em um ambiente que suporte Python e navegador Chromium; ele não será executado diretamente dentro de um Cloudflare Worker. O front-end deve acionar um endpoint privado de execução compatível com esse runtime, protegido por autenticação/segredo de serviço, e exibir estados reais da busca.
+A referência Python `zohaibbashir/Google-Maps-Scrapper` permanece como referência de comportamento e campos a coletar, não como runtime a hospedar. O Worker existente é o lugar da implementação compatível com Cloudflare.
 
 ## Fluxo esperado
 
@@ -28,7 +28,7 @@ Adaptar o scraper de referência ao fluxo já existente no front-end de Beleza-D
 
 ## Requisitos de implementação
 
-- Remover a dependência obrigatória de `env.BROWSER`, `chromium.connectOverCDP(env.BROWSER)` e a configuração antiga `[browser] binding = "BROWSER"` do caminho ativo.
+- Usar `env.PROSPECTING_BROWSER` e declarar `[browser] binding = "PROSPECTING_BROWSER"` na configuração Wrangler do Worker.
 - Reutilizar o front-end e os contratos de dados existentes sempre que compatíveis; não duplicar páginas ou menus.
 - Não expor chaves Supabase de serviço, tokens do scraper ou segredos no navegador.
 - Restringir o endpoint de execução a usuários autorizados; validar entrada, limitar resultados, aplicar timeout e devolver erros compreensíveis.
@@ -48,4 +48,4 @@ Adaptar o scraper de referência ao fluxo já existente no front-end de Beleza-D
 
 ## Estado atual e próximo passo
 
-Esta decisão registra o desenho e os critérios de aceite; não significa que o scraper já esteja integrado ou implantado. A implementação deve começar pelo contrato do endpoint e pelo adaptador Python/Playwright, depois conectar a ação de busca existente no front-end, persistir os resultados e validar a jornada completa.
+A coleta foi iniciada diretamente no Worker e o binding foi renomeado para PROSPECTING_BROWSER. A implementação ainda precisa de build/testes, validação de configuração Cloudflare e busca real ponta a ponta antes de ser considerada operacional.
