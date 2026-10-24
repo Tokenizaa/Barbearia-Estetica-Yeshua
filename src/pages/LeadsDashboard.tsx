@@ -447,8 +447,8 @@ export const LeadsDashboard: React.FC<LeadsDashboardProps> = ({
               Ver Site
             </a>
             <div className="flex items-center gap-1.5 sm:gap-2 bg-[#1c212c] px-2.5 sm:px-3 py-1.5 rounded-xl border border-[#2d3443] text-xs">
-              <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="text-neutral-300 font-medium hidden sm:inline">Mecanismo Ativo</span>
+              <span className={`h-2 w-2 rounded-full ${supabase ? "bg-emerald-400" : "bg-red-400"}`}></span>
+              <span className="text-neutral-300 font-medium hidden sm:inline">{supabase ? "Banco conectado" : "Banco não configurado"}</span>
             </div>
           </div>
         </header>
