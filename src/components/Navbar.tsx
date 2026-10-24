@@ -22,7 +22,7 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
-  const { establishment } = useStore();
+  const { establishment, session } = useStore();
   const { showToast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accessMenuOpen, setAccessMenuOpen] = useState(false);
@@ -117,10 +117,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                     <PWAInstallButton variant="navbar" className="w-full justify-start" />
                     <button
                       onClick={() => {
-                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
-                        const session = s.session;
-                        const isSupabaseConfigured = s.isSupabaseConfigured;
-                        if (!isSupabaseConfigured || !session) {
+                        if (!session) {
                           showToast('Faça login via Supabase Auth primeiro.');
                           return;
                         }
@@ -137,10 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                     </button>
                     <button
                       onClick={() => {
-                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
-                        const session = s.session;
-                        const isSupabaseConfigured = s.isSupabaseConfigured;
-                        if (!isSupabaseConfigured || !session) {
+                        if (!session) {
                           showToast('Faça login via Supabase Auth primeiro.');
                           return;
                         }
@@ -194,10 +188,7 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
               <PWAInstallButton variant="navbar" className="w-full justify-center" />
               <button
                 onClick={() => {
-                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
-                        const session = s.session;
-                        const isSupabaseConfigured = s.isSupabaseConfigured;
-                        if (!isSupabaseConfigured || !session) {
+                        if (!session) {
                           showToast('Faça login via Supabase Auth primeiro.');
                           return;
                         }

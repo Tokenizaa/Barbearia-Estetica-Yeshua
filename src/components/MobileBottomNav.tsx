@@ -30,7 +30,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   setCurrentPage,
   onBookClick,
 }) => {
-  const { company, establishment, store } = useStore();
+  const { company, establishment, store, session } = useStore();
   const { showToast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showPWAModal, setShowPWAModal] = useState(false);
@@ -288,10 +288,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
               {/* Painel Administrativo */}
               <button
                 onClick={() => {
-                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
-                        const session = s.session;
-                        const isSupabaseConfigured = s.isSupabaseConfigured;
-                        if (!isSupabaseConfigured || !session) {
+                        if (!session) {
                           showToast('Faça login via Supabase Auth primeiro.');
                           return;
                         }
