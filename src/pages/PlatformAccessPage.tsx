@@ -78,10 +78,12 @@ export function PlatformAccessPage() {
   }, []);
 
   useEffect(() => {
-    if (sessionEmail && isPlatformAdmin && window.location.pathname !== '/plataforma/admin') {
+    // Keep login mode on the access screen so a persisted previous session can
+    // be explicitly switched instead of immediately redirecting away.
+    if (sessionEmail && isPlatformAdmin && mode !== 'login' && window.location.pathname !== '/plataforma/admin') {
       window.location.replace('/plataforma/admin');
     }
-  }, [sessionEmail, isPlatformAdmin]);
+  }, [sessionEmail, isPlatformAdmin, mode]);
 
   useEffect(() => {
     if (!supabase || !sessionEmail || isPlatformAdmin) return;
