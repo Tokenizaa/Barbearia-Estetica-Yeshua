@@ -419,6 +419,8 @@ export const store = {
   updateEstablishment(id: string, updates: Partial<Establishment>): boolean {
     const auth = this.requireWriteAuth();
     if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(id);
+    if (!access.ok) throw new Error(access.message);
 
     const index = allEstablishments.findIndex((e) => e.id === id);
     if (index === -1) return false;
@@ -455,6 +457,8 @@ export const store = {
   toggleEstablishmentStatus(id: string): boolean {
     const auth = this.requireWriteAuth();
     if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(id);
+    if (!access.ok) throw new Error(access.message);
 
     const est = allEstablishments.find((e) => e.id === id);
     if (!est) return false;
@@ -479,6 +483,8 @@ export const store = {
   deleteEstablishment(id: string): boolean {
     const auth = this.requireWriteAuth();
     if (!auth.ok) throw new Error(auth.message);
+    const access = this.requireTenantAccess(id);
+    if (!access.ok) throw new Error(access.message);
 
     const est = allEstablishments.find((e) => e.id === id);
     if (!est || est.isDefault) {
@@ -605,22 +611,43 @@ export const store = {
   },
 
   updateService(id: string, updates: Partial<ServiceItem>) {
-    allServices = allServices.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const item = allServices.find((s) => s.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || 'est-yeshua';
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allServices = allServices.map((s) =>
+      s.id === id ? { ...s, ...updates } : s
     );
     saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
   deleteService(id: string) {
-    allServices = allServices.filter((item) => item.id !== id);
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const item = allServices.find((s) => s.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || 'est-yeshua';
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allServices = allServices.filter((s) => s.id !== id);
     saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
   },
 
   toggleFeaturedService(id: string) {
-    allServices = allServices.map((item) =>
-      item.id === id ? { ...item, featured: !item.featured } : item
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const item = allServices.find((s) => s.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || 'est-yeshua';
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allServices = allServices.map((s) =>
+      s.id === id ? { ...s, featured: !s.featured } : s
     );
     saveToStorage(STORAGE_KEYS.SERVICES, allServices);
     notify();
@@ -644,22 +671,43 @@ export const store = {
   },
 
   updateProduct(id: string, updates: Partial<ProductItem>) {
-    allProducts = allProducts.map((item) =>
-      item.id === id ? { ...item, ...updates } : item
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const item = allProducts.find((p) => p.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || 'est-yeshua';
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allProducts = allProducts.map((p) =>
+      p.id === id ? { ...p, ...updates } : p
     );
     saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
   deleteProduct(id: string) {
-    allProducts = allProducts.filter((item) => item.id !== id);
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const item = allProducts.find((p) => p.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || 'est-yeshua';
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allProducts = allProducts.filter((p) => p.id !== id);
     saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
   },
 
   toggleFeaturedProduct(id: string) {
-    allProducts = allProducts.map((item) =>
-      item.id === id ? { ...item, featured: !item.featured } : item
+    const auth = this.requireWriteAuth();
+    if (!auth.ok) throw new Error(auth.message);
+    const item = allProducts.find((p) => p.id === id);
+    if (!item) return;
+    const tenantId = item.establishmentId || 'est-yeshua';
+    const access = this.requireTenantAccess(tenantId);
+    if (!access.ok) throw new Error(access.message);
+    allProducts = allProducts.map((p) =>
+      p.id === id ? { ...p, featured: !p.featured } : p
     );
     saveToStorage(STORAGE_KEYS.PRODUCTS, allProducts);
     notify();
