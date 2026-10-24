@@ -173,8 +173,25 @@ export function PlatformAccessPage() {
   };
 
   const logout = async () => {
-    await supabase?.auth.signOut();
-    setPayment(null); setMessage('Sessão encerrada.');
+    if (!supabase) return;
+    setBusy(true);
+    setError('');
+    try {
+      // Clear only this browser's persisted session so a previous account
+      // cannot keep the login screen hidden when another user needs to sign in.
+      const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+      if (signOutError) throw signOutError;
+      setPayment(null);
+      setSessionEmail(null);
+      setIsPlatformAdmin(false);
+      setPlans([]);
+      setMode('login');
+      setMessage('Sessão encerrada. Entre com outra conta.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Não foi possível encerrar a sessão.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   if (!isSupabaseConfigured) {
@@ -191,6 +208,9 @@ export function PlatformAccessPage() {
           {sessionEmail ? (
             <div className="space-y-5">
               <p className="text-sm text-neutral-300">Sessão: <strong>{sessionEmail}</strong></p>
+              <button type="button" disabled={busy} onClick={logout} className="inline-flex items-center gap-2 rounded-lg border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:text-white disabled:opacity-50">
+                <LogOut size={16} /> Trocar de conta
+              </button>
               {isPlatformAdmin ? <><div className="rounded-xl border border-emerald-800 p-4"><p className="font-medium">Administrador geral ativo</p><p className="mt-1 text-sm text-neutral-400">Esta conta tem permissão administrativa geral da plataforma.</p></div><ProspectingConsole /></> : <><div className="rounded-xl border border-neutral-800 p-4"><p className="font-medium">Contratação e ativação</p><p className="mt-1 text-sm text-neutral-400">Escolha um plano ativo para gerar uma cobrança PIX. Seu salão permanece como rascunho até a confirmação do pagamento.</p></div>
               {plans.length === 0 ? <p className="text-sm text-neutral-400">Nenhum plano está publicado para contratação no momento.</p> : plans.map((plan) => (
                 <div key={plan.id} className="flex items-center justify-between gap-4 rounded-xl border border-neutral-800 p-4">
