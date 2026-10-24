@@ -10,9 +10,8 @@ crons = ["*/5 * * * *"]
 [vars]
 PROSPECTING_BATCH_SIZE = "10"
 
-# Browser Run binding for Playwright scraping
-[browser]
-binding = "BROWSER"
+# Private Python + Playwright service URL. Set to the private service origin (no trailing slash).
+PROSPECTING_SCRAPER_URL = "https://REPLACE_WITH_PRIVATE_SCRAPER_HOST"
 
 # Configure these as encrypted Worker secrets (wrangler secret put):
 # wrangler secret put SUPABASE_URL --config wrangler.prospecting-scheduler.toml
