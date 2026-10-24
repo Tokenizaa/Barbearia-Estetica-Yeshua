@@ -19,6 +19,7 @@ import { PlatformLeadsDashboard } from './pages/PlatformLeadsDashboard';
 import { readShareablePreview, SharedSitePreview } from './pages/SharedSitePreview';
 import { PublicDemoSelectionPage } from './pages/PublicDemoSelectionPage';
 import { AlertTriangle } from 'lucide-react';
+import { ToastProvider } from './context/ToastContext';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<PageView>('home');
@@ -154,17 +155,19 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
-      <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <main className="flex-1 pb-16 md:pb-0">{renderCurrentPage()}</main>
-      <Footer setCurrentPage={setCurrentPage} />
-      <MobileBottomNav
-        currentPage={currentPage}
-        setCurrentPage={setCurrentPage}
-        onBookClick={() => handleBookService()}
-      />
-      <FloatingWhatsApp />
-      <OfflineIndicator />
-    </div>
+    <ToastProvider>
+      <div className="min-h-screen bg-neutral-950 text-neutral-100 flex flex-col font-sans selection:bg-amber-500/30 selection:text-amber-200">
+        <Navbar currentPage={currentPage} setCurrentPage={setCurrentPage} />
+        <main className="flex-1 pb-16 md:pb-0">{renderCurrentPage()}</main>
+        <Footer setCurrentPage={setCurrentPage} />
+        <MobileBottomNav
+          currentPage={currentPage}
+          setCurrentPage={setCurrentPage}
+          onBookClick={() => handleBookService()}
+        />
+        <FloatingWhatsApp />
+        <OfflineIndicator />
+      </div>
+    </ToastProvider>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PageView } from '../types';
 import { useStore } from '../data/store';
 import { PWAInstallModal } from './PWAInstallModal';
+import { useToast } from '../context/ToastContext';
 import {
   Home,
   Scissors,
@@ -30,6 +31,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onBookClick,
 }) => {
   const { company, establishment, store } = useStore();
+  const { showToast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showPWAModal, setShowPWAModal] = useState(false);
 
@@ -285,7 +287,20 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
               {/* Painel Administrativo */}
               <button
-                onClick={() => handleNavigate('admin')}
+                onClick={() => {
+                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
+                        const session = s.session;
+                        const isSupabaseConfigured = s.isSupabaseConfigured;
+                        if (!isSupabaseConfigured || !session) {
+                          showToast('Faça login via Supabase Auth primeiro.');
+                          return;
+                        }
+                        if (session.role === 'establishment_admin' || session.role === 'super_admin') {
+                          handleNavigate('admin');
+                        } else {
+                          showToast('Acesso negado. Permissões insuficientes.');
+                        }
+                      }}
                 className={`w-full flex items-center gap-3 p-3 rounded-xl border text-sm font-medium transition-colors ${
                   currentPage === 'admin'
                     ? 'bg-neutral-800 border-neutral-600 text-amber-300'

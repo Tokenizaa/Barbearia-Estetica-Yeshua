@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { PageView } from '../types';
 import { useStore } from '../data/store';
 import { PWAInstallButton } from './PWAInstallButton';
+import { useToast } from '../context/ToastContext';
 import {
   Menu,
   X,
@@ -22,6 +23,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) => {
   const { establishment } = useStore();
+  const { showToast } = useToast();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accessMenuOpen, setAccessMenuOpen] = useState(false);
 
@@ -114,14 +116,40 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
                     <div className="px-3 pb-2 pt-1 text-xs font-medium text-neutral-500">Acesso e aplicativo</div>
                     <PWAInstallButton variant="navbar" className="w-full justify-start" />
                     <button
-                      onClick={() => handleNavClick('admin')}
+                      onClick={() => {
+                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
+                        const session = s.session;
+                        const isSupabaseConfigured = s.isSupabaseConfigured;
+                        if (!isSupabaseConfigured || !session) {
+                          showToast('Faça login via Supabase Auth primeiro.');
+                          return;
+                        }
+                        if (session.role === 'establishment_admin' || session.role === 'super_admin') {
+                          handleNavClick('admin');
+                        } else {
+                          showToast('Acesso negado. Permissões insuficientes.');
+                        }
+                      }}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer"
                     >
                       <ShieldCheck className="h-4 w-4 text-neutral-400" />
                       Área administrativa
                     </button>
                     <button
-                      onClick={goToPlatformSuperAdmin}
+                      onClick={() => {
+                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
+                        const session = s.session;
+                        const isSupabaseConfigured = s.isSupabaseConfigured;
+                        if (!isSupabaseConfigured || !session) {
+                          showToast('Faça login via Supabase Auth primeiro.');
+                          return;
+                        }
+                        if (session.role === 'super_admin') {
+                          goToPlatformSuperAdmin();
+                        } else {
+                          showToast('Acesso negado. Apenas super_adins.');
+                        }
+                      }}
                       className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-neutral-300 hover:bg-neutral-800 hover:text-white cursor-pointer"
                     >
                       <Building2 className="h-4 w-4 text-neutral-400" />
@@ -165,7 +193,20 @@ export const Navbar: React.FC<NavbarProps> = ({ currentPage, setCurrentPage }) =
             <div className="mt-3 space-y-1 border-t border-neutral-800 pt-3">
               <PWAInstallButton variant="navbar" className="w-full justify-center" />
               <button
-                onClick={() => handleNavClick('admin')}
+                onClick={() => {
+                        const s = (useStore as any).getState ? (useStore as any).getState() : useStore();
+                        const session = s.session;
+                        const isSupabaseConfigured = s.isSupabaseConfigured;
+                        if (!isSupabaseConfigured || !session) {
+                          showToast('Faça login via Supabase Auth primeiro.');
+                          return;
+                        }
+                        if (session.role === 'establishment_admin' || session.role === 'super_admin') {
+                          handleNavClick('admin');
+                        } else {
+                          showToast('Acesso negado. Permissões insuficientes.');
+                        }
+                      }}
                 className="flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm text-neutral-300 hover:bg-neutral-900 cursor-pointer"
               >
                 <ShieldCheck className="h-4 w-4" />
